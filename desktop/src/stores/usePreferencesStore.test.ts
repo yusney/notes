@@ -29,39 +29,45 @@ describe("usePreferencesStore", () => {
     expect(state.sortOrder).toBe("desc");
   });
 
-  it("fetchPreferences sets theme, sortBy, sortOrder from API", async () => {
+  it("fetchPreferences maps API values to frontend values", async () => {
     vi.mocked(apiClient.get).mockResolvedValueOnce({
       theme: "dark",
-      sortBy: "alphabetical",
-      sortOrder: "asc",
+      sortBy: "Title",       // API returns PascalCase enum names
+      sortOrder: "Asc",
     });
 
     await usePreferencesStore.getState().fetchPreferences();
 
     const state = usePreferencesStore.getState();
     expect(state.theme).toBe("dark");
-    expect(state.sortBy).toBe("alphabetical");
-    expect(state.sortOrder).toBe("asc");
+    expect(state.sortBy).toBe("alphabetical"); // "Title" → frontend "alphabetical"
+    expect(state.sortOrder).toBe("asc");        // "Asc" → frontend "asc"
   });
 
-  it("updatePreferences sends PUT and updates local state", async () => {
+  it("updatePreferences sends API values and maps response back", async () => {
     vi.mocked(apiClient.put).mockResolvedValueOnce({
+      theme: "light",
+      sortBy: "UpdatedAt",
+      sortOrder: "Asc",
+    });
+
+    // Call with frontend values
+    await usePreferencesStore.getState().updatePreferences({
       theme: "light",
       sortBy: "modification",
       sortOrder: "asc",
     });
 
-    await usePreferencesStore.getState().updatePreferences({ theme: "light", sortBy: "modification", sortOrder: "asc" });
-
+    // Should send API values in the PUT body
     expect(apiClient.put).toHaveBeenCalledWith("/api/user/preferences", {
       theme: "light",
-      sortBy: "modification",
-      sortOrder: "asc",
+      sortBy: "UpdatedAt",   // "modification" → API "UpdatedAt"
+      sortOrder: "Asc",      // "asc" → API "Asc"
     });
 
     const state = usePreferencesStore.getState();
     expect(state.theme).toBe("light");
-    expect(state.sortBy).toBe("modification");
+    expect(state.sortBy).toBe("modification"); // "UpdatedAt" → frontend "modification"
   });
 
   it("fetchPreferences sets error on failure", async () => {

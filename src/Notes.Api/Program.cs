@@ -82,8 +82,15 @@ builder.Services.AddHealthChecks();
 // ── Controllers ───────────────────────────────────────────────────────────────
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
+    {
         options.JsonSerializerOptions.PropertyNamingPolicy =
-            System.Text.Json.JsonNamingPolicy.CamelCase);
+            System.Text.Json.JsonNamingPolicy.CamelCase;
+        // Serialize enums as strings ("light"/"dark") instead of integers (0/1/2)
+        // Allow case-insensitive deserialization ("dark" ↔ Theme.Dark)
+        options.JsonSerializerOptions.Converters.Add(
+            new System.Text.Json.Serialization.JsonStringEnumConverter(
+                System.Text.Json.JsonNamingPolicy.CamelCase, allowIntegerValues: true));
+    });
 builder.Services.AddOpenApi();
 
 var app = builder.Build();

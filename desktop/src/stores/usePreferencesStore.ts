@@ -21,6 +21,29 @@ interface PreferencesState {
   updatePreferences: (prefs: Partial<UserPreferences>) => Promise<void>;
 }
 
+// Map frontend SortBy values to API enum names (PascalCase)
+const SORT_BY_TO_API: Record<SortBy, string> = {
+  creation: "CreatedAt",
+  modification: "UpdatedAt",
+  alphabetical: "Title",
+};
+
+const SORT_BY_FROM_API: Record<string, SortBy> = {
+  CreatedAt: "creation",
+  UpdatedAt: "modification",
+  Title: "alphabetical",
+};
+
+const SORT_ORDER_TO_API: Record<SortOrder, string> = {
+  asc: "Asc",
+  desc: "Desc",
+};
+
+const SORT_ORDER_FROM_API: Record<string, SortOrder> = {
+  Asc: "asc",
+  Desc: "desc",
+};
+
 export const usePreferencesStore = create<PreferencesState>((set, get) => ({
   theme: "system",
   sortBy: "creation",
@@ -31,11 +54,11 @@ export const usePreferencesStore = create<PreferencesState>((set, get) => ({
   fetchPreferences: async () => {
     set({ isLoading: true, error: null });
     try {
-      const data = await apiClient.get<UserPreferences>("/api/user/preferences");
+      const data = await apiClient.get<{ theme: string; sortBy: string; sortOrder: string }>("/api/user/preferences");
       set({
         theme: data.theme ?? "system",
-        sortBy: (data.sortBy as SortBy) ?? "creation",
-        sortOrder: (data.sortOrder as SortOrder) ?? "desc",
+        sortBy: SORT_BY_FROM_API[data.sortBy] ?? "creation",
+        sortOrder: SORT_ORDER_FROM_API[data.sortOrder] ?? "desc",
         isLoading: false,
       });
     } catch (err) {
@@ -49,16 +72,15 @@ export const usePreferencesStore = create<PreferencesState>((set, get) => ({
     try {
       const current = get();
       const payload = {
-        theme: current.theme,
-        sortBy: current.sortBy,
-        sortOrder: current.sortOrder,
-        ...prefs,
+        theme: prefs.theme ?? current.theme,
+        sortBy: prefs.sortBy ? SORT_BY_TO_API[prefs.sortBy] : SORT_BY_TO_API[current.sortBy],
+        sortOrder: prefs.sortOrder ? SORT_ORDER_TO_API[prefs.sortOrder] : SORT_ORDER_TO_API[current.sortOrder],
       };
-      const data = await apiClient.put<UserPreferences>("/api/user/preferences", payload);
+      const data = await apiClient.put<{ theme: string; sortBy: string; sortOrder: string }>("/api/user/preferences", payload);
       set({
         theme: data.theme ?? payload.theme,
-        sortBy: (data.sortBy as SortBy) ?? payload.sortBy,
-        sortOrder: (data.sortOrder as SortOrder) ?? payload.sortOrder,
+        sortBy: SORT_BY_FROM_API[data.sortBy] ?? "creation",
+        sortOrder: SORT_ORDER_FROM_API[data.sortOrder] ?? "desc",
         isLoading: false,
       });
     } catch (err) {

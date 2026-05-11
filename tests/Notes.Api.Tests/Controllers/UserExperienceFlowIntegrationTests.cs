@@ -98,14 +98,14 @@ public class UserExperienceFlowIntegrationTests : IClassFixture<NotesApiFactory>
         prefsBody.TryGetProperty("sortBy", out _).Should().BeTrue();
         prefsBody.TryGetProperty("sortOrder", out _).Should().BeTrue();
         // Default theme is System (0)
-        themeEl.GetInt32().Should().Be(0);
+        themeEl.GetString().Should().Be("system");
 
         // ── 8. Update preferences ─────────────────────────────────────────────
         var updatePrefsResp = await loginClient.PutAsJsonAsync("/api/user/preferences", new
         {
-            theme = 1,      // Dark
-            sortBy = 1,     // UpdatedAt
-            sortOrder = 1   // Desc
+            theme = "dark",
+            sortBy = "updatedAt",
+            sortOrder = "desc"
         });
         updatePrefsResp.StatusCode.Should().Be(HttpStatusCode.OK);
 
@@ -113,9 +113,9 @@ public class UserExperienceFlowIntegrationTests : IClassFixture<NotesApiFactory>
         var verifyPrefsResp = await loginClient.GetAsync("/api/user/preferences");
         verifyPrefsResp.StatusCode.Should().Be(HttpStatusCode.OK);
         var verifyPrefsBody = await verifyPrefsResp.Content.ReadFromJsonAsync<JsonElement>();
-        verifyPrefsBody.GetProperty("theme").GetInt32().Should().Be(1);
-        verifyPrefsBody.GetProperty("sortBy").GetInt32().Should().Be(1);
-        verifyPrefsBody.GetProperty("sortOrder").GetInt32().Should().Be(1);
+        verifyPrefsBody.GetProperty("theme").GetString().Should().Be("dark");
+        verifyPrefsBody.GetProperty("sortBy").GetString().Should().Be("updatedAt");
+        verifyPrefsBody.GetProperty("sortOrder").GetString().Should().Be("desc");
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -188,42 +188,42 @@ public class UserExperienceFlowIntegrationTests : IClassFixture<NotesApiFactory>
     {
         var (client, _) = await ClientWithTabAsync();
 
-        // ── 1. Get initial preferences — theme should be System (0) ──────────
+        // ── 1. Get initial preferences — theme should be System ──────────────
         var initResp = await client.GetAsync("/api/user/preferences");
         initResp.StatusCode.Should().Be(HttpStatusCode.OK);
         var initBody = await initResp.Content.ReadFromJsonAsync<JsonElement>();
-        initBody.GetProperty("theme").GetInt32().Should().Be(0, "default theme is System");
+        initBody.GetProperty("theme").GetString().Should().Be("system", "default theme is System");
 
-        // ── 2. Set theme to Dark (1) ──────────────────────────────────────────
+        // ── 2. Set theme to Dark ──────────────────────────────────────────────
         var setResp = await client.PutAsJsonAsync("/api/user/preferences", new
         {
-            theme = 1,      // Dark
-            sortBy = 0,     // CreatedAt
-            sortOrder = 1   // Desc
+            theme = "dark",
+            sortBy = "createdAt",
+            sortOrder = "desc"
         });
         setResp.StatusCode.Should().Be(HttpStatusCode.OK);
         var setBody = await setResp.Content.ReadFromJsonAsync<JsonElement>();
-        setBody.GetProperty("theme").GetInt32().Should().Be(1);
+        setBody.GetProperty("theme").GetString().Should().Be("dark");
 
         // ── 3. Simulate "page reload" — fresh GET to verify persistence ───────
         var reloadResp = await client.GetAsync("/api/user/preferences");
         reloadResp.StatusCode.Should().Be(HttpStatusCode.OK);
         var reloadBody = await reloadResp.Content.ReadFromJsonAsync<JsonElement>();
-        reloadBody.GetProperty("theme").GetInt32().Should().Be(1, "theme must persist across requests (simulated reload)");
+        reloadBody.GetProperty("theme").GetString().Should().Be("dark", "theme must persist across requests (simulated reload)");
 
-        // ── 4. Change to Light (2), verify again ─────────────────────────────
+        // ── 4. Change to Light, verify again ──────────────────────────────────
         var lightResp = await client.PutAsJsonAsync("/api/user/preferences", new
         {
-            theme = 2,      // Light
-            sortBy = 0,
-            sortOrder = 1
+            theme = "light",
+            sortBy = "createdAt",
+            sortOrder = "desc"
         });
         lightResp.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var light2Resp = await client.GetAsync("/api/user/preferences");
         light2Resp.StatusCode.Should().Be(HttpStatusCode.OK);
         var light2Body = await light2Resp.Content.ReadFromJsonAsync<JsonElement>();
-        light2Body.GetProperty("theme").GetInt32().Should().Be(2, "light theme must also persist");
+        light2Body.GetProperty("theme").GetString().Should().Be("light", "light theme must also persist");
     }
 
     // ─────────────────────────────────────────────────────────────────────────
