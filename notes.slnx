@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Notes.Api/Notes.Api.csproj" />
+    <Project Path="src/Notes.Application/Notes.Application.csproj" />
+    <Project Path="src/Notes.Domain/Notes.Domain.csproj" />
+    <Project Path="src/Notes.Infrastructure/Notes.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Notes.Api.Tests/Notes.Api.Tests.csproj" />
+    <Project Path="tests/Notes.Application.Tests/Notes.Application.Tests.csproj" />
+    <Project Path="tests/Notes.Domain.Tests/Notes.Domain.Tests.csproj" />
+    <Project Path="tests/Notes.Infrastructure.Tests/Notes.Infrastructure.Tests.csproj" />
+  </Folder>
+</Solution>
