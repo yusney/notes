@@ -60,7 +60,7 @@ export function ResetPasswordPage() {
   if (pageState === "validating") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-surface">
-        <div className="bg-surface-elevated border border-border p-8 rounded-2xl shadow-lg w-full max-w-sm text-center">
+        <div className="bg-surface-elevated border border-border p-8 w-full max-w-sm text-center">
           <p className="text-sm text-text-secondary">Verificando enlace...</p>
         </div>
       </div>
@@ -70,7 +70,7 @@ export function ResetPasswordPage() {
   if (pageState === "invalid") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-surface">
-        <div className="bg-surface-elevated border border-border p-8 rounded-2xl shadow-lg w-full max-w-sm text-center">
+        <div className="bg-surface-elevated border border-border p-8 w-full max-w-sm text-center">
           <h1 className="text-2xl font-bold text-text-primary mb-4">Enlace inválido</h1>
           <p className="text-sm text-text-secondary mb-6">
             Este enlace es inválido o ha expirado. Solicitá uno nuevo.
@@ -85,11 +85,11 @@ export function ResetPasswordPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-surface">
-      <div className="bg-surface-elevated border border-border p-8 rounded-2xl shadow-lg w-full max-w-sm">
+      <div className="bg-surface-elevated border border-border p-8 w-full max-w-sm">
         <h1 className="text-2xl font-bold text-text-primary mb-6">Nueva contraseña</h1>
 
         {pageState === "error" && (
-          <div role="alert" className="mb-4 p-3 bg-danger/10 border border-danger rounded-lg text-sm text-danger">
+          <div role="alert" className="mb-4 p-3 bg-danger/10 border border-danger text-sm text-danger">
             Ocurrió un error. Intentá de nuevo.
           </div>
         )}
@@ -113,7 +113,7 @@ export function ResetPasswordPage() {
           <button
             type="submit"
             disabled={pageState === "loading"}
-            className="w-full py-2 px-4 bg-accent text-accent-text rounded-lg text-sm font-medium hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full py-2 px-4 bg-accent text-accent-text text-sm font-medium hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {pageState === "loading" ? "Restableciendo..." : "Restablecer contraseña"}
           </button>

@@ -41,12 +41,12 @@ export function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-surface">
-      <div className="bg-surface-elevated border border-border p-8 rounded-2xl shadow-lg w-full max-w-sm">
+      <div className="bg-surface-elevated border border-border p-8 w-full max-w-sm">
         <h1 className="text-2xl font-bold text-text-primary mb-1">Notes</h1>
         <p className="text-sm text-text-secondary mb-6">Iniciá sesión para continuar</p>
 
         {error && (
-          <div role="alert" className="mb-4 p-3 bg-danger/10 border border-danger rounded-lg text-sm text-danger">
+          <div role="alert" className="mb-4 p-3 bg-danger/10 border border-danger text-sm text-danger">
             {error}
           </div>
         )}
@@ -61,7 +61,7 @@ export function LoginPage() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2 bg-surface border border-border rounded-lg text-sm text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
+              className="w-full px-3 py-2 bg-surface border-b-2 border-border text-sm text-text-primary placeholder:text-text-secondary focus:border-accent focus:outline-none"
               autoComplete="email"
               placeholder="tu@email.com"
             />
@@ -92,7 +92,7 @@ export function LoginPage() {
               type="checkbox"
               checked={rememberMe}
               onChange={(e) => setRememberMe(e.target.checked)}
-              className="h-4 w-4 rounded border-border bg-surface text-accent focus:ring-accent"
+              className="h-4 w-4 border-border bg-surface text-accent"
             />
             <label htmlFor="remember-me" className="text-xs text-text-secondary cursor-pointer select-none">
               Recordarme
@@ -102,7 +102,7 @@ export function LoginPage() {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full py-2.5 px-4 bg-accent text-accent-text rounded-lg text-sm font-semibold hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full py-2.5 px-4 bg-accent text-accent-text text-sm font-semibold hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading ? "Iniciando..." : "Iniciar sesión"}
           </button>
@@ -135,14 +135,14 @@ export function LoginPage() {
             <button
               type="button"
               onClick={() => handleOAuthLogin("google")}
-              className="w-full py-2 px-4 border border-border rounded-lg text-sm font-medium text-text-primary hover:bg-surface transition-colors"
+              className="w-full py-2 px-4 border border-border text-sm font-medium text-text-primary hover:bg-surface transition-colors"
             >
               Google
             </button>
             <button
               type="button"
               onClick={() => handleOAuthLogin("github")}
-              className="w-full py-2 px-4 border border-border rounded-lg text-sm font-medium text-text-primary hover:bg-surface transition-colors"
+              className="w-full py-2 px-4 border border-border text-sm font-medium text-text-primary hover:bg-surface transition-colors"
             >
               GitHub
             </button>

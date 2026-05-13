@@ -48,11 +48,11 @@ export function RegisterPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-surface">
-      <div className="bg-surface-elevated border border-border p-8 rounded-2xl shadow-lg w-full max-w-sm">
+      <div className="bg-surface-elevated border border-border p-8 w-full max-w-sm">
         <h1 className="text-2xl font-bold text-text-primary mb-6">Crear cuenta</h1>
 
         {error && (
-          <div role="alert" className="mb-4 p-3 bg-danger/10 border border-danger rounded-lg text-sm text-danger">
+          <div role="alert" className="mb-4 p-3 bg-danger/10 border border-danger text-sm text-danger">
             {error}
           </div>
         )}
@@ -67,7 +67,7 @@ export function RegisterPage() {
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-3 py-2 bg-surface border border-border rounded-lg text-sm text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
+              className="w-full px-3 py-2 bg-surface border-b-2 border-border text-sm text-text-primary placeholder:text-text-secondary focus:border-accent focus:outline-none"
               autoComplete="name"
             />
             {fieldErrors.name && (
@@ -84,7 +84,7 @@ export function RegisterPage() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2 bg-surface border border-border rounded-lg text-sm text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
+              className="w-full px-3 py-2 bg-surface border-b-2 border-border text-sm text-text-primary placeholder:text-text-secondary focus:border-accent focus:outline-none"
               autoComplete="email"
             />
             {fieldErrors.email && (
@@ -110,7 +110,7 @@ export function RegisterPage() {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full py-2 px-4 bg-accent text-accent-text rounded-lg text-sm font-medium hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full py-2 px-4 bg-accent text-accent-text text-sm font-medium hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading ? "Registrando..." : "Registrarse"}
           </button>

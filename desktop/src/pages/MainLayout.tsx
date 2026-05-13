@@ -208,7 +208,7 @@ export function MainLayout() {
           onClearAll={handleClearFilters}
         />
         {error && (
-          <div role="alert" className="mx-4 mb-2 rounded-2xl border border-danger bg-danger/10 px-3 py-2 text-xs text-danger">
+          <div role="alert" className="mx-4 mb-2 border border-danger bg-danger/10 px-3 py-2 text-xs text-danger">
             {error}
           </div>
         )}
@@ -247,7 +247,7 @@ export function MainLayout() {
           )
         ) : (
           <div className="flex h-full items-center justify-center bg-surface p-10 text-text-secondary">
-            <div className="max-w-md rounded-[2rem] border border-border bg-surface-elevated/75 p-8 text-center shadow-xl backdrop-blur">
+            <div className="max-w-md border border-border bg-surface-elevated/75 p-8 text-center backdrop-blur">
               <p className="text-xs font-semibold uppercase tracking-[0.25em] text-accent">Sin nota activa</p>
               <h1 className="mt-3 text-3xl font-semibold tracking-tight text-text-primary">Elegí una nota o empezá una nueva.</h1>
               <p className="mt-3 text-sm leading-6 text-text-secondary">

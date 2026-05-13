@@ -108,7 +108,7 @@ export function SettingsPage() {
             onClick={handleSave}
             disabled={isSaving}
             aria-label="Guardar configuración"
-            className="text-sm px-4 py-2 bg-accent text-accent-text rounded-lg hover:bg-accent-hover disabled:opacity-50 transition-colors"
+            className="text-sm px-4 py-2 bg-accent text-accent-text hover:bg-accent-hover disabled:opacity-50 transition-colors"
           >
             {isSaving ? "Guardando..." : "Guardar configuración"}
           </button>
