@@ -39,7 +39,7 @@ function ToolbarButton({ onClick, active, title, children }: ToolbarButtonProps)
       aria-label={title}
       aria-pressed={active}
       className={[
-        "flex h-7 w-7 items-center justify-center rounded text-xs font-bold transition-colors",
+        "flex h-7 w-7 items-center justify-center text-xs font-bold transition-colors",
         active
           ? "bg-border text-text-primary"
           : "text-text-secondary hover:bg-surface hover:text-text-primary",
@@ -287,7 +287,7 @@ export function NoteEditor({ note, availableTags = [], onSave, onSaveAndExit, on
         />
       </div>
 
-      <div className="note-editor mx-auto w-full max-w-4xl flex-1 overflow-y-auto rounded-t-[2rem] border border-b-0 border-border bg-surface-elevated shadow-xl">
+      <div className="note-editor mx-auto w-full max-w-4xl flex-1 overflow-y-auto border border-b-0 border-border bg-surface-elevated">
         <EditorToolbar editor={editor} />
         <div className="px-10 py-8 text-text-primary [&_.ProseMirror]:min-h-[55vh] [&_.ProseMirror]:outline-none [&_.ProseMirror_p]:leading-7">
           <EditorContent editor={editor} />

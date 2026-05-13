@@ -105,7 +105,7 @@ export function Select({
         aria-haspopup="listbox"
         onClick={() => setOpen(!open)}
         onKeyDown={handleTriggerKey}
-        className="flex w-full items-center justify-between rounded-lg border border-border bg-surface-elevated px-3 py-2 text-sm text-text-primary transition-colors hover:border-accent/50 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent"
+        className="flex w-full items-center justify-between border border-border bg-surface-elevated px-3 py-2 text-sm text-text-primary transition-colors hover:border-accent/50 focus:outline-none focus:border-accent"
       >
         <span className="truncate">{label}</span>
         <span
@@ -122,7 +122,7 @@ export function Select({
           role="listbox"
           aria-label={ariaLabel}
           onKeyDown={handleListKey}
-          className="absolute z-50 mt-1 w-full max-h-48 overflow-y-auto rounded-lg border border-border bg-surface-elevated shadow-lg shadow-black/10"
+          className="absolute z-50 mt-1 w-full max-h-48 overflow-y-auto border border-border bg-surface-elevated"
         >
           {options.map((opt, idx) => (
             <li
@@ -131,7 +131,7 @@ export function Select({
               aria-selected={opt.value === value}
               onClick={() => handleOptionClick(opt.value)}
               onMouseEnter={() => setFocusIdx(idx)}
-              className={`cursor-pointer px-3 py-2 text-sm transition-colors first:rounded-t-lg last:rounded-b-lg ${
+              className={`cursor-pointer px-3 py-2 text-sm transition-colors ${
                 opt.value === value
                   ? "bg-accent-subtle text-text-primary font-medium"
                   : focusIdx === idx
