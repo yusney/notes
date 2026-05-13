@@ -41,7 +41,7 @@ export function TagFilter({ tags, selectedTagIds, onChange }: TagFilterProps) {
               type="button"
               aria-pressed={isActive}
               onClick={() => toggle(tag.id)}
-              className={`rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
+              className={`border px-2.5 py-1 font-mono text-xs uppercase transition-colors ${
                 isActive
                   ? "border-accent bg-accent-subtle text-text-primary"
                   : "border-border bg-surface-elevated text-text-secondary hover:border-accent/50 hover:text-text-primary"

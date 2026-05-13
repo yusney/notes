@@ -34,7 +34,7 @@ export function NoteViewer({ note, onEdit }: NoteViewerProps) {
         <button
           type="button"
           onClick={onEdit}
-          className="rounded-full bg-text-primary px-4 py-1.5 text-sm font-semibold text-surface transition-colors hover:bg-accent hover:text-accent-text"
+          className="bg-accent px-4 py-1.5 text-sm font-bold text-accent-text transition-colors hover:bg-accent-hover"
         >
           Editar
         </button>

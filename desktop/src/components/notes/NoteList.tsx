@@ -65,7 +65,7 @@ export function NoteList({
           <button
             onClick={onCreateNote}
             aria-label="Nueva nota"
-            className="grid h-9 w-9 place-items-center rounded-full bg-accent text-lg leading-none text-accent-text shadow-sm transition-colors hover:bg-accent-hover"
+            className="grid h-9 w-9 place-items-center rounded-full bg-accent text-lg leading-none text-accent-text transition-colors hover:bg-accent-hover"
           >
             +
           </button>
@@ -86,7 +86,7 @@ export function NoteList({
 
       <ul className="flex-1 overflow-y-auto p-2">
         {notes.length === 0 ? (
-          <li className="m-2 rounded-3xl border border-dashed border-border bg-surface-elevated/70 px-5 py-8 text-center text-sm text-text-secondary">
+          <li className="m-2 border border-dashed border-border bg-surface-elevated/70 px-5 py-8 text-center text-sm text-text-secondary">
             {searchQuery ? (
               <>
                 No se encontraron notas para{" "}
@@ -118,10 +118,10 @@ export function NoteList({
               <button
                 onClick={() => onNoteSelect(note.id)}
                 aria-current={activeNoteId === note.id ? "true" : undefined}
-                className={`w-full rounded-3xl border px-4 py-3 text-left shadow-sm transition-all ${
+                className={`w-full border px-4 py-3 text-left transition-colors ${
                   activeNoteId === note.id
-                    ? "border-accent bg-surface-elevated shadow-accent/10"
-                    : "border-border bg-surface-elevated/75 shadow-transparent hover:border-border hover:bg-surface-elevated"
+                    ? "border-accent border-2 bg-surface-elevated"
+                    : "border-border bg-surface-elevated/75 hover:border-accent hover:bg-surface-elevated"
                 }`}
               >
                 <div className="flex items-start justify-between gap-2">

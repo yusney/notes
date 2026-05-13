@@ -13,7 +13,7 @@ export function SharedLinksList({ links, onRevoke }: SharedLinksListProps) {
   return (
     <ul className="space-y-2">
       {links.map((link) => (
-        <li key={link.id} className="flex items-center justify-between gap-3 rounded-xl border border-border bg-surface-elevated px-4 py-3">
+        <li key={link.id} className="flex items-center justify-between gap-3 border border-border bg-surface-elevated px-4 py-3">
           <div className="min-w-0 flex-1">
             <span className="block truncate text-xs font-mono text-text-secondary">{link.token}</span>
             {link.expiresAt && (
@@ -23,7 +23,7 @@ export function SharedLinksList({ links, onRevoke }: SharedLinksListProps) {
           <button
             onClick={() => onRevoke(link.token)}
             aria-label="revocar"
-            className="rounded-lg border border-danger px-3 py-1.5 text-xs font-medium text-danger transition-colors hover:bg-danger hover:text-accent-text"
+            className="border border-danger px-3 py-1.5 text-xs font-medium text-danger transition-colors hover:bg-danger hover:text-accent-text"
           >
             Revocar
           </button>

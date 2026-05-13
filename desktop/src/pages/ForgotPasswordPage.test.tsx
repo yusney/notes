@@ -23,7 +23,7 @@ beforeEach(() => {
 describe("ForgotPasswordPage", () => {
   it("renders email input and submit button", () => {
     renderPage();
-    expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/correo/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /enviar/i })).toBeInTheDocument();
   });
 
@@ -43,7 +43,7 @@ describe("ForgotPasswordPage", () => {
     });
 
     renderPage();
-    fireEvent.change(screen.getByLabelText(/email/i), {
+    fireEvent.change(screen.getByLabelText(/correo/i), {
       target: { value: "user@test.com" },
     });
     fireEvent.click(screen.getByRole("button", { name: /enviar/i }));
@@ -61,7 +61,7 @@ describe("ForgotPasswordPage", () => {
     });
 
     renderPage();
-    fireEvent.change(screen.getByLabelText(/email/i), {
+    fireEvent.change(screen.getByLabelText(/correo/i), {
       target: { value: "noexiste@test.com" },
     });
     fireEvent.click(screen.getByRole("button", { name: /enviar/i }));

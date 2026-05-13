@@ -98,14 +98,14 @@ export function ProfilePage() {
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-surface-elevated text-text-primary focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent"
+                className="w-full border-b-2 border-input-border px-1 py-2 text-sm bg-surface-elevated text-text-primary focus:border-accent focus:outline-none"
               />
               {nameError && <p className="text-xs text-danger">{nameError}</p>}
               {nameSuccess && <p className="text-xs text-accent">Nombre guardado</p>}
               <button
                 onClick={handleSaveName}
                 aria-label="Guardar nombre"
-                className="text-sm px-4 py-2 bg-accent text-accent-text rounded-lg hover:bg-accent-hover transition-colors"
+                className="text-sm px-4 py-2 bg-accent text-accent-text hover:bg-accent-hover transition-colors"
               >
                 Guardar nombre
               </button>
@@ -142,7 +142,7 @@ export function ProfilePage() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="text-sm px-4 py-2 bg-accent text-accent-text rounded-lg hover:bg-accent-hover disabled:opacity-50 transition-colors"
+                className="text-sm px-4 py-2 bg-accent text-accent-text hover:bg-accent-hover disabled:opacity-50 transition-colors"
               >
                 {isLoading ? "Guardando..." : "Cambiar contraseña"}
               </button>

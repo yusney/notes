@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Icon, type IconName } from "./Icon";
 
 interface PasswordInputProps {
   id: string;
@@ -7,6 +8,7 @@ interface PasswordInputProps {
   placeholder?: string;
   autoComplete?: string;
   ariaLabel?: string;
+  icon?: IconName;
 }
 
 export function PasswordInput({
@@ -16,11 +18,18 @@ export function PasswordInput({
   placeholder,
   autoComplete,
   ariaLabel,
+  icon,
 }: PasswordInputProps) {
   const [visible, setVisible] = useState(false);
 
   return (
     <div className="relative">
+      {icon && (
+        <Icon
+          name={icon}
+          className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary pointer-events-none"
+        />
+      )}
       <input
         id={id}
         type={visible ? "text" : "password"}
@@ -29,7 +38,7 @@ export function PasswordInput({
         placeholder={placeholder}
         autoComplete={autoComplete}
         aria-label={ariaLabel}
-        className="w-full px-3 py-2 bg-surface border border-border rounded-lg text-sm text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent pr-10"
+        className={`w-full py-2 bg-surface-elevated border-b-2 border-input-border text-sm text-text-primary placeholder:text-text-secondary focus:outline-none focus:border-accent pr-10 ${icon ? "pl-10" : "px-3"}`}
       />
       <button
         type="button"

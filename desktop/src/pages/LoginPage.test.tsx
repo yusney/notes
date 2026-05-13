@@ -33,7 +33,7 @@ describe("LoginPage", () => {
   it("renders email and password fields", () => {
     renderLoginPage();
 
-    expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/correo/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/contraseña/i, { selector: "input" })).toBeInTheDocument();
   });
 
@@ -55,7 +55,7 @@ describe("LoginPage", () => {
   it("shows validation error when submitting with empty password", async () => {
     renderLoginPage();
 
-    fireEvent.change(screen.getByLabelText(/email/i), {
+    fireEvent.change(screen.getByLabelText(/correo/i), {
       target: { value: "user@test.com" },
     });
     fireEvent.click(screen.getByRole("button", { name: /iniciar sesión/i }));
@@ -71,7 +71,7 @@ describe("LoginPage", () => {
     );
     renderLoginPage();
 
-    fireEvent.change(screen.getByLabelText(/email/i), {
+    fireEvent.change(screen.getByLabelText(/correo/i), {
       target: { value: "user@test.com" },
     });
     fireEvent.change(screen.getByLabelText(/contraseña/i, { selector: "input" }), {
@@ -92,7 +92,7 @@ describe("LoginPage", () => {
     });
     renderLoginPage();
 
-    fireEvent.change(screen.getByLabelText(/email/i), {
+    fireEvent.change(screen.getByLabelText(/correo/i), {
       target: { value: "bad@test.com" },
     });
     fireEvent.change(screen.getByLabelText(/contraseña/i, { selector: "input" }), {

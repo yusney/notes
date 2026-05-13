@@ -22,8 +22,10 @@ export function resolveTheme(stored: string | null, systemPrefersDark: boolean):
 export function applyThemeToDocument(resolved: ResolvedTheme): void {
   if (resolved === "dark") {
     document.documentElement.classList.add("dark");
+    document.documentElement.classList.remove("light");
   } else {
     document.documentElement.classList.remove("dark");
+    document.documentElement.classList.add("light");
   }
 }
 
@@ -36,7 +38,7 @@ export function useTheme() {
 
   const [theme, setThemeState] = useState<Theme>(() => {
     const stored = localStorage.getItem(THEME_KEY) as Theme | null;
-    return stored ?? "system";
+    return stored ?? "dark";
   });
 
   const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>(() => {
