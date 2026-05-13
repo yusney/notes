@@ -42,7 +42,7 @@ export function Sidebar({ tabs, activeTabId, onTabSelect, onCreateTab, userName,
                   aria-current={activeTabId === tab.id ? "true" : undefined}
                   className={`w-full px-3 py-2.5 text-left text-sm transition-colors ${
                     activeTabId === tab.id
-                      ? "bg-accent text-accent-text"
+                      ? "bg-accent-subtle border-l-2 border-accent text-text-primary"
                       : "text-text-secondary hover:bg-surface hover:text-text-primary"
                   }`}
                 >

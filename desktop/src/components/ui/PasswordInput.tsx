@@ -29,7 +29,7 @@ export function PasswordInput({
         placeholder={placeholder}
         autoComplete={autoComplete}
         aria-label={ariaLabel}
-        className="w-full px-3 py-2 bg-surface border border-border rounded-lg text-sm text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent pr-10"
+        className="w-full px-3 py-2 bg-surface-elevated border-b-2 border-border text-sm text-text-primary placeholder:text-text-secondary focus:outline-none focus:border-accent pr-10"
       />
       <button
         type="button"

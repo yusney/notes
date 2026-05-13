@@ -120,8 +120,8 @@ export function NoteList({
                 aria-current={activeNoteId === note.id ? "true" : undefined}
                 className={`w-full border px-4 py-3 text-left transition-colors ${
                   activeNoteId === note.id
-                    ? "border-accent bg-surface-elevated"
-                    : "border-border bg-surface-elevated/75 hover:border-border hover:bg-surface-elevated"
+                    ? "border-accent border-2 bg-surface-elevated"
+                    : "border-border bg-surface-elevated/75 hover:border-accent hover:bg-surface-elevated"
                 }`}
               >
                 <div className="flex items-start justify-between gap-2">
