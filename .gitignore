@@ -489,3 +489,6 @@ desktop/coverage/
 
 # ATL skill registry cache
 .atl/.skill-registry.cache.json
+
+# Engram local memory
+.engram/
