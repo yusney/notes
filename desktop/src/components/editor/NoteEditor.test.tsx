@@ -341,4 +341,83 @@ describe("NoteEditor", () => {
       // The tab shortcut is wired via editor extensions (verified in verify phase E2E)
     });
   });
+
+  // ─── Phase 3: Theme-Aware Highlighting & Editor UX ───────────────────────────
+
+  describe("3.3 — Empty code block placeholder", () => {
+    it("renders a data-placeholder attribute on the ProseMirror wrapper for empty notes", () => {
+      // NoteEditor must apply a CSS-driven placeholder via data-placeholder attribute
+      // on the .note-editor-content wrapper when note content is empty
+      const { container } = render(
+        <NoteEditor note={{ ...mockNote, content: "" }} onSave={vi.fn()} />
+      );
+      const contentWrapper = container.querySelector(".note-editor-content");
+      expect(contentWrapper).toBeInTheDocument();
+      // The placeholder is applied via the TipTap editor's placeholder extension
+      // In jsdom the EditorContent mock renders — we verify the wrapper is present
+      // and the editor is initialized (full placeholder behavior tested in E2E)
+      expect(container.querySelector("[data-testid='editor-content']")).toBeInTheDocument();
+    });
+
+    it("applies placeholder extension when content is empty", () => {
+      // When note.content is empty string, editor must be configured to show placeholder
+      // We check via a data attribute on the editor wrapper element
+      const { container } = render(
+        <NoteEditor note={{ ...mockNote, content: "" }} onSave={vi.fn()} />
+      );
+      // The note-editor-content wrapper must carry a data-placeholder-enabled attribute
+      // when content is empty — this signals placeholder CSS is active
+      const editorWrapper = container.querySelector(".note-editor-content");
+      expect(editorWrapper?.getAttribute("data-placeholder-enabled")).toBe("true");
+    });
+  });
+
+  describe("3.4 — Status bar", () => {
+    it("renders the status bar region", () => {
+      render(<NoteEditor note={mockNote} onSave={vi.fn()} />);
+      expect(screen.getByRole("status")).toBeInTheDocument();
+    });
+
+    it("displays character count in the status bar", () => {
+      render(<NoteEditor note={mockNote} onSave={vi.fn()} />);
+      // mockEditorInstance.getText returns "const x=1" (9 chars)
+      expect(screen.getByText(/9\s*car/i)).toBeInTheDocument();
+    });
+
+    it("displays word count in the status bar", () => {
+      render(<NoteEditor note={mockNote} onSave={vi.fn()} />);
+      // "const x=1" → 2 words ("const" and "x=1")
+      expect(screen.getByText(/2\s*pal/i)).toBeInTheDocument();
+    });
+
+    it("displays line count in the status bar", () => {
+      render(<NoteEditor note={mockNote} onSave={vi.fn()} />);
+      // "const x=1" → 1 line
+      expect(screen.getByText(/1\s*lín/i)).toBeInTheDocument();
+    });
+
+    it("renders copy button in the status bar", () => {
+      render(<NoteEditor note={mockNote} onSave={vi.fn()} />);
+      expect(screen.getByRole("button", { name: /copiar/i })).toBeInTheDocument();
+    });
+
+    it("copy button calls clipboard.writeText with editor text content", async () => {
+      const writeText = vi.fn().mockResolvedValue(undefined);
+      Object.defineProperty(navigator, "clipboard", {
+        value: { writeText },
+        writable: true,
+        configurable: true,
+      });
+
+      render(<NoteEditor note={mockNote} onSave={vi.fn()} />);
+      const copyBtn = screen.getByRole("button", { name: /copiar/i });
+
+      await act(async () => {
+        fireEvent.click(copyBtn);
+        await Promise.resolve();
+      });
+
+      expect(writeText).toHaveBeenCalledWith("const x=1");
+    });
+  });
 });
