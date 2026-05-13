@@ -85,7 +85,7 @@ function FilterPill({ label, onRemove }: { label: string; onRemove: () => void }
   return (
     <span
       role="listitem"
-      className="inline-flex items-center gap-1 rounded-full border border-accent bg-accent-subtle px-2.5 py-0.5 text-xs font-medium text-text-primary"
+      className="inline-flex items-center gap-1 border border-accent bg-accent-subtle px-2.5 py-0.5 font-mono text-xs uppercase text-text-primary"
     >
       {label}
       <button
