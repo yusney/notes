@@ -142,6 +142,30 @@ function EditorToolbar({ editor }: EditorToolbarProps) {
       >
         <span className="font-mono text-[9px] leading-none">{"<>"}</span>
       </ToolbarButton>
+
+      <div className="mx-1 h-4 w-px bg-border" />
+
+      <ToolbarButton
+        onClick={() => editor.chain().focus().undo().run()}
+        title="Deshacer (Ctrl+Z)"
+      >
+        <span className="font-mono text-[10px] leading-none">↩</span>
+      </ToolbarButton>
+      <ToolbarButton
+        onClick={() => editor.chain().focus().redo().run()}
+        title="Rehacer (Ctrl+Y)"
+      >
+        <span className="font-mono text-[10px] leading-none">↪</span>
+      </ToolbarButton>
+
+      <div className="mx-1 h-4 w-px bg-border" />
+
+      <ToolbarButton
+        onClick={() => editor.chain().focus().setHorizontalRule().run()}
+        title="Línea horizontal"
+      >
+        <span className="text-[10px] leading-none">―</span>
+      </ToolbarButton>
     </div>
   );
 }
@@ -287,9 +311,9 @@ export function NoteEditor({ note, availableTags = [], onSave, onSaveAndExit, on
         />
       </div>
 
-      <div className="note-editor mx-auto w-full max-w-4xl flex-1 overflow-y-auto border border-b-0 border-border bg-surface-elevated">
+      <div className="note-editor mx-auto w-full max-w-4xl flex-1 overflow-hidden border border-b-0 border-border bg-surface-elevated flex flex-col">
         <EditorToolbar editor={editor} />
-        <div className="px-10 py-8 text-text-primary [&_.ProseMirror]:min-h-[55vh] [&_.ProseMirror]:outline-none [&_.ProseMirror_p]:leading-7">
+        <div className="note-editor-content flex-1 overflow-y-auto px-10 py-8 text-text-primary [&_.ProseMirror]:min-h-[55vh] [&_.ProseMirror]:outline-none [&_.ProseMirror_p]:leading-7">
           <EditorContent editor={editor} />
         </div>
       </div>
