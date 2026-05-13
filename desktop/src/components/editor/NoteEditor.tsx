@@ -241,7 +241,7 @@ export function NoteEditor({ note, availableTags = [], onSave, onSaveAndExit, on
             <button
               onClick={onCancel}
               aria-label="Cancelar edición"
-              className="rounded-full border border-border bg-surface-elevated px-4 py-2 text-sm font-semibold text-text-primary transition-colors hover:bg-surface"
+              className="border border-border bg-surface-elevated px-4 py-2 text-sm font-semibold text-text-primary transition-colors hover:bg-surface"
             >
               Cancelar
             </button>
@@ -249,14 +249,14 @@ export function NoteEditor({ note, availableTags = [], onSave, onSaveAndExit, on
           <button
             onClick={() => setShareDialogOpen(true)}
             aria-label="Compartir nota"
-            className="rounded-full border border-accent bg-accent-subtle px-4 py-2 text-sm font-semibold text-accent transition-colors hover:bg-accent hover:text-accent-text"
+            className="border border-accent bg-accent-subtle px-4 py-2 text-sm font-semibold text-accent transition-colors hover:bg-accent hover:text-accent-text"
           >
             Compartir
           </button>
           <button
             onClick={handleManualSave}
             aria-label="Guardar nota"
-            className="rounded-full bg-text-primary px-4 py-2 text-sm font-semibold text-surface shadow-sm transition-colors hover:bg-accent hover:text-accent-text"
+            className="bg-accent px-4 py-2 text-sm font-bold text-accent-text transition-colors hover:bg-accent-hover"
           >
             Guardar
           </button>
