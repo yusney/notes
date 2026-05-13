@@ -77,12 +77,13 @@ describe("useNoteStore.exportNotes", () => {
   it("calls apiClient fetch with /api/notes/export and triggers download", async () => {
     const fakeZip = new Blob(["PK zip data"], { type: "application/zip" });
 
-    const mockFetch = vi.fn().mockResolvedValue(
-      new Response(fakeZip, {
-        status: 200,
-        headers: { "Content-Type": "application/zip" },
-      })
-    );
+    // jsdom no soporta new Response(blob) — usa .stream() interno que no existe.
+    // Devolvemos un objeto plano con .blob().
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      blob: () => Promise.resolve(fakeZip),
+    });
     vi.stubGlobal("fetch", mockFetch);
 
     const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
