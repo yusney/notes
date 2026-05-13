@@ -98,7 +98,7 @@ export function ProfilePage() {
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full border-b-2 border-border px-1 py-2 text-sm bg-surface-elevated text-text-primary focus:border-accent focus:outline-none"
+                className="w-full border-b-2 border-input-border px-1 py-2 text-sm bg-surface-elevated text-text-primary focus:border-accent focus:outline-none"
               />
               {nameError && <p className="text-xs text-danger">{nameError}</p>}
               {nameSuccess && <p className="text-xs text-accent">Nombre guardado</p>}

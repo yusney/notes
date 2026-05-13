@@ -51,7 +51,7 @@ export function TagInput({ availableTags, selectedTagNames, onChange }: TagInput
         value={inputValue}
         onChange={(e) => setInputValue(e.target.value)}
         onKeyDown={handleKeyDown}
-        className="w-full border-b-2 border-border bg-transparent px-1 py-2 text-sm text-text-primary placeholder:text-text-secondary focus:border-accent focus:outline-none"
+        className="w-full border-b-2 border-input-border bg-transparent px-1 py-2 text-sm text-text-primary placeholder:text-text-secondary focus:border-accent focus:outline-none"
       />
       <datalist id="available-tags">
         {availableTags.map((tag) => (

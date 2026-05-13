@@ -2,6 +2,7 @@ import { useState, useEffect, FormEvent } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { apiClient } from "../api/client";
 import { PasswordInput } from "../components/ui/PasswordInput";
+import { Icon } from "../components/ui/Icon";
 
 type PageState = "validating" | "invalid" | "ready" | "loading" | "error";
 
@@ -101,6 +102,7 @@ export function ResetPasswordPage() {
             </label>
             <PasswordInput
               id="password"
+              icon="lock"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="new-password"
@@ -113,9 +115,10 @@ export function ResetPasswordPage() {
           <button
             type="submit"
             disabled={pageState === "loading"}
-            className="w-full py-2 px-4 bg-accent text-accent-text text-sm font-medium hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full py-2 px-4 bg-accent text-accent-text text-sm font-medium hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {pageState === "loading" ? "Restableciendo..." : "Restablecer contraseña"}
+            <Icon name="arrow_forward" />
           </button>
         </form>
       </div>

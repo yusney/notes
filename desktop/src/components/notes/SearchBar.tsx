@@ -49,7 +49,7 @@ export function SearchBar({
           value={value}
           onChange={handleChange}
           placeholder="Buscar en título y contenido..."
-          className="w-full border-b-2 border-border bg-surface py-2.5 pl-9 pr-8 text-sm text-text-primary placeholder:text-text-secondary focus:border-accent focus:bg-surface-elevated focus:outline-none"
+          className="w-full border-b-2 border-input-border bg-surface py-2.5 pl-9 pr-8 text-sm text-text-primary placeholder:text-text-secondary focus:border-accent focus:bg-surface-elevated focus:outline-none"
         />
         {value && (
           <button

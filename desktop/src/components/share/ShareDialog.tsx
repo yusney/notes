@@ -66,7 +66,7 @@ export function ShareDialog({ noteId, isOpen, onClose }: ShareDialogProps) {
                     value={expiresAt}
                     onChange={(e) => setExpiresAt(e.target.value)}
                     aria-label="Expira el"
-                    className="w-full border-b-2 border-border bg-surface-elevated px-3 py-2 text-sm text-text-primary focus:border-accent focus:outline-none"
+                    className="w-full border-b-2 border-input-border bg-surface-elevated px-3 py-2 text-sm text-text-primary focus:border-accent focus:outline-none"
                   />
                 </div>
               )}
