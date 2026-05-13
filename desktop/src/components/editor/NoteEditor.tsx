@@ -28,6 +28,13 @@ const CodeBlockTabExtension = Extension.create({
   },
 });
 
+export function countEditorStats(text: string): { chars: number; words: number; lines: number } {
+  const chars = text.length;
+  const words = text.trim() === "" ? 0 : text.trim().split(/\s+/).length;
+  const lines = text === "" ? 1 : text.split("\n").length;
+  return { chars, words, lines };
+}
+
 function SaveStatusIndicator({ status }: { status: SaveStatus }) {
   if (status === "saving" || status === "pending") {
     return <span className="text-xs font-medium text-text-secondary">Guardando...</span>;
@@ -218,6 +225,9 @@ export function NoteEditor({ note, availableTags = [], onSave, onSaveAndExit, on
     },
   });
 
+  // Derived — always reflects current editor text without extra state
+  const editorText = editor?.getText() ?? "";
+
   useEffect(() => {
     if (previousNoteId.current === note.id) return;
     previousNoteId.current = note.id;
@@ -276,6 +286,11 @@ export function NoteEditor({ note, availableTags = [], onSave, onSaveAndExit, on
     } catch {
       // formatting failed silently — leave content unchanged
     }
+  }
+
+  async function handleCopyContent() {
+    const text = editor ? editor.getText() : editorText;
+    await navigator.clipboard.writeText(text);
   }
 
   async function handleManualSave() {
@@ -355,10 +370,46 @@ export function NoteEditor({ note, availableTags = [], onSave, onSaveAndExit, on
         {editor && (
           <CodeBlockBubbleMenu editor={editor} onFormat={handleFormatCodeBlock} />
         )}
-        <div className="note-editor-content flex-1 overflow-y-auto px-10 py-8 text-text-primary [&_.ProseMirror]:min-h-[55vh] [&_.ProseMirror]:outline-none [&_.ProseMirror_p]:leading-7">
+        <div
+          className="note-editor-content flex-1 overflow-y-auto px-10 py-8 text-text-primary [&_.ProseMirror]:min-h-[55vh] [&_.ProseMirror]:outline-none [&_.ProseMirror_p]:leading-7"
+          data-placeholder-enabled={editorContent === "" ? "true" : undefined}
+        >
           <EditorContent editor={editor} />
         </div>
+        <EditorStatusBar text={editorText} onCopy={handleCopyContent} />
       </div>
+    </div>
+  );
+}
+
+interface EditorStatusBarProps {
+  text: string;
+  onCopy: () => void;
+}
+
+function EditorStatusBar({ text, onCopy }: EditorStatusBarProps) {
+  const { chars, words, lines } = countEditorStats(text);
+  return (
+    <div
+      role="status"
+      aria-label="Estado del editor"
+      className="flex items-center justify-between border-t border-border bg-surface px-4 py-1.5 text-xs text-text-secondary"
+    >
+      <span className="flex gap-4">
+        <span aria-label="Caracteres">{chars} car.</span>
+        <span aria-label="Palabras">{words} pal.</span>
+        <span aria-label="Líneas">{lines} lín.</span>
+      </span>
+      <button
+        type="button"
+        onClick={onCopy}
+        aria-label="Copiar contenido"
+        title="Copiar contenido del editor"
+        className="flex items-center gap-1 text-xs text-text-secondary transition-colors hover:text-text-primary"
+      >
+        <span>⧉</span>
+        <span>Copiar</span>
+      </button>
     </div>
   );
 }
