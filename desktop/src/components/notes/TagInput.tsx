@@ -30,7 +30,7 @@ export function TagInput({ availableTags, selectedTagNames, onChange }: TagInput
         {selectedTagNames.map((name) => (
           <span
             key={name}
-            className="inline-flex items-center gap-1 rounded-full border border-accent-subtle bg-accent-subtle px-2.5 py-1 text-xs font-medium text-text-primary"
+            className="inline-flex items-center gap-1 border border-border bg-accent-subtle px-2.5 py-1 font-mono text-xs uppercase text-text-primary"
           >
             {name}
             <button
@@ -51,7 +51,7 @@ export function TagInput({ availableTags, selectedTagNames, onChange }: TagInput
         value={inputValue}
         onChange={(e) => setInputValue(e.target.value)}
         onKeyDown={handleKeyDown}
-        className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-secondary focus:border-accent focus:bg-surface-elevated focus:outline-none focus:ring-2 focus:ring-accent/20"
+        className="w-full border-b-2 border-input-border bg-transparent px-1 py-2 text-sm text-text-primary placeholder:text-text-secondary focus:border-accent focus:outline-none"
       />
       <datalist id="available-tags">
         {availableTags.map((tag) => (

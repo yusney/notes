@@ -38,9 +38,9 @@ export function ShareDialog({ noteId, isOpen, onClose }: ShareDialogProps) {
       role="dialog"
       aria-modal="true"
       aria-label="compartir nota"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-text-primary/40 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-overlay backdrop-blur-sm"
     >
-      <div className="w-full max-w-sm rounded-2xl border border-border bg-surface-elevated p-6 shadow-xl">
+      <div className="w-full max-w-sm border border-border bg-surface-elevated p-6">
         <h2 className="text-lg font-semibold text-text-primary mb-4">Compartir nota</h2>
 
         {!createdToken ? (
@@ -52,7 +52,7 @@ export function ShareDialog({ noteId, isOpen, onClose }: ShareDialogProps) {
                   aria-label="fecha de expiración"
                   checked={hasExpiry}
                   onChange={(e) => setHasExpiry(e.target.checked)}
-                  className="h-4 w-4 rounded border-border bg-surface text-accent focus:ring-accent"
+                  className="h-4 w-4 border-border bg-surface text-accent focus:outline-none focus:border-accent"
                 />
                 Fecha de expiración
               </label>
@@ -66,7 +66,7 @@ export function ShareDialog({ noteId, isOpen, onClose }: ShareDialogProps) {
                     value={expiresAt}
                     onChange={(e) => setExpiresAt(e.target.value)}
                     aria-label="Expira el"
-                    className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
+                    className="w-full border-b-2 border-input-border bg-surface-elevated px-3 py-2 text-sm text-text-primary focus:border-accent focus:outline-none"
                   />
                 </div>
               )}
@@ -75,14 +75,14 @@ export function ShareDialog({ noteId, isOpen, onClose }: ShareDialogProps) {
             <div className="mt-5 flex justify-end gap-2">
               <button
                 onClick={handleClose}
-                className="rounded-lg border border-border px-4 py-2 text-sm text-text-secondary transition-colors hover:bg-surface hover:text-text-primary"
+                className="border border-border px-4 py-2 text-sm text-text-secondary transition-colors hover:bg-surface hover:text-text-primary"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleCreate}
                 disabled={isLoading}
-                className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-text transition-colors hover:bg-accent-hover disabled:opacity-50"
+                className="bg-accent px-4 py-2 text-sm font-bold text-accent-text transition-colors hover:bg-accent-hover disabled:opacity-50"
               >
                 Crear enlace
               </button>
@@ -91,19 +91,19 @@ export function ShareDialog({ noteId, isOpen, onClose }: ShareDialogProps) {
         ) : (
           <>
             <p className="text-sm text-text-secondary mb-2">Enlace creado:</p>
-            <code className="block w-full rounded-lg border border-border bg-surface px-3 py-2 text-xs text-text-primary break-all">
+            <code className="block w-full border border-border bg-surface px-3 py-2 text-xs text-text-primary break-all">
               {`${window.location.origin}/share/${createdToken}`}
             </code>
             <div className="mt-5 flex justify-end gap-2">
               <button
                 onClick={handleCopy}
-                className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-text transition-colors hover:bg-accent-hover"
+                className="bg-accent px-4 py-2 text-sm font-bold text-accent-text transition-colors hover:bg-accent-hover"
               >
                 Copiar enlace
               </button>
               <button
                 onClick={handleClose}
-                className="rounded-lg border border-border px-4 py-2 text-sm text-text-secondary transition-colors hover:bg-surface hover:text-text-primary"
+                className="border border-border px-4 py-2 text-sm text-text-secondary transition-colors hover:bg-surface hover:text-text-primary"
               >
                 Cerrar
               </button>

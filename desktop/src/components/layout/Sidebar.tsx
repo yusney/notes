@@ -31,8 +31,7 @@ export function Sidebar({ tabs, activeTabId, onTabSelect, onCreateTab, userName,
 
       <nav className="flex-1 overflow-y-auto px-2 pb-3">
         {tabs.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-border p-4 text-sm text-text-secondary">
-            No hay tabs todavía. Creá un espacio para agrupar tus notas.
+          <div className="border border-dashed border-border p-4 text-sm text-text-secondary">            No hay tabs todavía. Creá un espacio para agrupar tus notas.
           </div>
         ) : (
           <ul className="space-y-1">
@@ -41,9 +40,9 @@ export function Sidebar({ tabs, activeTabId, onTabSelect, onCreateTab, userName,
                 <button
                   onClick={() => onTabSelect(tab.id)}
                   aria-current={activeTabId === tab.id ? "true" : undefined}
-                  className={`w-full rounded-2xl px-3 py-2.5 text-left text-sm transition-colors ${
+                  className={`w-full px-3 py-2.5 text-left text-sm transition-colors ${
                     activeTabId === tab.id
-                      ? "bg-accent text-accent-text shadow-sm"
+                      ? "bg-accent-subtle border-l-2 border-accent text-text-primary"
                       : "text-text-secondary hover:bg-surface hover:text-text-primary"
                   }`}
                 >
@@ -57,13 +56,13 @@ export function Sidebar({ tabs, activeTabId, onTabSelect, onCreateTab, userName,
 
       <div className="border-t border-border p-2">
         {(userName || onLogout) && (
-          <div className="mb-2 rounded-2xl border border-border bg-surface/70 p-3">
+          <div className="mb-2 border border-border bg-surface/70 p-3">
             <p className="truncate text-xs font-medium text-text-secondary">Sesión activa</p>
             {userName && <p className="mt-1 truncate text-sm font-semibold text-text-primary">{userName}</p>}
             {onLogout && (
               <button
                 onClick={onLogout}
-                className="mt-3 w-full rounded-full border border-border px-3 py-2 text-xs font-semibold text-text-secondary transition-colors hover:border-danger hover:bg-danger/10 hover:text-danger"
+                className="mt-3 w-full border border-border px-3 py-2 text-xs font-semibold text-text-secondary transition-colors hover:border-danger hover:bg-danger/10 hover:text-danger"
               >
                 Cerrar sesión
               </button>
@@ -73,14 +72,14 @@ export function Sidebar({ tabs, activeTabId, onTabSelect, onCreateTab, userName,
         <Link
           to="/profile"
           aria-label="Perfil"
-          className="flex items-center rounded-xl px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-surface hover:text-text-primary"
+          className="flex items-center px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-surface hover:text-text-primary"
         >
           <span className="mr-2" aria-hidden="true">👤</span> Perfil
         </Link>
         <Link
           to="/settings"
           aria-label="Configuración"
-          className="flex items-center rounded-xl px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-surface hover:text-text-primary"
+          className="flex items-center px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-surface hover:text-text-primary"
         >
           <span className="mr-2" aria-hidden="true">⚙️</span> Configuración
         </Link>

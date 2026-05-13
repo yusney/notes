@@ -1,6 +1,7 @@
 import { useState, FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { apiClient } from "../api/client";
+import { Icon } from "../components/ui/Icon";
 
 type PageState = "idle" | "loading" | "success" | "error";
 
@@ -30,7 +31,7 @@ export function ForgotPasswordPage() {
   if (pageState === "success") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-surface">
-        <div className="bg-surface-elevated border border-border p-8 rounded-2xl shadow-lg w-full max-w-sm text-center">
+        <div className="bg-surface-elevated border border-border p-8 w-full max-w-sm text-center">
           <h1 className="text-2xl font-bold text-text-primary mb-4">Revisá tu email</h1>
           <p className="text-sm text-text-secondary mb-6">
             Si tu email está registrado, recibirás un enlace para restablecer tu contraseña.
@@ -45,11 +46,11 @@ export function ForgotPasswordPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-surface">
-      <div className="bg-surface-elevated border border-border p-8 rounded-2xl shadow-lg w-full max-w-sm">
+      <div className="bg-surface-elevated border border-border p-8 w-full max-w-sm">
         <h1 className="text-2xl font-bold text-text-primary mb-6">Recuperar contraseña</h1>
 
         {pageState === "error" && (
-          <div role="alert" className="mb-4 p-3 bg-danger/10 border border-danger rounded-lg text-sm text-danger">
+          <div role="alert" className="mb-4 p-3 bg-danger/10 border border-danger text-sm text-danger">
             Ocurrió un error. Intentá de nuevo más tarde.
           </div>
         )}
@@ -57,16 +58,19 @@ export function ForgotPasswordPage() {
         <form onSubmit={handleSubmit} noValidate className="space-y-4">
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-text-primary mb-1">
-              Email
+              Correo Electrónico
             </label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2 bg-surface border border-border rounded-lg text-sm text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
-              autoComplete="email"
-            />
+            <div className="relative">
+              <Icon name="mail" className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary pointer-events-none" />
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full pl-10 pr-3 py-2 bg-surface-elevated border-b-2 border-input-border text-sm text-text-primary placeholder:text-text-secondary focus:border-accent focus:outline-none"
+                autoComplete="email"
+              />
+            </div>
             {fieldError && (
               <p className="mt-1 text-xs text-danger">{fieldError}</p>
             )}
@@ -75,9 +79,10 @@ export function ForgotPasswordPage() {
           <button
             type="submit"
             disabled={pageState === "loading"}
-            className="w-full py-2 px-4 bg-accent text-accent-text rounded-lg text-sm font-medium hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full py-2 px-4 bg-accent text-accent-text text-sm font-medium hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {pageState === "loading" ? "Enviando..." : "Enviar enlace"}
+            <Icon name="arrow_forward" />
           </button>
         </form>
 

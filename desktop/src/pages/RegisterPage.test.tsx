@@ -30,7 +30,7 @@ describe("RegisterPage", () => {
     renderRegisterPage();
 
     expect(screen.getByLabelText(/nombre/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/correo/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/contraseña/i, { selector: "input" })).toBeInTheDocument();
   });
 
@@ -43,7 +43,7 @@ describe("RegisterPage", () => {
     renderRegisterPage();
 
     fireEvent.change(screen.getByLabelText(/nombre/i), { target: { value: "User" } });
-    fireEvent.change(screen.getByLabelText(/email/i), { target: { value: "u@t.com" } });
+    fireEvent.change(screen.getByLabelText(/correo/i), { target: { value: "u@t.com" } });
     fireEvent.change(screen.getByLabelText(/contraseña/i, { selector: "input" }), { target: { value: "short" } });
     fireEvent.click(screen.getByRole("button", { name: /registrarse/i }));
 
@@ -56,7 +56,7 @@ describe("RegisterPage", () => {
     renderRegisterPage();
 
     fireEvent.change(screen.getByLabelText(/nombre/i), { target: { value: "User" } });
-    fireEvent.change(screen.getByLabelText(/email/i), { target: { value: "u@t.com" } });
+    fireEvent.change(screen.getByLabelText(/correo/i), { target: { value: "u@t.com" } });
     fireEvent.change(screen.getByLabelText(/contraseña/i, { selector: "input" }), {
       target: { value: "NoNumbers!" },
     });
@@ -70,7 +70,7 @@ describe("RegisterPage", () => {
   it("shows error when name is empty", async () => {
     renderRegisterPage();
 
-    fireEvent.change(screen.getByLabelText(/email/i), { target: { value: "u@t.com" } });
+    fireEvent.change(screen.getByLabelText(/correo/i), { target: { value: "u@t.com" } });
     fireEvent.change(screen.getByLabelText(/contraseña/i, { selector: "input" }), {
       target: { value: "Password1!" },
     });
