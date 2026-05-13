@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useEditor, EditorContent } from "@tiptap/react";
+import { useEditor, EditorContent, Extension } from "@tiptap/react";
 import { StarterKit } from "@tiptap/starter-kit";
 import { CodeBlockLowlight } from "@tiptap/extension-code-block-lowlight";
 import { all, createLowlight } from "lowlight";
@@ -7,8 +7,26 @@ import { useAutoSave, type SaveStatus } from "../../hooks/useAutoSave";
 import type { Note, Tag } from "../../types";
 import { TagInput } from "../notes/TagInput";
 import { ShareDialog } from "../share/ShareDialog";
+import { CodeBlockBubbleMenu } from "./CodeBlockBubbleMenu";
+import { formatCodeBlock } from "./CodeFormatter";
+import type { SupportedFormatLang } from "./CodeFormatter";
 
 const lowlight = createLowlight(all);
+
+const CodeBlockTabExtension = Extension.create({
+  name: "codeBlockTab",
+  addKeyboardShortcuts() {
+    return {
+      Tab: () => {
+        if (this.editor.isActive("codeBlock")) {
+          this.editor.chain().focus().insertContent("  ").run();
+          return true;
+        }
+        return false;
+      },
+    };
+  },
+});
 
 function SaveStatusIndicator({ status }: { status: SaveStatus }) {
   if (status === "saving" || status === "pending") {
@@ -192,6 +210,7 @@ export function NoteEditor({ note, availableTags = [], onSave, onSaveAndExit, on
     extensions: [
       StarterKit.configure({ codeBlock: false }),
       CodeBlockLowlight.configure({ lowlight, defaultLanguage: null }),
+      CodeBlockTabExtension,
     ],
     content: note.content,
     onUpdate: ({ editor }) => {
@@ -238,6 +257,26 @@ export function NoteEditor({ note, availableTags = [], onSave, onSaveAndExit, on
     onSave: handleAutoSave,
     delay: 1500,
   });
+
+  async function handleFormatCodeBlock() {
+    if (!editor) return;
+    const lang = editor.getAttributes("codeBlock").language as string | null;
+    const supportedLangs: SupportedFormatLang[] = [
+      "javascript", "typescript", "json", "css", "html", "markdown",
+    ];
+    if (!lang || !supportedLangs.includes(lang as SupportedFormatLang)) return;
+    const raw = editor.state.doc.textBetween(
+      editor.state.selection.from,
+      editor.state.selection.to,
+      "\n"
+    ) || editor.getText();
+    try {
+      const formatted = await formatCodeBlock(raw, lang as SupportedFormatLang);
+      editor.chain().focus().selectAll().insertContent(formatted).run();
+    } catch {
+      // formatting failed silently — leave content unchanged
+    }
+  }
 
   async function handleManualSave() {
     isSavingManually.current = true;
@@ -313,6 +352,9 @@ export function NoteEditor({ note, availableTags = [], onSave, onSaveAndExit, on
 
       <div className="note-editor mx-auto w-full max-w-4xl flex-1 overflow-hidden border border-b-0 border-border bg-surface-elevated flex flex-col">
         <EditorToolbar editor={editor} />
+        {editor && (
+          <CodeBlockBubbleMenu editor={editor} onFormat={handleFormatCodeBlock} />
+        )}
         <div className="note-editor-content flex-1 overflow-y-auto px-10 py-8 text-text-primary [&_.ProseMirror]:min-h-[55vh] [&_.ProseMirror]:outline-none [&_.ProseMirror_p]:leading-7">
           <EditorContent editor={editor} />
         </div>

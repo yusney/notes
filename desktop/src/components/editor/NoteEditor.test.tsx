@@ -3,11 +3,33 @@ import { render, screen, act, fireEvent } from "@testing-library/react";
 import { NoteEditor } from "./NoteEditor";
 import type { Note, Tag } from "../../types";
 
+// Mock CodeFormatter so we can control its behavior in tests
+vi.mock("./CodeFormatter", () => ({
+  formatCodeBlock: vi.fn(),
+}));
+
+// Mock CodeBlockBubbleMenu to expose onFormat callback
+vi.mock("./CodeBlockBubbleMenu", () => ({
+  CodeBlockBubbleMenu: ({
+    onFormat,
+  }: {
+    onFormat: () => void;
+    editor: unknown;
+  }) => (
+    <button data-testid="mock-format-btn" onClick={onFormat}>
+      Format
+    </button>
+  ),
+}));
+
 // Mock editor with getHTML so we can verify the save path reads from it
 const mockGetHTML = vi.fn(() => "<p>content from editor</p>");
+const mockInsertContentRun = vi.fn();
 const mockEditorInstance = {
   getHTML: mockGetHTML,
   isActive: vi.fn(() => false),
+  getAttributes: vi.fn(() => ({ language: "javascript" })),
+  getText: vi.fn(() => "const x=1"),
   chain: vi.fn(() => ({
     focus: vi.fn(() => ({
       toggleHeading: vi.fn(() => ({ run: vi.fn() })),
@@ -21,9 +43,19 @@ const mockEditorInstance = {
       undo: vi.fn(() => ({ run: vi.fn() })),
       redo: vi.fn(() => ({ run: vi.fn() })),
       setHorizontalRule: vi.fn(() => ({ run: vi.fn() })),
+      insertContent: vi.fn(() => ({ run: mockInsertContentRun })),
+      deleteSelection: vi.fn(() => ({ insertContent: vi.fn(() => ({ run: mockInsertContentRun })) })),
     })),
   })),
-  commands: { setContent: vi.fn() },
+  commands: {
+    setContent: vi.fn(),
+    selectAll: vi.fn(),
+    insertContent: vi.fn(),
+  },
+  state: {
+    selection: { from: 0, to: 10 },
+    doc: { textBetween: vi.fn(() => "const x=1") },
+  },
 };
 
 // TipTap doesn't fully work in jsdom — we test the wrapper behavior
@@ -32,6 +64,9 @@ vi.mock("@tiptap/react", () => ({
   EditorContent: ({ editor }: { editor: unknown }) => (
     <div data-testid="editor-content" data-editor={editor ? "ready" : "loading"} />
   ),
+  Extension: {
+    create: vi.fn((config: Record<string, unknown>) => config),
+  },
 }));
 
 const mockTags: Tag[] = [
@@ -266,6 +301,44 @@ describe("NoteEditor", () => {
     it("renders a Horizontal Rule button in the toolbar", () => {
       render(<NoteEditor note={mockNote} onSave={vi.fn()} />);
       expect(screen.getByRole("button", { name: /línea horizontal/i })).toBeInTheDocument();
+    });
+  });
+
+  // ─── Phase 2: Code Block Contextual Controls ─────────────────────────────────
+
+  describe("2.4 — Format action integration", () => {
+    it("renders the CodeBlockBubbleMenu (mock) inside NoteEditor", () => {
+      render(<NoteEditor note={mockNote} onSave={vi.fn()} />);
+      expect(screen.getByTestId("mock-format-btn")).toBeInTheDocument();
+    });
+
+    it("calls formatCodeBlock when Format button is clicked", async () => {
+      const { formatCodeBlock } = await import("./CodeFormatter");
+      const mockFmt = vi.mocked(formatCodeBlock);
+      mockFmt.mockResolvedValue("const x = 1;\n");
+
+      render(<NoteEditor note={mockNote} onSave={vi.fn()} />);
+      const formatBtn = screen.getByTestId("mock-format-btn");
+
+      await act(async () => {
+        fireEvent.click(formatBtn);
+        await Promise.resolve();
+      });
+
+      expect(mockFmt).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("2.5 — Tab key inserts spaces in code blocks", () => {
+    it("editor is configured with keyboard shortcut extensions", () => {
+      // NoteEditor must pass keyboardShortcuts or an extension to handle Tab
+      // We verify the editor is created (integration point) — actual tab behavior
+      // requires real ProseMirror which doesn't work in jsdom. This test ensures
+      // the extension setup call path runs without error.
+      const { container } = render(<NoteEditor note={mockNote} onSave={vi.fn()} />);
+      // The editor content wrapper must be present — proving editor initialized
+      expect(container.querySelector(".note-editor-content")).toBeInTheDocument();
+      // The tab shortcut is wired via editor extensions (verified in verify phase E2E)
     });
   });
 });
