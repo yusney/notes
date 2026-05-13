@@ -18,6 +18,9 @@ const mockEditorInstance = {
       toggleBlockquote: vi.fn(() => ({ run: vi.fn() })),
       toggleCode: vi.fn(() => ({ run: vi.fn() })),
       toggleCodeBlock: vi.fn(() => ({ run: vi.fn() })),
+      undo: vi.fn(() => ({ run: vi.fn() })),
+      redo: vi.fn(() => ({ run: vi.fn() })),
+      setHorizontalRule: vi.fn(() => ({ run: vi.fn() })),
     })),
   })),
   commands: { setContent: vi.fn() },
@@ -213,5 +216,56 @@ describe("NoteEditor", () => {
     expect(onSave).toHaveBeenCalledWith(
       expect.objectContaining({ tagNames: [] })
     );
+  });
+
+  // ─── Phase 1: Sticky Layout & Toolbar Baseline ───────────────────────────────
+
+  describe("sticky layout structure", () => {
+    it("toolbar is rendered outside the scrollable content container", () => {
+      const { container } = render(<NoteEditor note={mockNote} onSave={vi.fn()} />);
+      const scrollContainer = container.querySelector(".note-editor-content");
+      const toolbar = screen.getByRole("toolbar", { name: /barra de formato/i });
+      expect(scrollContainer).toBeInTheDocument();
+      // toolbar must NOT be a descendant of the scroll container
+      expect(scrollContainer!.contains(toolbar)).toBe(false);
+    });
+
+    it("editor content area has overflow-y-auto class for scrolling", () => {
+      const { container } = render(<NoteEditor note={mockNote} onSave={vi.fn()} />);
+      const scrollContainer = container.querySelector(".note-editor-content");
+      expect(scrollContainer).not.toBeNull();
+      expect(scrollContainer!.className).toContain("overflow-y-auto");
+    });
+  });
+
+  describe("undo / redo toolbar buttons", () => {
+    it("renders an Undo button in the toolbar", () => {
+      render(<NoteEditor note={mockNote} onSave={vi.fn()} />);
+      expect(screen.getByRole("button", { name: /deshacer/i })).toBeInTheDocument();
+    });
+
+    it("renders a Redo button in the toolbar", () => {
+      render(<NoteEditor note={mockNote} onSave={vi.fn()} />);
+      expect(screen.getByRole("button", { name: /rehacer/i })).toBeInTheDocument();
+    });
+
+    it("Undo button has a tooltip that includes the keyboard shortcut", () => {
+      render(<NoteEditor note={mockNote} onSave={vi.fn()} />);
+      const undoBtn = screen.getByRole("button", { name: /deshacer/i });
+      expect(undoBtn.getAttribute("title")).toMatch(/ctrl\+z/i);
+    });
+
+    it("Redo button has a tooltip that includes the keyboard shortcut", () => {
+      render(<NoteEditor note={mockNote} onSave={vi.fn()} />);
+      const redoBtn = screen.getByRole("button", { name: /rehacer/i });
+      expect(redoBtn.getAttribute("title")).toMatch(/ctrl\+y|ctrl\+shift\+z/i);
+    });
+  });
+
+  describe("horizontal rule toolbar button", () => {
+    it("renders a Horizontal Rule button in the toolbar", () => {
+      render(<NoteEditor note={mockNote} onSave={vi.fn()} />);
+      expect(screen.getByRole("button", { name: /línea horizontal/i })).toBeInTheDocument();
+    });
   });
 });
