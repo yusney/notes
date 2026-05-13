@@ -483,3 +483,9 @@ $RECYCLE.BIN/
 Tauri
 desktop/src-tauri/target/
 desktop/dist/
+
+# Frontend coverage reports
+desktop/coverage/
+
+# ATL skill registry cache
+.atl/.skill-registry.cache.json
