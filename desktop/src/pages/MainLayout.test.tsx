@@ -23,7 +23,8 @@ vi.mock("../stores/useNoteStore", () => {
     searchQuery: "",
   };
   const hook = vi.fn(() => mockState);
-  (hook as unknown as { getState: () => typeof mockState }).getState = () => mockState;
+  (hook as unknown as { getState: () => typeof mockState; setState: (partial: Partial<typeof mockState>) => void }).getState = () => mockState;
+  (hook as unknown as { setState: (partial: Partial<typeof mockState>) => void }).setState = (partial: Partial<typeof mockState>) => Object.assign(mockState, partial);
   return { useNoteStore: hook };
 });
 
@@ -31,12 +32,27 @@ vi.mock("../stores/useAuthStore", () => ({
   useAuthStore: vi.fn(),
 }));
 
-vi.mock("../stores/useTagStore", () => ({
-  useTagStore: () => ({
+vi.mock("../stores/useTagStore", () => {
+  const mockState = {
     tags: [],
     fetchTags: vi.fn(),
-  }),
-}));
+  };
+  const hook = vi.fn(() => mockState);
+  (hook as unknown as { getState: () => typeof mockState }).getState = () => mockState;
+  return { useTagStore: hook };
+});
+
+vi.mock("../stores/usePreferencesStore", () => {
+  const mockState = {
+    sortBy: "creation",
+    sortOrder: "desc",
+    theme: "dark",
+    fetchPreferences: vi.fn().mockResolvedValue(undefined),
+  };
+  const hook = vi.fn(() => mockState);
+  (hook as unknown as { getState: () => typeof mockState }).getState = () => mockState;
+  return { usePreferencesStore: hook };
+});
 
 vi.mock("../components/layout/Sidebar", () => ({
   Sidebar: () => <div data-testid="sidebar" />,
