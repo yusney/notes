@@ -109,6 +109,23 @@ html.light {
   --color-code-inline: #c2410c;
 
   color-scheme: light;
+
+  /* Syntax highlight tokens — warm industrial light palette */
+  --color-hljs-comment: #78716c;
+  --color-hljs-keyword: #c2410c;
+  --color-hljs-number: #0369a1;
+  --color-hljs-string: #15803d;
+  --color-hljs-title: #7c3aed;
+  --color-hljs-type: #ea580c;
+  --color-hljs-tag: #0891b2;
+  --color-hljs-link: #2563eb;
+  --color-hljs-symbol: #ea580c;
+  --color-hljs-builtin: #0369a1;
+  --color-hljs-meta: #78716c;
+  --color-hljs-deletion-bg: #fecaca;
+  --color-hljs-deletion-text: #991b1b;
+  --color-hljs-addition-bg: #bbf7d0;
+  --color-hljs-addition-text: #166534;
 }
 
 @custom-variant dark (&:where(.dark, .dark *));
