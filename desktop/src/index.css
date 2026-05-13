@@ -3,21 +3,22 @@
 /* ─── Semantic theme tokens ─────────────────────────────────────────────── */
 
 @theme {
-  --color-surface: #f5f5f4;
-  --color-surface-elevated: #ffffff;
-  --color-text-primary: #1c1917;
-  --color-text-secondary: #78716c;
-  --color-border: #e7e5e4;
-  --color-accent: #2563eb;
-  --color-accent-hover: #1d4ed8;
-  --color-accent-text: #ffffff;
-  --color-accent-subtle: #dbeafe;
-  --color-danger: #ef4444;
-  --color-danger-hover: #dc2626;
+  --color-surface: var(--color-surface);
+  --color-surface-elevated: var(--color-surface-elevated);
+  --color-text-primary: var(--color-text-primary);
+  --color-text-secondary: var(--color-text-secondary);
+  --color-border: var(--color-border);
+  --color-accent: var(--color-accent);
+  --color-accent-hover: var(--color-accent-hover);
+  --color-accent-text: var(--color-accent-text);
+  --color-accent-subtle: var(--color-accent-subtle);
+  --color-danger: var(--color-danger);
+  --color-danger-hover: var(--color-danger-hover);
+  --color-overlay: var(--color-overlay);
   /* Code block surface colors */
-  --color-code-bg: #1c1917;
-  --color-code-text: #e7e5e4;
-  --color-code-inline: #be185d;
+  --color-code-bg: var(--color-code-bg);
+  --color-code-text: var(--color-code-text);
+  --color-code-inline: var(--color-code-inline);
   /* Syntax highlight tokens */
   --color-hljs-comment: #8b949e;
   --color-hljs-keyword: #ff7b72;
@@ -34,39 +35,90 @@
   --color-hljs-deletion-text: #ff7b72;
   --color-hljs-addition-bg: #04260f;
   --color-hljs-addition-text: #56d364;
+  /* Typography */
+  --font-sans: 'Inter', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
 }
 
-@custom-variant dark (&:where(.dark, .dark *));
+/* ─── Default: Dark mode (:root) ────────────────────────────────────────── */
 
-.dark {
-  --color-surface: #1c1917;
-  --color-surface-elevated: #292524;
-  --color-text-primary: #f5f5f4;
-  --color-text-secondary: #a8a29e;
-  --color-border: #44403c;
-  --color-accent: #3b82f6;
-  --color-accent-hover: #60a5fa;
-  --color-accent-subtle: #1e3a8a;
-  --color-danger: #f87171;
-  --color-danger-hover: #fca5a5;
-  /* Code block surface colors — lighter in dark mode for contrast */
+:root {
+  --color-surface: #131313;
+  --color-surface-elevated: #1f1f1f;
+  --color-text-primary: #e2e2e2;
+  --color-text-secondary: #a48c7a;
+  --color-border: #564334;
+  --color-accent: #ff8c00;
+  --color-accent-hover: #ffb77d;
+  --color-accent-text: #4d2600;
+  --color-accent-subtle: #353535;
+  --color-danger: #ffb4ab;
+  --color-danger-hover: #ffdad6;
+  --color-overlay: rgba(0, 0, 0, 0.6);
+  /* Code block — GitHub Dark palette */
   --color-code-bg: #0c0a09;
   --color-code-text: #f5f5f4;
   --color-code-inline: #f472b6;
 
-  /* Tell the browser to render native form controls (select, input, etc.) in dark mode */
+  color-scheme: dark;
+  font-family: 'Inter', sans-serif;
+}
+
+/* ─── .dark class override (same as :root — dark is the default) ─────────── */
+
+.dark {
+  --color-surface: #131313;
+  --color-surface-elevated: #1f1f1f;
+  --color-text-primary: #e2e2e2;
+  --color-text-secondary: #a48c7a;
+  --color-border: #564334;
+  --color-accent: #ff8c00;
+  --color-accent-hover: #ffb77d;
+  --color-accent-text: #4d2600;
+  --color-accent-subtle: #353535;
+  --color-danger: #ffb4ab;
+  --color-danger-hover: #ffdad6;
+  --color-overlay: rgba(0, 0, 0, 0.6);
+  /* Code block — GitHub Dark palette */
+  --color-code-bg: #0c0a09;
+  --color-code-text: #f5f5f4;
+  --color-code-inline: #f472b6;
+
+  /* Tell the browser to render native form controls in dark mode */
   color-scheme: dark;
 }
+
+/* ─── Light mode ─────────────────────────────────────────────────────────── */
+
+html.light {
+  --color-surface: #f5f5f4;
+  --color-surface-elevated: #ffffff;
+  --color-text-primary: #1c1917;
+  --color-text-secondary: #78716c;
+  --color-border: #d6d3d1;
+  --color-accent: #ea580c;
+  --color-accent-hover: #c2410c;
+  --color-accent-text: #ffffff;
+  --color-accent-subtle: #fff7ed;
+  --color-danger: #dc2626;
+  --color-danger-hover: #b91c1c;
+  --color-overlay: rgba(0, 0, 0, 0.4);
+  /* Code block — light industrial palette */
+  --color-code-bg: #f5f5f4;
+  --color-code-text: #1c1917;
+  --color-code-inline: #c2410c;
+
+  color-scheme: light;
+}
+
+@custom-variant dark (&:where(.dark, .dark *));
 
 /* ─── Root element theming ──────────────────────────────────────────────── */
 
 html {
   background-color: var(--color-surface);
   color: var(--color-text-primary);
-}
-
-html.light {
-  color-scheme: light;
+  font-family: 'Inter', sans-serif;
 }
 
 /* ─── ProseMirror / TipTap shared editor + viewer styles ─────────────────── */
@@ -144,7 +196,7 @@ html.light {
 
 .note-editor .ProseMirror code,
 .note-viewer .ProseMirror code {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 0.85em;
   background-color: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -155,7 +207,7 @@ html.light {
 
 .note-editor .ProseMirror pre,
 .note-viewer .ProseMirror pre {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 0.875rem;
   line-height: 1.6;
   background-color: var(--color-code-bg);
