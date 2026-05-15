@@ -117,6 +117,13 @@ app.UseAuthorization();
 app.MapHealthChecks("/health");
 app.MapControllers();
 
+// ── Auto-migrate on startup ───────────────────────────────────────────────────
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    await db.Database.MigrateAsync();
+}
+
 app.Run();
 
 // Make Program accessible for WebApplicationFactory in integration tests
