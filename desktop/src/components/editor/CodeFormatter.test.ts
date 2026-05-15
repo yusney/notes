@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import type { SupportedFormatLang } from "./CodeFormatter";
 
 // We test the pure function behavior with dynamic imports mocked
 const mockFormat = vi.fn();

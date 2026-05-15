@@ -25,6 +25,7 @@ vi.mock("./CodeBlockBubbleMenu", () => ({
 // Mock editor with getHTML so we can verify the save path reads from it
 const mockGetHTML = vi.fn(() => "<p>content from editor</p>");
 const mockInsertContentRun = vi.fn();
+const mockDispatch = vi.fn();
 const mockEditorInstance = {
   getHTML: mockGetHTML,
   isActive: vi.fn(() => false),
@@ -45,6 +46,7 @@ const mockEditorInstance = {
       setHorizontalRule: vi.fn(() => ({ run: vi.fn() })),
       insertContent: vi.fn(() => ({ run: mockInsertContentRun })),
       deleteSelection: vi.fn(() => ({ insertContent: vi.fn(() => ({ run: mockInsertContentRun })) })),
+      command: vi.fn((cb) => { cb({ tr: { replaceWith: vi.fn() } }); return { setCodeBlock: vi.fn(() => ({ run: vi.fn() })) }; }),
     })),
   })),
   commands: {
@@ -52,8 +54,22 @@ const mockEditorInstance = {
     selectAll: vi.fn(),
     insertContent: vi.fn(),
   },
+  schema: { text: vi.fn((t: string) => t) },
+  view: { dispatch: mockDispatch },
   state: {
-    selection: { from: 0, to: 10 },
+    selection: {
+      from: 0,
+      to: 10,
+      $from: {
+        depth: 2,
+        node: vi.fn((d: number) => ({
+          type: { name: d === 2 ? "codeBlock" : "doc" },
+          textContent: "const x=1",
+        })),
+        start: vi.fn(() => 0),
+        end: vi.fn(() => 10),
+      },
+    },
     doc: { textBetween: vi.fn(() => "const x=1") },
   },
 };
