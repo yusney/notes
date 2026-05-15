@@ -120,9 +120,21 @@ app.MapControllers();
 // ── Auto-migrate on startup ───────────────────────────────────────────────────
 using (var scope = app.Services.CreateScope())
 {
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     if (db.Database.IsRelational())
+    {
+        logger.LogInformation("Checking database connection...");
+        var canConnect = await db.Database.CanConnectAsync();
+        if (!canConnect)
+        {
+            logger.LogError("Cannot connect to the database. Check the connection string.");
+            throw new InvalidOperationException("Database is unreachable on startup.");
+        }
+        logger.LogInformation("Database connection OK. Running pending migrations...");
         await db.Database.MigrateAsync();
+        logger.LogInformation("Migrations applied successfully.");
+    }
 }
 
 app.Run();
