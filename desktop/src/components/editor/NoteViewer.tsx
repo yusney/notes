@@ -62,19 +62,19 @@ export function NoteViewer({ note, onEdit }: NoteViewerProps) {
   }, [note.content, viewer]);
 
   return (
-    <div className="flex h-full flex-col bg-surface">
-      <div className="flex items-center justify-between border-b border-border bg-surface-elevated px-6 py-4">
-        <h1 className="truncate text-xl font-semibold text-text-primary">{note.title}</h1>
+    <div className="flex h-full flex-col overflow-hidden bg-surface">
+      <div className="flex shrink-0 items-center justify-between border-b border-border bg-surface-elevated px-6 py-4">
+        <h1 className="min-w-0 truncate text-xl font-semibold text-text-primary">{note.title}</h1>
         <button
           type="button"
           onClick={onEdit}
-          className="bg-accent px-4 py-1.5 text-sm font-bold text-accent-text transition-colors hover:bg-accent-hover"
+          className="ml-4 shrink-0 bg-accent px-4 py-1.5 text-sm font-bold text-accent-text transition-colors hover:bg-accent-hover"
         >
           Editar
         </button>
       </div>
 
-      <div className="note-viewer flex-1 overflow-y-auto px-8 py-6">
+      <div className="note-viewer flex-1 overflow-x-hidden overflow-y-auto px-8 py-6">
         {note.content ? (
           <EditorContent editor={viewer} />
         ) : (
