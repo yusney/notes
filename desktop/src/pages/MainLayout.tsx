@@ -187,7 +187,7 @@ export function MainLayout() {
         onLogout={logout}
       />
 
-      <div className="flex w-80 flex-none flex-col border-r border-border bg-surface">
+      <div className="flex w-80 min-w-[200px] shrink flex-col border-r border-border bg-surface">
         <div className="border-b border-border p-4 pb-3">
           <SearchBar onSearch={handleSearchNotes} />
         </div>
