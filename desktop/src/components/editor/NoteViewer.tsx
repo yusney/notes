@@ -1,11 +1,45 @@
-import { useEffect } from "react";
-import { EditorContent, useEditor } from "@tiptap/react";
+import { useState, useEffect } from "react";
+import { EditorContent, useEditor, ReactNodeViewRenderer, NodeViewWrapper, NodeViewContent } from "@tiptap/react";
 import { StarterKit } from "@tiptap/starter-kit";
 import { CodeBlockLowlight } from "@tiptap/extension-code-block-lowlight";
 import { all, createLowlight } from "lowlight";
 import type { Note } from "../../types";
+import type { NodeViewProps } from "@tiptap/react";
 
 const lowlight = createLowlight(all);
+
+function CodeBlockCopyButton({ node }: Pick<NodeViewProps, "node">) {
+  const [copied, setCopied] = useState(false);
+
+  async function handleCopy() {
+    if (copied) return;
+    await navigator.clipboard.writeText(node.textContent);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  return (
+    <NodeViewWrapper className="relative my-4">
+      <button
+        type="button"
+        onClick={handleCopy}
+        aria-label="Copiar código"
+        className="absolute top-2 right-2 z-10 rounded border border-border bg-surface-elevated px-2 py-0.5 text-xs font-medium text-text-secondary transition-colors hover:text-text-primary"
+      >
+        {copied ? "Copiado ✓" : "Copiar"}
+      </button>
+      <pre>
+        <NodeViewContent />
+      </pre>
+    </NodeViewWrapper>
+  );
+}
+
+const CodeBlockWithCopyExtension = CodeBlockLowlight.extend({
+  addNodeView() {
+    return ReactNodeViewRenderer(CodeBlockCopyButton);
+  },
+});
 
 interface NoteViewerProps {
   note: Note;
@@ -16,7 +50,7 @@ export function NoteViewer({ note, onEdit }: NoteViewerProps) {
   const viewer = useEditor({
     extensions: [
       StarterKit.configure({ codeBlock: false }),
-      CodeBlockLowlight.configure({ lowlight, defaultLanguage: null }),
+      CodeBlockWithCopyExtension.configure({ lowlight, defaultLanguage: null }),
     ],
     content: note.content,
     editable: false,

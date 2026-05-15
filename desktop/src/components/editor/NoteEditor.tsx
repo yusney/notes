@@ -275,16 +275,34 @@ export function NoteEditor({ note, availableTags = [], onSave, onSaveAndExit, on
       "javascript", "typescript", "json", "css", "html", "markdown",
     ];
     if (!lang || !supportedLangs.includes(lang as SupportedFormatLang)) return;
-    const raw = editor.state.doc.textBetween(
-      editor.state.selection.from,
-      editor.state.selection.to,
-      "\n"
-    ) || editor.getText();
+
+    // Find the codeBlock ancestor from the current selection
+    const { $from } = editor.state.selection;
+    let depth = $from.depth;
+    while (depth > 0 && $from.node(depth).type.name !== "codeBlock") {
+      depth--;
+    }
+    // Verify we actually landed on a codeBlock node (not the doc root)
+    if ($from.node(depth).type.name !== "codeBlock") return;
+
+    const start = $from.start(depth);
+    const end = $from.end(depth);
+    const codeBlockText = $from.node(depth).textContent;
+
+    if (!codeBlockText.trim()) return;
+
     try {
-      const formatted = await formatCodeBlock(raw, lang as SupportedFormatLang);
-      editor.chain().focus().selectAll().insertContent(formatted).run();
-    } catch {
-      // formatting failed silently — leave content unchanged
+      const formatted = await formatCodeBlock(codeBlockText, lang as SupportedFormatLang);
+      // Replace only the text content inside the codeBlock node — do NOT recreate the node
+      editor.chain()
+        .focus()
+        .command(({ tr }) => {
+          tr.replaceWith(start, end, editor.schema.text(formatted));
+          return true;
+        })
+        .run();
+    } catch (err) {
+      console.error("[CodeFormatter] formatting failed:", err);
     }
   }
 

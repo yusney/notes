@@ -1,22 +1,26 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { CodeBlockBubbleMenu, SUPPORTED_LANGUAGES } from "./CodeBlockBubbleMenu";
 
-// Mock @tiptap/extension-bubble-menu — renders children when shouldShow returns true
-vi.mock("@tiptap/extension-bubble-menu", () => ({
-  BubbleMenu: ({
-    children,
-    shouldShow,
-    editor,
-  }: {
-    children: React.ReactNode;
-    shouldShow?: (props: { editor: unknown }) => boolean;
-    editor: unknown;
-  }) => {
-    const visible = shouldShow ? shouldShow({ editor }) : true;
-    return visible ? <div data-testid="bubble-menu">{children}</div> : null;
-  },
-}));
+// Mock @tiptap/react/menus BubbleMenu — renders children when shouldShow returns true
+vi.mock("@tiptap/react/menus", async () => {
+  const actual = await vi.importActual<typeof import("@tiptap/react/menus")>("@tiptap/react/menus");
+  return {
+    ...actual,
+    BubbleMenu: ({
+      children,
+      shouldShow,
+      editor,
+    }: {
+      children: React.ReactNode;
+      shouldShow?: (props: { editor: unknown }) => boolean;
+      editor: unknown;
+    }) => {
+      const visible = shouldShow ? shouldShow({ editor }) : true;
+      return visible ? <div data-testid="bubble-menu">{children}</div> : null;
+    },
+  };
+});
 
 function makeEditor(isCodeBlock: boolean) {
   return {

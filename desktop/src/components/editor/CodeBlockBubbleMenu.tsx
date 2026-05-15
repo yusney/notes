@@ -1,5 +1,5 @@
+import { BubbleMenu } from "@tiptap/react/menus";
 import type { Editor } from "@tiptap/react";
-import { BubbleMenu } from "@tiptap/extension-bubble-menu";
 
 export const SUPPORTED_LANGUAGES = [
   "bash",
@@ -40,8 +40,7 @@ export function CodeBlockBubbleMenu({ editor, onFormat }: CodeBlockBubbleMenuPro
   return (
     <BubbleMenu
       editor={editor}
-      shouldShow={({ editor: ed }) => (ed as Editor).isActive("codeBlock")}
-      tippyOptions={{ duration: 100 }}
+      shouldShow={({ editor: ed }) => ed.isActive("codeBlock")}
     >
       <div className="flex items-center gap-1 rounded border border-border bg-surface-elevated px-2 py-1 shadow-md">
         <label htmlFor="code-language-select" className="sr-only">
