@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useEditor, EditorContent } from "@tiptap/react";
+import { useEditor, EditorContent, Extension } from "@tiptap/react";
 import { StarterKit } from "@tiptap/starter-kit";
 import { CodeBlockLowlight } from "@tiptap/extension-code-block-lowlight";
 import { all, createLowlight } from "lowlight";
@@ -7,8 +7,33 @@ import { useAutoSave, type SaveStatus } from "../../hooks/useAutoSave";
 import type { Note, Tag } from "../../types";
 import { TagInput } from "../notes/TagInput";
 import { ShareDialog } from "../share/ShareDialog";
+import { CodeBlockBubbleMenu } from "./CodeBlockBubbleMenu";
+import { formatCodeBlock } from "./CodeFormatter";
+import type { SupportedFormatLang } from "./CodeFormatter";
 
 const lowlight = createLowlight(all);
+
+const CodeBlockTabExtension = Extension.create({
+  name: "codeBlockTab",
+  addKeyboardShortcuts() {
+    return {
+      Tab: () => {
+        if (this.editor.isActive("codeBlock")) {
+          this.editor.chain().focus().insertContent("  ").run();
+          return true;
+        }
+        return false;
+      },
+    };
+  },
+});
+
+export function countEditorStats(text: string): { chars: number; words: number; lines: number } {
+  const chars = text.length;
+  const words = text.trim() === "" ? 0 : text.trim().split(/\s+/).length;
+  const lines = text === "" ? 1 : text.split("\n").length;
+  return { chars, words, lines };
+}
 
 function SaveStatusIndicator({ status }: { status: SaveStatus }) {
   if (status === "saving" || status === "pending") {
@@ -142,6 +167,30 @@ function EditorToolbar({ editor }: EditorToolbarProps) {
       >
         <span className="font-mono text-[9px] leading-none">{"<>"}</span>
       </ToolbarButton>
+
+      <div className="mx-1 h-4 w-px bg-border" />
+
+      <ToolbarButton
+        onClick={() => editor.chain().focus().undo().run()}
+        title="Deshacer (Ctrl+Z)"
+      >
+        <span className="font-mono text-[10px] leading-none">↩</span>
+      </ToolbarButton>
+      <ToolbarButton
+        onClick={() => editor.chain().focus().redo().run()}
+        title="Rehacer (Ctrl+Y)"
+      >
+        <span className="font-mono text-[10px] leading-none">↪</span>
+      </ToolbarButton>
+
+      <div className="mx-1 h-4 w-px bg-border" />
+
+      <ToolbarButton
+        onClick={() => editor.chain().focus().setHorizontalRule().run()}
+        title="Línea horizontal"
+      >
+        <span className="text-[10px] leading-none">―</span>
+      </ToolbarButton>
     </div>
   );
 }
@@ -168,12 +217,16 @@ export function NoteEditor({ note, availableTags = [], onSave, onSaveAndExit, on
     extensions: [
       StarterKit.configure({ codeBlock: false }),
       CodeBlockLowlight.configure({ lowlight, defaultLanguage: null }),
+      CodeBlockTabExtension,
     ],
     content: note.content,
     onUpdate: ({ editor }) => {
       setEditorContent(editor.getHTML());
     },
   });
+
+  // Derived — always reflects current editor text without extra state
+  const editorText = editor?.getText() ?? "";
 
   useEffect(() => {
     if (previousNoteId.current === note.id) return;
@@ -214,6 +267,49 @@ export function NoteEditor({ note, availableTags = [], onSave, onSaveAndExit, on
     onSave: handleAutoSave,
     delay: 1500,
   });
+
+  async function handleFormatCodeBlock() {
+    if (!editor) return;
+    const lang = editor.getAttributes("codeBlock").language as string | null;
+    const supportedLangs: SupportedFormatLang[] = [
+      "javascript", "typescript", "json", "css", "html", "markdown",
+    ];
+    if (!lang || !supportedLangs.includes(lang as SupportedFormatLang)) return;
+
+    // Find the codeBlock ancestor from the current selection
+    const { $from } = editor.state.selection;
+    let depth = $from.depth;
+    while (depth > 0 && $from.node(depth).type.name !== "codeBlock") {
+      depth--;
+    }
+    // Verify we actually landed on a codeBlock node (not the doc root)
+    if ($from.node(depth).type.name !== "codeBlock") return;
+
+    const start = $from.start(depth);
+    const end = $from.end(depth);
+    const codeBlockText = $from.node(depth).textContent;
+
+    if (!codeBlockText.trim()) return;
+
+    try {
+      const formatted = await formatCodeBlock(codeBlockText, lang as SupportedFormatLang);
+      // Replace only the text content inside the codeBlock node — do NOT recreate the node
+      editor.chain()
+        .focus()
+        .command(({ tr }) => {
+          tr.replaceWith(start, end, editor.schema.text(formatted));
+          return true;
+        })
+        .run();
+    } catch (err) {
+      console.error("[CodeFormatter] formatting failed:", err);
+    }
+  }
+
+  async function handleCopyContent() {
+    const text = editor ? editor.getText() : editorText;
+    await navigator.clipboard.writeText(text);
+  }
 
   async function handleManualSave() {
     isSavingManually.current = true;
@@ -287,12 +383,51 @@ export function NoteEditor({ note, availableTags = [], onSave, onSaveAndExit, on
         />
       </div>
 
-      <div className="note-editor mx-auto w-full max-w-4xl flex-1 overflow-y-auto border border-b-0 border-border bg-surface-elevated">
+      <div className="note-editor mx-auto w-full max-w-4xl flex-1 overflow-hidden border border-b-0 border-border bg-surface-elevated flex flex-col">
         <EditorToolbar editor={editor} />
-        <div className="px-10 py-8 text-text-primary [&_.ProseMirror]:min-h-[55vh] [&_.ProseMirror]:outline-none [&_.ProseMirror_p]:leading-7">
+        {editor && (
+          <CodeBlockBubbleMenu editor={editor} onFormat={handleFormatCodeBlock} />
+        )}
+        <div
+          className="note-editor-content flex-1 overflow-y-auto px-10 py-8 text-text-primary [&_.ProseMirror]:min-h-[55vh] [&_.ProseMirror]:outline-none [&_.ProseMirror_p]:leading-7"
+          data-placeholder-enabled={editorContent === "" ? "true" : undefined}
+        >
           <EditorContent editor={editor} />
         </div>
+        <EditorStatusBar text={editorText} onCopy={handleCopyContent} />
       </div>
+    </div>
+  );
+}
+
+interface EditorStatusBarProps {
+  text: string;
+  onCopy: () => void;
+}
+
+function EditorStatusBar({ text, onCopy }: EditorStatusBarProps) {
+  const { chars, words, lines } = countEditorStats(text);
+  return (
+    <div
+      role="status"
+      aria-label="Estado del editor"
+      className="flex items-center justify-between border-t border-border bg-surface px-4 py-1.5 text-xs text-text-secondary"
+    >
+      <span className="flex gap-4">
+        <span aria-label="Caracteres">{chars} car.</span>
+        <span aria-label="Palabras">{words} pal.</span>
+        <span aria-label="Líneas">{lines} lín.</span>
+      </span>
+      <button
+        type="button"
+        onClick={onCopy}
+        aria-label="Copiar contenido"
+        title="Copiar contenido del editor"
+        className="flex items-center gap-1 text-xs text-text-secondary transition-colors hover:text-text-primary"
+      >
+        <span>⧉</span>
+        <span>Copiar</span>
+      </button>
     </div>
   );
 }
