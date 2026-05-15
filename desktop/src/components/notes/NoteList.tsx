@@ -115,10 +115,13 @@ export function NoteList({
         ) : (
           notes.map((note) => (
             <li key={note.id} className="group relative mb-2">
-              <button
+              <div
+                role="button"
+                tabIndex={0}
                 onClick={() => onNoteSelect(note.id)}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onNoteSelect(note.id); } }}
                 aria-current={activeNoteId === note.id ? "true" : undefined}
-                className={`w-full border px-4 py-3 text-left transition-colors ${
+                className={`w-full border px-4 py-3 text-left transition-colors cursor-pointer ${
                   activeNoteId === note.id
                     ? "border-accent border-2 bg-surface-elevated"
                     : "border-border bg-surface-elevated/75 hover:border-accent hover:bg-surface-elevated"
@@ -151,7 +154,7 @@ export function NoteList({
                     ))}
                   </div>
                 )}
-              </button>
+              </div>
               {onDeleteNote && (
                 <button
                   onClick={(e) => { e.stopPropagation(); onDeleteNote(note.id); }}
