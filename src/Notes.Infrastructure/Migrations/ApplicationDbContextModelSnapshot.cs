@@ -35,7 +35,7 @@ namespace Notes.Infrastructure.Migrations
 
                     b.HasIndex("TagId");
 
-                    b.ToTable("NoteTags");
+                    b.ToTable("NoteTags", (string)null);
                 });
 
             modelBuilder.Entity("Notes.Domain.Entities.Note", b =>
@@ -408,7 +408,7 @@ namespace Notes.Infrastructure.Migrations
                                 .IsUnique()
                                 .HasDatabaseName("IX_Users_Email");
 
-                            b1.ToTable("Users");
+                            b1.ToTable("Users", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("UserId");
