@@ -35,6 +35,15 @@
     ],
     "publisher": "Yusney Martínez Duque",
     "homepage": "https://donduque.dev/",
-    "copyright": "© 2026 Yusney Martínez Duque"
+    "copyright": "© 2026 Yusney Martínez Duque",
+    "deb": {
+      "maintainer": "Yusney Martínez Duque <yusney@donduque.dev>"
+    },
+    "rpm": {
+      "license": "MIT"
+    },
+    "macOS": {
+      "minimumSystemVersion": "10.13"
+    }
   }
 }
