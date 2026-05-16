@@ -3,8 +3,17 @@ import { act, renderHook } from "@testing-library/react";
 import { useAuthStore } from "./useAuthStore";
 
 // Reset store between tests
-beforeEach(() => {
-  useAuthStore.getState().logout();
+beforeEach(async () => {
+  await act(async () => {
+    useAuthStore.setState({
+      user: null,
+      accessToken: null,
+      isAuthenticated: false,
+      isInitialized: true,
+      isLoading: false,
+      error: null,
+    });
+  });
 });
 
 describe("useAuthStore", () => {
@@ -19,26 +28,21 @@ describe("useAuthStore", () => {
 
   describe("login", () => {
     it("sets user and token after successful login", async () => {
-      const mockUser = { id: "1", email: "test@test.com", name: "Test" };
-      const mockTokens = {
-        accessToken: "access-123",
-        refreshToken: "refresh-123",
-        expiresIn: 3600,
-      };
+      const mockTokens = { accessToken: "access-123", refreshToken: "refresh-123" };
+      const mockProfile = { id: "1", email: "test@test.com", displayName: "Test" };
 
-      global.fetch = vi.fn().mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: async () => ({ user: mockUser, ...mockTokens }),
-      });
+      // login returns tokens, then profile fetch returns user
+      global.fetch = vi.fn()
+        .mockResolvedValueOnce({ ok: true, status: 200, json: async () => mockTokens })
+        .mockResolvedValueOnce({ ok: true, status: 200, json: async () => mockProfile });
 
       const { result } = renderHook(() => useAuthStore());
 
       await act(async () => {
-        await result.current.login("test@test.com", "password123");
+        await result.current.login("test@test.com", "password123", true);
       });
 
-      expect(result.current.user).toEqual(mockUser);
+      expect(result.current.user).toEqual({ ...mockProfile, name: "Test" });
       expect(result.current.accessToken).toBe("access-123");
       expect(result.current.isAuthenticated).toBe(true);
     });
@@ -65,7 +69,6 @@ describe("useAuthStore", () => {
     it("clears user and token on logout", async () => {
       const { result } = renderHook(() => useAuthStore());
 
-      // Set up logged in state first
       act(() => {
         useAuthStore.setState({
           user: { id: "1", email: "a@b.com", name: "Test" },
@@ -74,8 +77,8 @@ describe("useAuthStore", () => {
         });
       });
 
-      act(() => {
-        result.current.logout();
+      await act(async () => {
+        await result.current.logout();
       });
 
       expect(result.current.user).toBeNull();
@@ -86,18 +89,12 @@ describe("useAuthStore", () => {
 
   describe("register", () => {
     it("sets user and token after successful registration", async () => {
-      const mockUser = { id: "2", email: "new@test.com", name: "New User" };
-      const mockTokens = {
-        accessToken: "access-new",
-        refreshToken: "refresh-new",
-        expiresIn: 3600,
-      };
+      const mockTokens = { accessToken: "access-new", refreshToken: "refresh-new" };
+      const mockProfile = { id: "2", email: "new@test.com", displayName: "New User" };
 
-      global.fetch = vi.fn().mockResolvedValueOnce({
-        ok: true,
-        status: 201,
-        json: async () => ({ user: mockUser, ...mockTokens }),
-      });
+      global.fetch = vi.fn()
+        .mockResolvedValueOnce({ ok: true, status: 201, json: async () => mockTokens })
+        .mockResolvedValueOnce({ ok: true, status: 200, json: async () => mockProfile });
 
       const { result } = renderHook(() => useAuthStore());
 
@@ -105,7 +102,7 @@ describe("useAuthStore", () => {
         await result.current.register("New User", "new@test.com", "Password1!");
       });
 
-      expect(result.current.user).toEqual(mockUser);
+      expect(result.current.user).toEqual({ ...mockProfile, name: "New User" });
       expect(result.current.isAuthenticated).toBe(true);
     });
   });
@@ -113,9 +110,7 @@ describe("useAuthStore", () => {
   describe("loading state", () => {
     it("sets isLoading true during login and false after", async () => {
       let resolveLogin!: (v: unknown) => void;
-      const loginPromise = new Promise((res) => {
-        resolveLogin = res;
-      });
+      const loginPromise = new Promise((res) => { resolveLogin = res; });
 
       global.fetch = vi.fn().mockReturnValueOnce(loginPromise);
 
@@ -124,7 +119,6 @@ describe("useAuthStore", () => {
         await result.current.login("a@b.com", "pass").catch(() => {});
       });
 
-      // Resolve with error to end the call
       resolveLogin({ ok: false, status: 401, json: async () => ({ message: "err" }) });
       await loginCall;
 
