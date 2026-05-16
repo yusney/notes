@@ -62,6 +62,8 @@ jobs:
   build-tauri:
     name: Build Tauri App
     needs: create-release
+    permissions:
+      contents: write
     strategy:
       fail-fast: false
       matrix:
