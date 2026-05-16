@@ -1,54 +1,61 @@
 import { create } from "zustand";
+import { invoke } from "@tauri-apps/api/core";
 import type { User, AuthTokens } from "../types";
 import { API_BASE_URL, ApiClientError, createApiClient } from "../api/client";
 
-const AUTH_STORAGE_KEY = "notes:auth";
-const REMEMBER_KEY = "notes:remember";
+// ─── OS Keychain access via Tauri commands ────────────────────────────────────
+// The refresh token is stored in the OS keychain (Keychain on macOS,
+// Credential Manager on Windows, Secret Service on Linux).
+// It never touches localStorage or any file on disk in plaintext.
+// The access token always lives in memory only — never persisted.
 
-interface StoredAuth {
-  user: User;
-  accessToken: string;
-  refreshToken: string;
+async function persistToken(refreshToken: string): Promise<void> {
+  await invoke("save_token", { token: refreshToken });
 }
 
-function persistTokens(auth: StoredAuth) {
-  localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(auth));
+async function restoreToken(): Promise<string | null> {
+  return invoke<string | null>("load_token");
 }
 
-function restoreTokens(): StoredAuth | null {
+async function clearToken(): Promise<void> {
+  await invoke("delete_token");
+}
+
+// ─── Raw refresh — plain fetch, bypasses the API client interceptor ──────────
+// This prevents the 401-retry loop that would happen if we used apiClient here.
+async function rawRefresh(refreshToken: string): Promise<AuthTokens | null> {
   try {
-    const raw = localStorage.getItem(AUTH_STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (parsed.accessToken && parsed.refreshToken && parsed.user) {
-      return parsed as StoredAuth;
-    }
-    return null;
+    const res = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: refreshToken }),
+    });
+    if (!res.ok) return null;
+    return res.json() as Promise<AuthTokens>;
   } catch {
     return null;
   }
 }
 
-function clearTokens() {
-  localStorage.removeItem(AUTH_STORAGE_KEY);
-}
-
-function isRemembered(): boolean {
-  return localStorage.getItem(REMEMBER_KEY) === "true";
-}
-
-function setRemembered(value: boolean) {
-  if (value) {
-    localStorage.setItem(REMEMBER_KEY, "true");
-  } else {
-    localStorage.removeItem(REMEMBER_KEY);
+// ─── Raw profile fetch ────────────────────────────────────────────────────────
+async function fetchProfile(accessToken: string): Promise<User | null> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/user/profile`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return { ...data, name: data.displayName ?? data.name ?? data.email } as User;
+  } catch {
+    return null;
   }
 }
+
+// ─── Store interface ──────────────────────────────────────────────────────────
 
 interface AuthState {
   user: User | null;
   accessToken: string | null;
-  refreshToken: string | null;
   isAuthenticated: boolean;
   isInitialized: boolean;
   isLoading: boolean;
@@ -57,7 +64,7 @@ interface AuthState {
   initialize: () => Promise<void>;
   login: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   refreshAccessToken: () => Promise<void>;
   clearError: () => void;
 }
@@ -67,93 +74,76 @@ const authApiClient = createApiClient({ baseUrl: API_BASE_URL });
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   accessToken: null,
-  refreshToken: null,
   isAuthenticated: false,
   isInitialized: false,
   isLoading: false,
   error: null,
 
+  // Called once on app start. Tries to restore the session silently.
   initialize: async () => {
-    const memo = isRemembered();
-    if (!memo) {
+    const refreshToken = await restoreToken();
+
+    if (!refreshToken) {
       set({ isInitialized: true });
       return;
     }
 
-    const stored = restoreTokens();
-    if (!stored) {
+    const tokens = await rawRefresh(refreshToken);
+
+    if (!tokens?.accessToken) {
+      // Stale token — clear it and show login
+      await clearToken();
       set({ isInitialized: true });
       return;
     }
 
-    // Preload the stored tokens so apiClient has them during refresh
+    // Rotate refresh token if the server issued a new one
+    if (tokens.refreshToken && tokens.refreshToken !== refreshToken) {
+      await persistToken(tokens.refreshToken);
+    }
+
+    // Fetch user profile with the fresh access token
+    const user = await fetchProfile(tokens.accessToken);
+    if (!user) {
+      await clearToken();
+      set({ isInitialized: true });
+      return;
+    }
+
     set({
-      user: stored.user,
-      accessToken: stored.accessToken,
-      refreshToken: stored.refreshToken,
+      user,
+      accessToken: tokens.accessToken,
+      isAuthenticated: true,
+      isInitialized: true,
     });
-
-    try {
-      const data = await authApiClient.post<AuthTokens>(
-        "/api/auth/refresh",
-        { refreshToken: stored.refreshToken },
-      );
-      const updated: StoredAuth = {
-        user: stored.user,
-        accessToken: data.accessToken,
-        refreshToken: data.refreshToken,
-      };
-      persistTokens(updated);
-      set({
-        user: stored.user,
-        accessToken: data.accessToken,
-        refreshToken: data.refreshToken,
-        isAuthenticated: true,
-        isInitialized: true,
-      });
-    } catch {
-      // Refresh failed — tokens are stale, clear everything and re-login
-      clearTokens();
-      set({
-        user: null,
-        accessToken: null,
-        refreshToken: null,
-        isAuthenticated: false,
-        isInitialized: true,
-      });
-    }
   },
 
   login: async (email, password, rememberMe = false) => {
     set({ isLoading: true, error: null });
     try {
-      const data = await authApiClient.post<
-        AuthTokens & { user: User }
-      >("/api/auth/login", { email, password });
+      const data = await authApiClient.post<AuthTokens>(
+        "/api/auth/login",
+        { email, password, rememberMe }
+      );
 
-      setRemembered(rememberMe);
+      const user = await fetchProfile(data.accessToken);
+      if (!user) throw new Error("No se pudo obtener el perfil del usuario");
 
-      const stored: StoredAuth = {
-        user: data.user,
-        accessToken: data.accessToken,
-        refreshToken: data.refreshToken,
-      };
-
-      if (rememberMe) {
-        persistTokens(stored);
+      if (rememberMe && data.refreshToken) {
+        await persistToken(data.refreshToken);
+      } else {
+        await clearToken();
       }
 
       set({
-        user: stored.user,
-        accessToken: stored.accessToken,
-        refreshToken: stored.refreshToken,
+        user,
+        accessToken: data.accessToken,
         isAuthenticated: true,
         isInitialized: true,
         isLoading: false,
       });
     } catch (err) {
-      const message =
-        err instanceof ApiClientError ? err.message : "Error al iniciar sesión";
+      const message = err instanceof ApiClientError ? err.message : "Error al iniciar sesión";
       set({ isLoading: false, error: message });
       throw err;
     }
@@ -162,77 +152,73 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   register: async (name, email, password) => {
     set({ isLoading: true, error: null });
     try {
-      const data = await authApiClient.post<
-        AuthTokens & { user: User }
-      >("/api/auth/register", { name, email, password });
+      const data = await authApiClient.post<AuthTokens>(
+        "/api/auth/register",
+        { displayName: name, email, password }
+      );
 
-      setRemembered(true); // auto-remember after registration
+      const user = await fetchProfile(data.accessToken);
+      if (!user) throw new Error("No se pudo obtener el perfil del usuario");
 
-      const stored: StoredAuth = {
-        user: data.user,
-        accessToken: data.accessToken,
-        refreshToken: data.refreshToken,
-      };
-      persistTokens(stored);
+      // Always persist after registration
+      if (data.refreshToken) {
+        await persistToken(data.refreshToken);
+      }
 
       set({
-        user: stored.user,
-        accessToken: stored.accessToken,
-        refreshToken: stored.refreshToken,
+        user,
+        accessToken: data.accessToken,
         isAuthenticated: true,
         isInitialized: true,
         isLoading: false,
       });
     } catch (err) {
-      const message =
-        err instanceof ApiClientError ? err.message : "Error al registrarse";
+      const message = err instanceof ApiClientError ? err.message : "Error al registrarse";
       set({ isLoading: false, error: message });
       throw err;
     }
   },
 
-  logout: () => {
-    const { refreshToken } = get();
-    // Fire-and-forget revoke — don't block logout on network
+  logout: async () => {
+    const refreshToken = await restoreToken();
     if (refreshToken) {
-      authApiClient
-        .post("/api/auth/logout", { refreshToken })
-        .catch(() => {});
+      // Fire-and-forget — revoke on backend but don't block logout
+      fetch(`${API_BASE_URL}/api/auth/logout`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: refreshToken }),
+      }).catch(() => {});
     }
-    clearTokens();
+    await clearToken();
     set({
       user: null,
       accessToken: null,
-      refreshToken: null,
       isAuthenticated: false,
+      isInitialized: true,
       error: null,
     });
   },
 
+  // Called by the API client interceptor on 401.
+  // Uses raw fetch to avoid triggering another interceptor cycle.
   refreshAccessToken: async () => {
-    const { refreshToken } = get();
-    if (!refreshToken) return;
-    try {
-      const data = await authApiClient.post<AuthTokens>(
-        "/api/auth/refresh",
-        { refreshToken },
-      );
-      set({ accessToken: data.accessToken, refreshToken: data.refreshToken });
-
-      // Persist refreshed tokens if remember is active
-      if (isRemembered()) {
-        const { user } = get();
-        if (user) {
-          persistTokens({
-            user,
-            accessToken: data.accessToken,
-            refreshToken: data.refreshToken,
-          });
-        }
-      }
-    } catch {
-      get().logout();
+    const refreshToken = await restoreToken();
+    if (!refreshToken) {
+      await get().logout();
+      return;
     }
+
+    const tokens = await rawRefresh(refreshToken);
+    if (!tokens?.accessToken) {
+      await get().logout();
+      return;
+    }
+
+    if (tokens.refreshToken && tokens.refreshToken !== refreshToken) {
+      await persistToken(tokens.refreshToken);
+    }
+
+    set({ accessToken: tokens.accessToken });
   },
 
   clearError: () => set({ error: null }),

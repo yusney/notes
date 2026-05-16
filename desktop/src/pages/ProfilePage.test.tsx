@@ -34,7 +34,7 @@ beforeEach(() => {
   useAuthStore.setState({
     user: { id: "u1", name: "Juan Pérez", email: "juan@test.com" },
     accessToken: "tok",
-    refreshToken: "ref",
+    
     isAuthenticated: true,
     isLoading: false,
     error: null,

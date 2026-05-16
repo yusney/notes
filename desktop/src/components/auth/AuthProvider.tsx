@@ -21,7 +21,7 @@ function LoadingScreen() {
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
-  const { isInitialized, isAuthenticated, initialize, refreshAccessToken } = useAuthStore();
+  const { isInitialized, isAuthenticated } = useAuthStore();
 
   useEffect(() => {
     // Wire up the API client token getter and unauthorized handler
@@ -32,9 +32,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, []);
 
   useEffect(() => {
-    // On mount, try to restore persisted session
-    initialize();
-  }, [initialize]);
+    // On mount only — initialize is stable from zustand but we pin with empty deps to be safe
+    useAuthStore.getState().initialize();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Keep the apiClient's unauthorized handler reactive when token refreshes
   const hasAuth = isAuthenticated;
@@ -45,7 +45,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         () => useAuthStore.getState().refreshAccessToken()
       );
     }
-  }, [hasAuth, refreshAccessToken]);
+  }, [hasAuth]);
 
   if (!isInitialized) {
     return <LoadingScreen />;

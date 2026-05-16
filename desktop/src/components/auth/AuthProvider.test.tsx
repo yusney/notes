@@ -17,7 +17,7 @@ function renderWithRouter(isAuthenticated: boolean, startPath = "/") {
     isAuthenticated,
     user: isAuthenticated ? { id: "1", email: "a@b.com", name: "Test" } : null,
     accessToken: isAuthenticated ? "token" : null,
-    refreshToken: null,
+    
     isLoading: false,
     error: null,
   });
@@ -43,7 +43,7 @@ function renderWithRouter(isAuthenticated: boolean, startPath = "/") {
 
 beforeEach(() => {
   useAuthStore.setState({
-    user: null, accessToken: null, refreshToken: null,
+    user: null, accessToken: null, 
     isAuthenticated: false, isLoading: false, error: null,
   });
 });
