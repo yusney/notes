@@ -108,14 +108,12 @@ jobs:
 
   publish-release:
     name: Publish Release
-    needs: build-tauri
+    needs: [create-release, build-tauri]
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - name: Publish Release
-        uses: actions/publish-release@v1
+      - name: Publish Draft Release
+        run: gh release edit "${{ github.ref_name }}" --draft=false --repo "${{ github.repository }}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          release_id: ${{ needs.create-release.outputs.release_id }}
