@@ -15,9 +15,9 @@ function TestLogin() {
 function renderWithRouter(isAuthenticated: boolean, startPath = "/") {
   useAuthStore.setState({
     isAuthenticated,
+    isInitialized: true, // skip the initialize() loader in tests
     user: isAuthenticated ? { id: "1", email: "a@b.com", name: "Test" } : null,
     accessToken: isAuthenticated ? "token" : null,
-    
     isLoading: false,
     error: null,
   });
@@ -43,8 +43,8 @@ function renderWithRouter(isAuthenticated: boolean, startPath = "/") {
 
 beforeEach(() => {
   useAuthStore.setState({
-    user: null, accessToken: null, 
-    isAuthenticated: false, isLoading: false, error: null,
+    user: null, accessToken: null,
+    isAuthenticated: false, isInitialized: true, isLoading: false, error: null,
   });
 });
 

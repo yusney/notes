@@ -3,7 +3,13 @@ import { vi } from "vitest";
 
 // Mock Tauri APIs
 vi.mock("@tauri-apps/api/core", () => ({
-  invoke: vi.fn(),
+  invoke: vi.fn((cmd: string) => {
+    // Keychain commands used by useAuthStore
+    if (cmd === "load_token") return Promise.resolve(null);
+    if (cmd === "save_token") return Promise.resolve();
+    if (cmd === "delete_token") return Promise.resolve();
+    return Promise.resolve();
+  }),
 }));
 
 vi.mock("@tauri-apps/plugin-opener", () => ({
