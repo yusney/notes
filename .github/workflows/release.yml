@@ -1,36 +1,42 @@
-
 name: Release
 
 on:
   push:
-    branches:
-      - main
+    tags:
+      - "v*"
 
 jobs:
-  # This job creates a draft release, so we can upload assets to it from the build jobs.
+  # Gate: run CI first — release only proceeds if all tests pass
+  ci:
+    name: Run CI
+    uses: ./.github/workflows/ci.yml
+
   create-release:
     name: Create Draft Release
+    needs: ci
     runs-on: ubuntu-latest
     outputs:
       release_id: ${{ steps.create_release.outputs.id }}
     permissions:
-      contents: write # To create a release
+      contents: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
       - name: Get version from package.json
         id: package-version
         uses: martinbeentjes/npm-get-version-action@v1.3.1
         with:
-          path: desktop # Specify the path to the package.json
+          path: desktop
+
       - name: Create Draft Release
         id: create_release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: v${{ steps.package-version.outputs.current-version }}
-          release_name: "Notes Desktop v${{ steps.package-version.outputs.current-version }}"
+          tag_name: ${{ github.ref_name }}
+          release_name: "Notes Desktop ${{ github.ref_name }}"
           body: "New release of the Notes desktop application."
           draft: true
           prerelease: false
@@ -90,20 +96,11 @@ jobs:
     needs: build-tauri
     runs-on: ubuntu-latest
     permissions:
-      contents: write # To publish the release
+      contents: write
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      - name: Get version from package.json
-        id: package-version
-        uses: martinbeentjes/npm-get-version-action@v1.3.1
-        with:
-          path: desktop
       - name: Publish Release
-        id: publish_release
         uses: actions/publish-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           release_id: ${{ needs.create-release.outputs.release_id }}
-
