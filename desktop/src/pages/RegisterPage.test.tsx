@@ -19,7 +19,7 @@ function renderRegisterPage() {
 
 beforeEach(() => {
   useAuthStore.setState({
-    user: null, accessToken: null, refreshToken: null,
+    user: null, accessToken: null, 
     isAuthenticated: false, isLoading: false, error: null,
   });
   vi.restoreAllMocks();
