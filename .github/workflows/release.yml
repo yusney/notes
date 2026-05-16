@@ -101,7 +101,7 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VITE_API_BASE_URL: "https://your-production-api.com" # IMPORTANT: Change this
+          VITE_API_BASE_URL: "https://api.notes.donduque.dev"
         with:
           projectPath: desktop
           releaseId: ${{ needs.create-release.outputs.release_id }}
