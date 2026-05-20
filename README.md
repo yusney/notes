@@ -51,6 +51,14 @@ docker-compose up -d
 # Health:     http://localhost:8080/health
 ```
 
+Or run the API directly with .NET CLI (requires a running PostgreSQL):
+
+```bash
+cd src/Notes.Api
+dotnet run --launch-profile http
+# API: http://localhost:5000
+```
+
 ### 3. Run backend tests
 
 ```bash
