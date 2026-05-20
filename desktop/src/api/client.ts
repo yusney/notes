@@ -121,12 +121,39 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
   };
 }
 
-// Singleton API client - token managed in-memory by auth store
-// API base URL: set VITE_API_BASE_URL env var to override (default: http://localhost:8080)
+// Runtime configuration loader — reads from config.json bundled with the app
+let _runtimeApiUrl: string | null = null;
+
+export async function loadRuntimeConfig(): Promise<void> {
+  try {
+    const res = await fetch("/config.json", { cache: "no-store" });
+    if (res.ok) {
+      const cfg = await res.json();
+      if (cfg.apiBaseUrl) {
+        _runtimeApiUrl = cfg.apiBaseUrl;
+        return;
+      }
+    }
+  } catch {
+    // silently fall back to build-time or default URL
+  }
+}
+
+// Build-time fallback (Vite define injection)
 declare const __API_BASE_URL__: string;
-export const API_BASE_URL = typeof __API_BASE_URL__ !== "undefined"
-  ? __API_BASE_URL__
-  : "http://localhost:8080";
+
+function resolveBaseUrl(): string {
+  // 1. Runtime config wins (allows hot-swapping without rebuild)
+  if (_runtimeApiUrl) return _runtimeApiUrl;
+
+  // 2. Build-time env (Vite define)
+  if (typeof __API_BASE_URL__ !== "undefined") return __API_BASE_URL__;
+
+  // 3. Ultimate fallback for safety
+  return "http://localhost:8080";
+}
+
+export const API_BASE_URL = resolveBaseUrl();
 
 let _tokenGetter: (() => string | null) | null = null;
 let _onUnauthorized: (() => Promise<void>) | null = null;
