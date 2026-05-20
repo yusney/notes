@@ -15,6 +15,14 @@ vi.mock("../api/client", () => ({
     get: vi.fn(),
     put: vi.fn(),
   },
+  createApiClient: vi.fn(() => ({
+    get: vi.fn(),
+    post: vi.fn(),
+    put: vi.fn(),
+    patch: vi.fn(),
+    delete: vi.fn(),
+  })),
+  API_BASE_URL: "http://localhost:8080",
 }));
 
 import { apiClient } from "../api/client";

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { apiClient } from "../api/client";
+import { useAuthStore } from "../stores/useAuthStore";
 
 export type Theme = "light" | "dark" | "system";
 export type ResolvedTheme = "light" | "dark";
@@ -46,18 +47,21 @@ export function useTheme() {
     return resolveTheme(stored, getSystemPrefersDark());
   });
 
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+
   useEffect(() => {
     const resolved = resolveTheme(theme, getSystemPrefersDark());
     setResolvedTheme(resolved);
     applyThemeToDocument(resolved);
     localStorage.setItem(THEME_KEY, theme);
 
-    // Sync with API (fire-and-forget)
+    // Sync with API only when authenticated (fire-and-forget)
+    if (!isAuthenticated) return;
     const apiTheme = theme === "system" ? "system" : theme;
     apiClient
       .put("/api/user/preferences", { theme: apiTheme })
       .catch(() => {});
-  }, [theme]);
+  }, [theme, isAuthenticated]);
 
   // Listen to system preference changes
   useEffect(() => {
@@ -73,8 +77,9 @@ export function useTheme() {
     return () => mq.removeEventListener("change", handler);
   }, [theme]);
 
-  // Initial sync from API
+  // Initial sync from API — only when authenticated
   useEffect(() => {
+    if (!isAuthenticated) return;
     apiClient
       .get<{ theme: string }>("/api/user/preferences")
       .then((data) => {
@@ -87,7 +92,7 @@ export function useTheme() {
         }
       })
       .catch(() => {});
-  }, []);
+  }, [isAuthenticated]);
 
   const setTheme = (newTheme: Theme) => {
     setThemeState(newTheme);

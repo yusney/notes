@@ -48,8 +48,12 @@ export function MainLayout() {
 
   const searchRef = useRef<HTMLInputElement>(null);
 
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+
   // ── Init: load saved preferences first, then fetch data + tags ─────────────
+  // Only run when authenticated — prevents 401 storms on login page
   useEffect(() => {
+    if (!isAuthenticated) return;
     async function init() {
       await usePreferencesStore.getState().fetchPreferences();
       const prefs = usePreferencesStore.getState();
@@ -63,7 +67,7 @@ export function MainLayout() {
       await useTagStore.getState().fetchTags();
     }
     init();
-  }, []);
+  }, [isAuthenticated]);
 
   const [deleteWarning, setDeleteWarning] = useState<{
     noteId: string;
