@@ -63,7 +63,7 @@ interface AuthState {
 
   initialize: () => Promise<void>;
   login: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<void>;
+  register: (name: string, email: string, password: string, rememberMe?: boolean) => Promise<void>;
   logout: () => Promise<void>;
   refreshAccessToken: () => Promise<void>;
   clearError: () => void;
@@ -149,7 +149,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  register: async (name, email, password) => {
+  register: async (name, email, password, rememberMe = true) => {
     set({ isLoading: true, error: null });
     try {
       const data = await authApiClient.post<AuthTokens>(
@@ -160,9 +160,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const user = await fetchProfile(data.accessToken);
       if (!user) throw new Error("No se pudo obtener el perfil del usuario");
 
-      // Always persist after registration
-      if (data.refreshToken) {
+      if (rememberMe && data.refreshToken) {
         await persistToken(data.refreshToken);
+      } else {
+        await clearToken();
       }
 
       set({
