@@ -17,6 +17,7 @@ export function RegisterPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(true);
   const [fieldErrors, setFieldErrors] = useState<{
     name?: string;
     email?: string;
@@ -40,7 +41,7 @@ export function RegisterPage() {
     if (Object.keys(errors).length > 0) return;
 
     try {
-      await register(name, email, password);
+      await register(name, email, password, rememberMe);
       navigate("/");
     } catch {
       // error set in store
@@ -121,6 +122,20 @@ export function RegisterPage() {
             {fieldErrors.password && (
               <p className="mt-1 text-xs text-danger">{fieldErrors.password}</p>
             )}
+          </div>
+
+          {/* Remember me */}
+          <div className="flex items-center gap-2">
+            <input
+              id="remember-me"
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+              className="h-4 w-4 border-border bg-surface text-accent"
+            />
+            <label htmlFor="remember-me" className="text-xs text-text-secondary cursor-pointer select-none">
+              Mantener sesión iniciada
+            </label>
           </div>
 
           <button
