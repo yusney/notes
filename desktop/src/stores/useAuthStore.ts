@@ -64,6 +64,7 @@ interface AuthState {
   initialize: () => Promise<void>;
   login: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
   register: (name: string, email: string, password: string, rememberMe?: boolean) => Promise<void>;
+  loginWithOAuth: (accessToken: string, refreshToken: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshAccessToken: () => Promise<void>;
   clearError: () => void;
@@ -175,6 +176,30 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       });
     } catch (err) {
       const message = err instanceof ApiClientError ? err.message : "Error al registrarse";
+      set({ isLoading: false, error: message });
+      throw err;
+    }
+  },
+
+  // Called after the OAuth deep link callback delivers tokens.
+  // Always persists the refresh token (OAuth = "remember me" by nature).
+  loginWithOAuth: async (accessToken: string, refreshToken: string) => {
+    set({ isLoading: true, error: null });
+    try {
+      const user = await fetchProfile(accessToken);
+      if (!user) throw new Error("No se pudo obtener el perfil del usuario");
+
+      await persistToken(refreshToken);
+
+      set({
+        user,
+        accessToken,
+        isAuthenticated: true,
+        isInitialized: true,
+        isLoading: false,
+      });
+    } catch (err) {
+      const message = err instanceof ApiClientError ? err.message : "Error al iniciar sesión con OAuth";
       set({ isLoading: false, error: message });
       throw err;
     }

@@ -37,7 +37,7 @@ public class GoogleOAuthProviderTests
     public async Task GetUserInfoAsync_ReturnsUserInfo()
     {
         // Triangulation: userinfo returns correct fields
-        var userInfoPayload = new { sub = "google-sub-123", email = "alice@gmail.com", name = "Alice" };
+        var userInfoPayload = new { sub = "google-sub-123", email = "alice@gmail.com", email_verified = true, name = "Alice" };
         var client = MakeClient(("https://www.googleapis.com/oauth2/v3/userinfo", userInfoPayload));
         var provider = new GoogleOAuthProvider(client, "client-id", "client-secret");
 
@@ -46,6 +46,7 @@ public class GoogleOAuthProviderTests
         Assert.Equal("google-sub-123", result.ProviderId);
         Assert.Equal("alice@gmail.com", result.Email);
         Assert.Equal("Alice", result.DisplayName);
+        Assert.True(result.EmailVerified);
     }
 }
 
@@ -76,9 +77,16 @@ public class GitHubOAuthProviderTests
     [Fact]
     public async Task GetUserInfoAsync_WithPublicEmail_ReturnsUserInfo()
     {
-        // Triangulation: user with public email — no secondary call needed
+        // Triangulation: user with public email — secondary call verifies ownership
         var userPayload = new { id = 42L, login = "alice", name = "Alice", email = "alice@example.com" };
-        var client = MakeClient(("https://api.github.com/user", userPayload));
+        var emailsPayload = new[]
+        {
+            new { email = "alice@example.com", primary = true, verified = true }
+        };
+
+        var client = MakeClient(
+            ("https://api.github.com/user", userPayload),
+            ("https://api.github.com/user/emails", emailsPayload));
         var provider = new GitHubOAuthProvider(client, "client-id", "client-secret");
 
         var result = await provider.GetUserInfoAsync("access-token");
@@ -86,6 +94,7 @@ public class GitHubOAuthProviderTests
         Assert.Equal("42", result.ProviderId);
         Assert.Equal("alice@example.com", result.Email);
         Assert.Equal("alice", result.DisplayName);
+        Assert.True(result.EmailVerified);
     }
 
     [Fact]
@@ -107,6 +116,7 @@ public class GitHubOAuthProviderTests
 
         Assert.Equal("99", result.ProviderId);
         Assert.Equal("bob@private.com", result.Email);
+        Assert.True(result.EmailVerified);
     }
 }
 

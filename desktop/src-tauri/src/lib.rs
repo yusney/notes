@@ -1,3 +1,9 @@
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
+use tauri::{Manager, RunEvent, WindowEvent};
+use tauri_plugin_deep_link::DeepLinkExt;
 use tauri_plugin_keyring_store::KeyringStore;
 
 const SERVICE: &str = "dev.donduque.notes";
@@ -18,11 +24,7 @@ fn save_token(token: String) -> Result<(), String> {
 /// Returns None if no token is stored yet.
 #[tauri::command]
 fn load_token() -> Result<Option<String>, String> {
-    match keyring().get_password(ACCOUNT) {
-        Ok(Some(token)) => Ok(Some(token)),
-        Ok(None) => Ok(None),
-        Err(e) => Err(e.to_string()),
-    }
+    keyring().get_password(ACCOUNT).map_err(|e| e.to_string())
 }
 
 /// Deletes the refresh token from the OS keychain (called on logout).
@@ -31,15 +33,106 @@ fn delete_token() -> Result<(), String> {
     match keyring().delete(ACCOUNT) {
         Ok(_) => Ok(()),
         Err(e) if e.to_string().contains("No credential") => Ok(()),
-        Err(e) => Err(e.to_string()),
+        Err(e) => {
+            Err(e.to_string())
+        }
     }
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let mut builder = tauri::Builder::default();
+    let should_exit = Arc::new(AtomicBool::new(false));
+    let should_exit_for_setup = should_exit.clone();
+    let should_exit_for_run = should_exit.clone();
+
+    // Must be registered before other plugins so Linux/Windows can forward
+    // deep links from a second spawned process to the already-running app.
+    #[cfg(desktop)]
+    {
+        builder = builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            if let Some(window) = app.get_webview_window("main") {
+                window.show().ok();
+                window.set_focus().ok();
+            }
+        }));
+    }
+
+    builder
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_deep_link::init())
         .invoke_handler(tauri::generate_handler![save_token, load_token, delete_token])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .setup(move |app| {
+            // In dev and AppImage-style installs on Linux/Windows, force-register
+            // configured schemes so `notes://...` opens this executable.
+            #[cfg(any(target_os = "linux", all(debug_assertions, windows)))]
+            app.deep_link().register_all()?;
+
+            #[cfg(desktop)]
+            {
+                use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
+
+                let quit_i = MenuItem::with_id(app, "quit", "Salir", true, None::<&str>)?;
+                let show_i = MenuItem::with_id(app, "show", "Mostrar", true, None::<&str>)?;
+                let separator = PredefinedMenuItem::separator(app)?;
+
+                let menu = Menu::with_items(app, &[&show_i, &separator, &quit_i])?;
+                let should_exit_for_menu = should_exit_for_setup.clone();
+
+                let _tray = tauri::tray::TrayIconBuilder::new()
+                    .icon(app.default_window_icon().unwrap().clone())
+                    .menu(&menu)
+                    .show_menu_on_left_click(false)
+                    .on_menu_event(move |app_handle, event| match event.id.as_ref() {
+                        "quit" => {
+                            should_exit_for_menu.store(true, Ordering::SeqCst);
+                            app_handle.exit(0);
+                        }
+                        "show" => {
+                            if let Some(window) = app_handle.get_webview_window("main") {
+                                window.show().unwrap();
+                                window.set_focus().unwrap();
+                            }
+                        }
+                        _ => {}
+                    })
+                    .on_tray_icon_event(|tray_handle, event| {
+                        if let tauri::tray::TrayIconEvent::Click { .. } = event {
+                            let app = tray_handle.app_handle();
+                            if let Some(window) = app.get_webview_window("main") {
+                                window.show().unwrap();
+                                window.set_focus().unwrap();
+                            }
+                        }
+                    })
+                    .build(app)?;
+            }
+            Ok(())
+        })
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(move |app_handle, event| match event {
+            RunEvent::ExitRequested { api, .. } => {
+                // Don't exit when the window closes — keep running in tray.
+                // The tray "Salir" action sets should_exit=true so the app can
+                // terminate completely.
+                if !should_exit_for_run.load(Ordering::SeqCst) {
+                    api.prevent_exit();
+                }
+            }
+            RunEvent::WindowEvent {
+                label,
+                event: WindowEvent::CloseRequested { api, .. },
+                ..
+            } => {
+                // Hide window instead of closing, keeping session alive
+                if label == "main" {
+                    api.prevent_close();
+                    if let Some(window) = app_handle.get_webview_window("main") {
+                        window.hide().unwrap();
+                    }
+                }
+            }
+            _ => {}
+        });
 }

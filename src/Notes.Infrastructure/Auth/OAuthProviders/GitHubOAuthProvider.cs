@@ -77,16 +77,21 @@ public sealed class GitHubOAuthProvider : IOAuthProvider
         var userData = await userResponse.Content.ReadFromJsonAsync<GitHubUserResponse>(cancellationToken: ct)
                        ?? throw new InvalidOperationException("Failed to deserialize GitHub user response.");
 
-        // GitHub may return null email if profile email is private — fetch from /user/emails
-        var email = userData.Email ?? await FetchPrimaryEmailAsync(accessToken, ct);
+        // GitHub may return null email if profile email is private. Use /user/emails
+        // so we can require a verified email before linking to an existing account.
+        var email = await FetchPrimaryEmailAsync(accessToken, userData.Email, ct);
 
         return new OAuthUserInfo(
             userData.Id.ToString(),
-            email,
-            userData.Login ?? userData.Name ?? email);
+            email.Email,
+            userData.Login ?? userData.Name ?? email.Email,
+            email.Verified);
     }
 
-    private async Task<string> FetchPrimaryEmailAsync(string accessToken, CancellationToken ct)
+    private async Task<(string Email, bool Verified)> FetchPrimaryEmailAsync(
+        string accessToken,
+        string? preferredEmail,
+        CancellationToken ct)
     {
         var request = new HttpRequestMessage(HttpMethod.Get, UserEmailsEndpoint);
         request.Headers.Authorization =
@@ -101,9 +106,17 @@ public sealed class GitHubOAuthProvider : IOAuthProvider
                          cancellationToken: ct)
                      ?? throw new InvalidOperationException("Failed to fetch GitHub emails.");
 
-        return emails.FirstOrDefault(e => e.Primary && e.Verified)?.Email
-               ?? emails.FirstOrDefault()?.Email
-               ?? throw new InvalidOperationException("No verified email found in GitHub account.");
+        var email = preferredEmail is not null
+            ? emails.FirstOrDefault(e => e.Email.Equals(preferredEmail, StringComparison.OrdinalIgnoreCase))
+            : null;
+
+        email ??= emails.FirstOrDefault(e => e.Primary && e.Verified)
+                  ?? emails.FirstOrDefault(e => e.Verified)
+                  ?? emails.FirstOrDefault();
+
+        return email is not null
+            ? (email.Email, email.Verified)
+            : throw new InvalidOperationException("No email found in GitHub account.");
     }
 
     private sealed record GitHubTokenResponse(

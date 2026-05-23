@@ -16,6 +16,16 @@ vi.mock("@tauri-apps/plugin-opener", () => ({
   openUrl: vi.fn(),
 }));
 
+vi.mock("@tauri-apps/api/event", () => ({
+  listen: vi.fn(() => Promise.resolve(vi.fn())),
+  emit: vi.fn(() => Promise.resolve()),
+}));
+
+vi.mock("@tauri-apps/plugin-deep-link", () => ({
+  getCurrent: vi.fn(() => Promise.resolve(null)),
+  onOpenUrl: vi.fn(() => Promise.resolve(vi.fn())),
+}));
+
 // Mock window.matchMedia (required by useTheme)
 Object.defineProperty(window, "matchMedia", {
   writable: true,

@@ -2,7 +2,7 @@ namespace Notes.Application.Common.Interfaces;
 
 public record OAuthTokenResponse(string AccessToken, string? RefreshToken);
 
-public record OAuthUserInfo(string ProviderId, string Email, string DisplayName);
+public record OAuthUserInfo(string ProviderId, string Email, string DisplayName, bool EmailVerified);
 
 public interface IOAuthProvider
 {

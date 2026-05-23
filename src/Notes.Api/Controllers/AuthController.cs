@@ -1,8 +1,11 @@
 using System.Security.Claims;
+using System.Security.Cryptography;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Caching.Memory;
 using Notes.Application.Common.Interfaces;
 using Notes.Application.Features.Auth.Commands.ForgotPassword;
 using Notes.Application.Features.Auth.Commands.Login;
@@ -21,8 +24,13 @@ namespace Notes.Api.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly IMediator _mediator;
+    private readonly IMemoryCache _cache;
 
-    public AuthController(IMediator mediator) => _mediator = mediator;
+    public AuthController(IMediator mediator, IMemoryCache cache)
+    {
+        _mediator = mediator;
+        _cache = cache;
+    }
 
     // POST /api/auth/register
     [AllowAnonymous]
@@ -145,7 +153,7 @@ public class AuthController : ControllerBase
     [HttpGet("oauth/google")]
     public IActionResult GoogleLogin([FromKeyedServices("google")] IOAuthProvider provider)
     {
-        var state = Guid.NewGuid().ToString("N");
+        var state = CreateOAuthState();
         var redirectUri = BuildCallbackUri("google");
         var authUrl = provider.BuildAuthorizationUrl(state, redirectUri);
         return Redirect(authUrl);
@@ -156,11 +164,12 @@ public class AuthController : ControllerBase
     [HttpGet("oauth/google/callback")]
     public async Task<IActionResult> GoogleCallback(
         [FromQuery] string? code,
+        [FromQuery] string? state,
         [FromQuery] string? error,
         [FromKeyedServices("google")] IOAuthProvider provider,
         CancellationToken ct)
     {
-        return await HandleOAuthCallback(provider, code, error, AuthProvider.Google, ct);
+        return await HandleOAuthCallback(provider, code, state, error, AuthProvider.Google, ct);
     }
 
     // GET /api/auth/oauth/github
@@ -168,7 +177,7 @@ public class AuthController : ControllerBase
     [HttpGet("oauth/github")]
     public IActionResult GitHubLogin([FromKeyedServices("github")] IOAuthProvider provider)
     {
-        var state = Guid.NewGuid().ToString("N");
+        var state = CreateOAuthState();
         var redirectUri = BuildCallbackUri("github");
         var authUrl = provider.BuildAuthorizationUrl(state, redirectUri);
         return Redirect(authUrl);
@@ -179,11 +188,32 @@ public class AuthController : ControllerBase
     [HttpGet("oauth/github/callback")]
     public async Task<IActionResult> GitHubCallback(
         [FromQuery] string? code,
+        [FromQuery] string? state,
         [FromQuery] string? error,
         [FromKeyedServices("github")] IOAuthProvider provider,
         CancellationToken ct)
     {
-        return await HandleOAuthCallback(provider, code, error, AuthProvider.GitHub, ct);
+        return await HandleOAuthCallback(provider, code, state, error, AuthProvider.GitHub, ct);
+    }
+
+    // POST /api/auth/oauth/desktop/exchange
+    [AllowAnonymous]
+    [HttpPost("oauth/desktop/exchange")]
+    public IActionResult ExchangeDesktopOAuthCode([FromBody] OAuthDesktopExchangeRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Code))
+            return BadRequest(new { errors = new[] { "Code is required." } });
+
+        var cacheKey = BuildOAuthDesktopCodeCacheKey(request.Code);
+        if (!_cache.TryGetValue<TokenPairDto>(cacheKey, out var tokenPair) || tokenPair is null)
+            return Unauthorized(new { errors = new[] { "Invalid or expired OAuth code." } });
+
+        _cache.Remove(cacheKey);
+        return Ok(new
+        {
+            accessToken = tokenPair.AccessToken,
+            refreshToken = tokenPair.RefreshToken
+        });
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
@@ -191,12 +221,23 @@ public class AuthController : ControllerBase
     private async Task<IActionResult> HandleOAuthCallback(
         IOAuthProvider provider,
         string? code,
+        string? state,
         string? error,
         AuthProvider authProvider,
         CancellationToken ct)
     {
         if (!string.IsNullOrEmpty(error) || string.IsNullOrEmpty(code))
-            return BadRequest(new { errors = new[] { error ?? "Authorization code missing." } });
+        {
+            // For desktop apps, redirect with error to custom protocol
+            var errorUrl = BuildOAuthRedirectUrl(null, error ?? "Authorization code missing.");
+            return Redirect(errorUrl);
+        }
+
+        if (!ValidateAndConsumeOAuthState(state))
+        {
+            var errorUrl = BuildOAuthRedirectUrl(null, "Invalid OAuth state.");
+            return Redirect(errorUrl);
+        }
 
         var redirectUri = BuildCallbackUri(provider.Name);
 
@@ -208,21 +249,84 @@ public class AuthController : ControllerBase
         }
         catch (Exception ex)
         {
-            return BadRequest(new { errors = new[] { $"OAuth exchange failed: {ex.Message}" } });
+            var errorUrl = BuildOAuthRedirectUrl(null, $"OAuth exchange failed: {ex.Message}");
+            return Redirect(errorUrl);
         }
 
         var result = await _mediator.Send(
-            new OAuthLoginCommand(authProvider, userInfo.ProviderId, userInfo.Email, userInfo.DisplayName), ct);
+            new OAuthLoginCommand(
+                authProvider,
+                userInfo.ProviderId,
+                userInfo.Email,
+                userInfo.DisplayName,
+                userInfo.EmailVerified), ct);
 
         if (!result.IsSuccess)
-            return BadRequest(new { errors = result.Errors });
-
-        return Ok(new
         {
-            accessToken = result.Value!.AccessToken,
-            refreshToken = result.Value.RefreshToken
-        });
+            var errorUrl = BuildOAuthRedirectUrl(null, string.Join(", ", result.Errors));
+            return Redirect(errorUrl);
+        }
+
+        // Never put bearer tokens in a custom protocol URL. The desktop app
+        // receives a short-lived one-time code and exchanges it over HTTPS.
+        var desktopCode = CreateOAuthDesktopCode(result.Value!);
+        var successUrl = BuildOAuthRedirectUrl(desktopCode, null);
+        return Redirect(successUrl);
     }
+
+    private string BuildOAuthRedirectUrl(string? code, string? error)
+    {
+        // Custom protocol for Tauri desktop app
+        var protocol = "notes";
+        var path = "auth/callback";
+
+        var query = new List<string>();
+        if (!string.IsNullOrEmpty(code))
+            query.Add($"code={Uri.EscapeDataString(code)}");
+        if (!string.IsNullOrEmpty(error))
+            query.Add($"error={Uri.EscapeDataString(error)}");
+
+        var queryString = query.Count > 0 ? $"?{string.Join("&", query)}" : "";
+        return $"{protocol}://{path}{queryString}";
+    }
+
+    private string CreateOAuthState()
+    {
+        var state = CreateSecureToken();
+        _cache.Set(BuildOAuthStateCacheKey(state), true, TimeSpan.FromMinutes(10));
+        return state;
+    }
+
+    private bool ValidateAndConsumeOAuthState(string? state)
+    {
+        if (string.IsNullOrWhiteSpace(state))
+            return false;
+
+        var cacheKey = BuildOAuthStateCacheKey(state);
+        if (!_cache.TryGetValue<bool>(cacheKey, out _))
+            return false;
+
+        _cache.Remove(cacheKey);
+        return true;
+    }
+
+    private string CreateOAuthDesktopCode(TokenPairDto tokenPair)
+    {
+        var code = CreateSecureToken();
+        _cache.Set(BuildOAuthDesktopCodeCacheKey(code), tokenPair, TimeSpan.FromMinutes(2));
+        return code;
+    }
+
+    private static string CreateSecureToken()
+    {
+        Span<byte> bytes = stackalloc byte[32];
+        RandomNumberGenerator.Fill(bytes);
+        return WebEncoders.Base64UrlEncode(bytes);
+    }
+
+    private static string BuildOAuthStateCacheKey(string state) => $"oauth-state:{state}";
+
+    private static string BuildOAuthDesktopCodeCacheKey(string code) => $"oauth-desktop-code:{code}";
 
     private string BuildCallbackUri(string providerName)
     {
@@ -242,5 +346,6 @@ public class AuthController : ControllerBase
 public record RegisterRequest(string Email, string Password, string DisplayName);
 public record LoginRequest(string Email, string Password);
 public record RefreshRequest(string Token);
+public record OAuthDesktopExchangeRequest(string Code);
 public record ForgotPasswordRequest(string Email);
 public record ResetPasswordRequest(string Token, string NewPassword);

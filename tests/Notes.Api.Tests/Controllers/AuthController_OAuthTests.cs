@@ -52,21 +52,31 @@ public class AuthController_OAuthTests : IClassFixture<NotesApiFactory>
     // ── GET /api/auth/oauth/google/callback (missing code) ───────────────────
 
     [Fact]
-    public async Task GoogleCallback_MissingCode_Returns400()
+    public async Task GoogleCallback_MissingCode_RedirectsToDesktopWithError()
     {
         // No 'code' query parameter — OAuth error scenario
         var response = await _client.GetAsync("/api/auth/oauth/google/callback?error=access_denied");
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.Redirect);
+        response.Headers.Location.Should().NotBeNull();
+        response.Headers.Location!.Scheme.Should().Be("notes");
+        response.Headers.Location.Host.Should().Be("auth");
+        response.Headers.Location.AbsolutePath.Should().Be("/callback");
+        response.Headers.Location.Query.Should().Contain("error=access_denied");
     }
 
     // ── GET /api/auth/oauth/github/callback (missing code) ───────────────────
 
     [Fact]
-    public async Task GitHubCallback_MissingCode_Returns400()
+    public async Task GitHubCallback_MissingCode_RedirectsToDesktopWithError()
     {
         var response = await _client.GetAsync("/api/auth/oauth/github/callback?error=access_denied");
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.Redirect);
+        response.Headers.Location.Should().NotBeNull();
+        response.Headers.Location!.Scheme.Should().Be("notes");
+        response.Headers.Location.Host.Should().Be("auth");
+        response.Headers.Location.AbsolutePath.Should().Be("/callback");
+        response.Headers.Location.Query.Should().Contain("error=access_denied");
     }
 }
