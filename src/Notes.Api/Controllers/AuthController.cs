@@ -25,11 +25,13 @@ public class AuthController : ControllerBase
 {
     private readonly IMediator _mediator;
     private readonly IMemoryCache _cache;
+    private readonly IConfiguration _configuration;
 
-    public AuthController(IMediator mediator, IMemoryCache cache)
+    public AuthController(IMediator mediator, IMemoryCache cache, IConfiguration configuration)
     {
         _mediator = mediator;
         _cache = cache;
+        _configuration = configuration;
     }
 
     // POST /api/auth/register
@@ -330,6 +332,10 @@ public class AuthController : ControllerBase
 
     private string BuildCallbackUri(string providerName)
     {
+        var publicBaseUrl = _configuration["OAuth:PublicBaseUrl"]?.TrimEnd('/');
+        if (!string.IsNullOrWhiteSpace(publicBaseUrl))
+            return $"{publicBaseUrl}/api/auth/oauth/{providerName}/callback";
+
         var scheme = Request.Scheme;
         var host = Request.Host.Value;
         return $"{scheme}://{host}/api/auth/oauth/{providerName}/callback";
