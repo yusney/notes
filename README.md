@@ -84,6 +84,8 @@ pnpm exec vitest run
 
 Copy `.env.example` to `.env` and fill in the values.
 
+### Core
+
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `POSTGRES_DB` | Database name | `notes_db` |
@@ -92,7 +94,24 @@ Copy `.env.example` to `.env` and fill in the values.
 | `Jwt__Secret` | JWT signing key (≥32 chars) | **REQUIRED** |
 | `Jwt__Issuer` | JWT issuer | `notes-api` |
 | `Jwt__Audience` | JWT audience | `notes-client` |
-| `VITE_API_BASE_URL` | API URL for desktop app | `http://localhost:8080` |
+| `VITE_API_BASE_URL` | API base URL used by the desktop app | `http://localhost:8080` |
+
+### OAuth (optional — required only if social login is enabled)
+
+| Variable | Description |
+|----------|-------------|
+| `OAuth__Google__ClientId` | Google OAuth 2.0 client ID |
+| `OAuth__Google__ClientSecret` | Google OAuth 2.0 client secret |
+| `OAuth__GitHub__ClientId` | GitHub OAuth App client ID |
+| `OAuth__GitHub__ClientSecret` | GitHub OAuth App client secret |
+| `OAuth__PublicBaseUrl` | **Required in production.** Public HTTPS root of the API (e.g. `https://api.notes.donduque.dev`). Needed when the API runs behind a reverse proxy that terminates TLS; without it the redirect URI sent to Google/GitHub uses `http://` and the login fails with `redirect_uri_mismatch`. Leave empty for local dev. |
+
+#### Authorized redirect URIs to register in each provider
+
+| Provider | URI to add in the developer console |
+|----------|--------------------------------------|
+| Google | `https://<your-domain>/api/auth/oauth/google/callback` |
+| GitHub | `https://<your-domain>/api/auth/oauth/github/callback` |
 
 > ⚠️ **Never commit `.env` to git.** It is already in `.gitignore`.
 
@@ -166,11 +185,24 @@ Set production secrets in Dokploy environment panel (never in the repository).
 
 ## API Endpoints
 
+### Auth
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/api/auth/register` | No | Register with email + password |
+| POST | `/api/auth/login` | No | Login, returns JWT + refresh token |
+| POST | `/api/auth/refresh` | No | Exchange refresh token for new JWT |
+| GET | `/api/auth/oauth/google` | No | Redirect to Google login |
+| GET | `/api/auth/oauth/google/callback` | No | Google callback (browser) |
+| GET | `/api/auth/oauth/github` | No | Redirect to GitHub login |
+| GET | `/api/auth/oauth/github/callback` | No | GitHub callback (browser) |
+| POST | `/api/auth/oauth/desktop/exchange` | No | Exchange one-time code for JWT (desktop app) |
+
+### Resources
+
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
 | GET | `/health` | No | Health check |
-| POST | `/api/auth/register` | No | Register user |
-| POST | `/api/auth/login` | No | Login, returns JWT |
 | GET/POST | `/api/tabs` | JWT | Manage tabs |
 | GET/POST | `/api/notes` | JWT | Manage notes |
 | GET/POST | `/api/tags` | JWT | Manage tags |
