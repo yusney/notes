@@ -71,7 +71,7 @@ public sealed class GoogleOAuthProvider : IOAuthProvider
         var data = await response.Content.ReadFromJsonAsync<GoogleUserInfoResponse>(cancellationToken: ct)
                    ?? throw new InvalidOperationException("Failed to deserialize Google userinfo response.");
 
-        return new OAuthUserInfo(data.Sub, data.Email, data.Name ?? data.Email);
+        return new OAuthUserInfo(data.Sub, data.Email, data.Name ?? data.Email, data.EmailVerified);
     }
 
     private sealed record GoogleTokenResponse(
@@ -81,5 +81,6 @@ public sealed class GoogleOAuthProvider : IOAuthProvider
     private sealed record GoogleUserInfoResponse(
         [property: JsonPropertyName("sub")] string Sub,
         [property: JsonPropertyName("email")] string Email,
+        [property: JsonPropertyName("email_verified")] bool EmailVerified,
         [property: JsonPropertyName("name")] string? Name);
 }

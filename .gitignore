@@ -492,3 +492,4 @@ desktop/coverage/
 
 # Engram local memory
 .engram/
+src/Notes.Api/appsettings.Development.json

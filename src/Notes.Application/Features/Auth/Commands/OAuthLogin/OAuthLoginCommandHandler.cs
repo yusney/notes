@@ -5,23 +5,27 @@ using Notes.Application.Features.Auth.Commands.RegisterUser;
 using Notes.Domain.Entities;
 using Notes.Domain.Enums;
 using Notes.Domain.ValueObjects;
+using DomainRefreshToken = Notes.Domain.Entities.RefreshToken;
 
 namespace Notes.Application.Features.Auth.Commands.OAuthLogin;
 
 public class OAuthLoginCommandHandler : IRequestHandler<OAuthLoginCommand, Result<TokenPairDto>>
 {
     private readonly IUserRepository _userRepository;
+    private readonly IRefreshTokenRepository _refreshTokenRepository;
     private readonly ITabRepository _tabRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IJwtService _jwtService;
 
     public OAuthLoginCommandHandler(
         IUserRepository userRepository,
+        IRefreshTokenRepository refreshTokenRepository,
         ITabRepository tabRepository,
         IUnitOfWork unitOfWork,
         IJwtService jwtService)
     {
         _userRepository = userRepository;
+        _refreshTokenRepository = refreshTokenRepository;
         _tabRepository = tabRepository;
         _unitOfWork = unitOfWork;
         _jwtService = jwtService;
@@ -36,14 +40,21 @@ public class OAuthLoginCommandHandler : IRequestHandler<OAuthLoginCommand, Resul
         if (existingOAuth is not null)
         {
             // Returning OAuth user — just issue tokens
-            var pair = _jwtService.GenerateTokenPair(existingOAuth.Id, existingOAuth.Email.Value);
-            return Result<TokenPairDto>.Ok(new TokenPairDto(pair.AccessToken, pair.RefreshToken));
+            return await IssueTokenPairAsync(existingOAuth, cancellationToken);
         }
 
-        // Check if a Local account exists with the same email — reject to prevent account takeover
-        var existingLocal = await _userRepository.GetByEmailAsync(request.Email, cancellationToken);
-        if (existingLocal is not null && existingLocal.Provider == AuthProvider.Local)
-            return Result<TokenPairDto>.Fail("Email is already registered with a password account.");
+        // If a user already exists with the same verified email, treat OAuth as
+        // an additional trusted login method for that account. This prevents
+        // duplicate accounts while still blocking account takeover for providers
+        // that cannot prove email ownership.
+        var existingByEmail = await _userRepository.GetByEmailAsync(request.Email, cancellationToken);
+        if (existingByEmail is not null)
+        {
+            if (!request.EmailVerified)
+                return Result<TokenPairDto>.Fail("OAuth email must be verified to sign in to an existing account.");
+
+            return await IssueTokenPairAsync(existingByEmail, cancellationToken);
+        }
 
         // Create new OAuth user
         var email = new Email(request.Email);
@@ -55,9 +66,18 @@ public class OAuthLoginCommandHandler : IRequestHandler<OAuthLoginCommand, Resul
 
         await _userRepository.AddAsync(newUser, cancellationToken);
         await _tabRepository.AddAsync(generalTab, cancellationToken);
+
+        return await IssueTokenPairAsync(newUser, cancellationToken);
+    }
+
+    private async Task<Result<TokenPairDto>> IssueTokenPairAsync(User user, CancellationToken cancellationToken)
+    {
+        var pair = _jwtService.GenerateTokenPair(user.Id, user.Email.Value);
+        var refreshToken = new DomainRefreshToken(Guid.NewGuid(), user.Id, pair.RefreshToken, DateTime.UtcNow);
+
+        await _refreshTokenRepository.AddAsync(refreshToken, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        var tokenPair = _jwtService.GenerateTokenPair(newUser.Id, email.Value);
-        return Result<TokenPairDto>.Ok(new TokenPairDto(tokenPair.AccessToken, tokenPair.RefreshToken));
+        return Result<TokenPairDto>.Ok(new TokenPairDto(pair.AccessToken, pair.RefreshToken));
     }
 }

@@ -1,22 +1,24 @@
-import { useState, FormEvent } from "react";
+import { useEffect, useState, FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { openUrl } from "@tauri-apps/plugin-opener";
 import { useAuthStore } from "../stores/useAuthStore";
-import { API_BASE_URL } from "../api/client";
+import { useOAuthLogin } from "../hooks/useOAuth";
 import { PasswordInput } from "../components/ui/PasswordInput";
 import { Icon } from "../components/ui/Icon";
 
-async function handleOAuthLogin(provider: "google" | "github") {
-  await openUrl(`${API_BASE_URL}/api/auth/oauth/${provider}`);
-}
-
 export function LoginPage() {
-  const { login, isLoading, error, clearError } = useAuthStore();
+  const { login, isLoading, error, clearError, isAuthenticated } = useAuthStore();
+  const { startOAuth, isLoading: isOAuthLoading, error: oauthError, clearError: clearOAuthError } = useOAuthLogin();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/", { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
 
   function validate() {
     const errors: { email?: string; password?: string } = {};
@@ -50,9 +52,9 @@ export function LoginPage() {
         </div>
         <p className="text-sm text-text-secondary mb-6">Autenticación Requerida</p>
 
-        {error && (
+        {(error || oauthError) && (
           <div role="alert" className="mb-4 p-3 bg-danger/10 border border-danger text-sm text-danger">
-            {error}
+            {error || oauthError}
           </div>
         )}
 
@@ -141,19 +143,21 @@ export function LoginPage() {
           <div className="mt-4 flex flex-col gap-2">
             <button
               type="button"
-              onClick={() => handleOAuthLogin("google")}
-              className="w-full py-2 px-4 border border-border text-sm font-medium text-text-primary hover:bg-surface transition-colors flex items-center justify-center gap-2"
+              onClick={() => { clearOAuthError(); startOAuth("google"); }}
+              disabled={isOAuthLoading}
+              className="w-full py-2 px-4 border border-border text-sm font-medium text-text-primary hover:bg-surface transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Icon name="data_object" className="text-text-secondary" />
-              Google
+              {isOAuthLoading ? "Abriendo navegador..." : "Google"}
             </button>
             <button
               type="button"
-              onClick={() => handleOAuthLogin("github")}
-              className="w-full py-2 px-4 border border-border text-sm font-medium text-text-primary hover:bg-surface transition-colors flex items-center justify-center gap-2"
+              onClick={() => { clearOAuthError(); startOAuth("github"); }}
+              disabled={isOAuthLoading}
+              className="w-full py-2 px-4 border border-border text-sm font-medium text-text-primary hover:bg-surface transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Icon name="terminal" className="text-text-secondary" />
-              GitHub
+              {isOAuthLoading ? "Abriendo navegador..." : "GitHub"}
             </button>
           </div>
         </div>

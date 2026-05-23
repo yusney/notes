@@ -9,4 +9,5 @@ public record OAuthLoginCommand(
     AuthProvider Provider,
     string ProviderUserId,
     string Email,
-    string DisplayName) : IRequest<Result<TokenPairDto>>;
+    string DisplayName,
+    bool EmailVerified) : IRequest<Result<TokenPairDto>>;

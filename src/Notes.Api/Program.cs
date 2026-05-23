@@ -23,6 +23,9 @@ builder.Services.AddApplication();
 // ── Infrastructure layer (DbContext + repos + services) ──────────────────────
 builder.Services.AddInfrastructure(builder.Configuration);
 
+// ── Short-lived OAuth state and desktop exchange code storage ────────────────
+builder.Services.AddMemoryCache();
+
 // ── JWT Bearer Authentication (Task 5.11) ────────────────────────────────────
 // Configure JWT Bearer using IConfigureOptions<JwtBearerOptions> so that
 // the signing key is resolved from IConfiguration AT REQUEST TIME — not
