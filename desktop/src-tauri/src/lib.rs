@@ -51,6 +51,9 @@ pub fn run() {
     #[cfg(desktop)]
     {
         builder = builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            // Bring the window to front when a second instance is launched.
+            // The single-instance plugin (built with deep-link feature) automatically
+            // forwards notes:// URLs from the second instance to the running app.
             if let Some(window) = app.get_webview_window("main") {
                 window.show().ok();
                 window.set_focus().ok();
