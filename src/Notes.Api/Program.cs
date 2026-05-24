@@ -69,9 +69,10 @@ builder.Services.AddCors(options =>
     {
         policy
             .WithOrigins(
-                "http://localhost:1420",  // Tauri dev
-                "tauri://localhost",       // Tauri production
-                "https://tauri.localhost"  // Tauri production (some platforms)
+                "http://localhost:1420",   // Tauri dev
+                "tauri://localhost",        // Tauri production (macOS/Linux)
+                "https://tauri.localhost",  // Tauri production (Windows)
+                "http://tauri.localhost"    // Tauri production (Windows fallback)
             )
             .AllowAnyHeader()
             .AllowAnyMethod()
