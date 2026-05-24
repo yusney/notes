@@ -36,9 +36,22 @@ public sealed class RateLimitingMiddleware
             return;
         }
 
-        // Only apply rate limiting to auth and public share endpoints
-        if (!context.Request.Path.StartsWithSegments("/api/auth", StringComparison.OrdinalIgnoreCase) &&
-            !context.Request.Path.StartsWithSegments("/share", StringComparison.OrdinalIgnoreCase))
+        // Only apply rate limiting to auth and public share endpoints.
+        // OAuth callbacks are exempt — they are server-side redirects from
+        // Google/GitHub, not user-initiated requests, and must not be throttled.
+        var path = context.Request.Path;
+        var isOAuthCallback = path.StartsWithSegments("/api/auth/oauth", StringComparison.OrdinalIgnoreCase)
+            && path.Value != null
+            && path.Value.EndsWith("/callback", StringComparison.OrdinalIgnoreCase);
+
+        if (isOAuthCallback)
+        {
+            await _next(context);
+            return;
+        }
+
+        if (!path.StartsWithSegments("/api/auth", StringComparison.OrdinalIgnoreCase) &&
+            !path.StartsWithSegments("/share", StringComparison.OrdinalIgnoreCase))
         {
             await _next(context);
             return;
