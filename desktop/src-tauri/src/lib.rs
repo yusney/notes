@@ -36,6 +36,15 @@ fn delete_token() -> Result<(), String> {
     }
 }
 
+/// Called by the frontend when the user chooses "Minimize to tray".
+/// Hides the window so the process keeps running in the system tray.
+#[tauri::command]
+fn hide_to_tray(app: tauri::AppHandle) {
+    if let Some(window) = app.get_webview_window("main") {
+        window.hide().unwrap_or(());
+    }
+}
+
 /// Called by the frontend when the user explicitly chooses "Close completely".
 /// Sets the exit flag so ExitRequested doesn't prevent the shutdown.
 #[tauri::command]
@@ -71,6 +80,7 @@ pub fn run() {
             save_token,
             load_token,
             delete_token,
+            hide_to_tray,
             exit_app
         ])
         .setup(move |app| {
