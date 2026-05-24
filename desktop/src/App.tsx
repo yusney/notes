@@ -9,6 +9,7 @@ import { SharedNotePage } from "./pages/SharedNotePage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { useTheme } from "./hooks/useTheme";
+import { CloseDialog } from "./components/CloseDialog";
 
 function ThemeWatcher() {
   // Mount useTheme to trigger initial theme application via applyThemeToDocument in useTheme.ts
@@ -20,6 +21,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <ThemeWatcher />
+      <CloseDialog />
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<LoginPage />} />

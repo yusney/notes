@@ -2,7 +2,7 @@ use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc,
 };
-use tauri::{Manager, RunEvent, WindowEvent};
+use tauri::{Emitter, Listener, Manager, RunEvent, WindowEvent};
 use tauri_plugin_keyring_store::KeyringStore;
 
 const SERVICE: &str = "dev.donduque.notes";
@@ -103,12 +103,25 @@ pub fn run() {
                         _ => {}
                     })
                     .on_tray_icon_event(|tray_handle, event| {
-                        if let tauri::tray::TrayIconEvent::Click { .. } = event {
-                            let app = tray_handle.app_handle();
-                            if let Some(window) = app.get_webview_window("main") {
-                                window.show().unwrap();
-                                window.set_focus().unwrap();
+                        match event {
+                            tauri::tray::TrayIconEvent::Click {
+                                button: tauri::tray::MouseButton::Left,
+                                ..
+                            } => {
+                                let app = tray_handle.app_handle();
+                                if let Some(window) = app.get_webview_window("main") {
+                                    window.show().unwrap();
+                                    window.set_focus().unwrap();
+                                }
                             }
+                            tauri::tray::TrayIconEvent::Click {
+                                button: tauri::tray::MouseButton::Right,
+                                ..
+                            } => {
+                                // On Windows, right click shows the menu via set_menu no-op trick
+                                // The menu is already attached — the OS handles right-click on Windows
+                            }
+                            _ => {}
                         }
                     })
                     .build(app)?;
@@ -131,11 +144,21 @@ pub fn run() {
                 event: WindowEvent::CloseRequested { api, .. },
                 ..
             } => {
-                // Hide window instead of closing, keeping session alive
+                // Always prevent the default close — let the frontend decide
+                // whether to hide to tray or exit completely via CloseDialog.
                 if label == "main" {
                     api.prevent_close();
                     if let Some(window) = app_handle.get_webview_window("main") {
-                        window.hide().unwrap();
+                        // Emit event to frontend to show the close dialog
+                        window.emit("close-requested-dialog", ()).unwrap_or(());
+
+                        // Listen once for the frontend's confirm-close response
+                        let window_clone = window.clone();
+                        let should_exit_confirm = should_exit_for_run.clone();
+                        window.once("confirm-close", move |_| {
+                            should_exit_confirm.store(true, Ordering::SeqCst);
+                            window_clone.close().unwrap_or(());
+                        });
                     }
                 }
             }
