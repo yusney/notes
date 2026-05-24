@@ -24,7 +24,7 @@ export function CloseDialog() {
 
   const minimize = async () => {
     setOpen(false);
-    await getCurrentWindow().hide();
+    await invoke("hide_to_tray");
   };
 
   const close = async () => {
