@@ -63,9 +63,10 @@ pub fn run() {
         .plugin(tauri_plugin_deep_link::init())
         .invoke_handler(tauri::generate_handler![save_token, load_token, delete_token])
         .setup(move |app| {
-            // In dev and AppImage-style installs on Linux/Windows, force-register
-            // configured schemes so `notes://...` opens this executable.
-            #[cfg(any(target_os = "linux", all(debug_assertions, windows)))]
+            // Register deep-link schemes so `notes://...` opens this executable.
+            // macOS handles this via Info.plist (no manual registration needed).
+            // Linux and Windows both require explicit registration.
+            #[cfg(any(target_os = "linux", target_os = "windows"))]
             app.deep_link().register_all()?;
 
             #[cfg(desktop)]
