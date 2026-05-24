@@ -102,6 +102,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VITE_API_BASE_URL: "https://api.notes.donduque.dev"
+          APPLE_SIGNING_IDENTITY: "-"
         with:
           projectPath: desktop
           releaseId: ${{ needs.create-release.outputs.release_id }}

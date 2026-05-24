@@ -3,7 +3,6 @@ use std::sync::{
     Arc,
 };
 use tauri::{Manager, RunEvent, WindowEvent};
-use tauri_plugin_deep_link::DeepLinkExt;
 use tauri_plugin_keyring_store::KeyringStore;
 
 const SERVICE: &str = "dev.donduque.notes";
@@ -70,7 +69,10 @@ pub fn run() {
             // macOS handles this via Info.plist (no manual registration needed).
             // Linux and Windows both require explicit registration.
             #[cfg(any(target_os = "linux", target_os = "windows"))]
-            app.deep_link().register_all()?;
+            {
+                use tauri_plugin_deep_link::DeepLinkExt;
+                app.deep_link().register_all()?;
+            }
 
             #[cfg(desktop)]
             {
