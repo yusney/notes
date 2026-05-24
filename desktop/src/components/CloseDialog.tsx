@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { invoke } from "@tauri-apps/api/core";
 
 /**
  * Dialog shown when the user clicks the window close button.
- * Default action is "minimize to tray" — closing completely requires explicit choice.
+ * - "Minimize to tray" → hides the window, process keeps running.
+ * - "Close completely" → calls exit_app Tauri command, process exits.
  */
 export function CloseDialog() {
   const [open, setOpen] = useState(false);
@@ -22,14 +24,12 @@ export function CloseDialog() {
 
   const minimize = async () => {
     setOpen(false);
-    const appWindow = getCurrentWindow();
-    await appWindow.hide();
+    await getCurrentWindow().hide();
   };
 
   const close = async () => {
     setOpen(false);
-    const appWindow = getCurrentWindow();
-    await appWindow.emit("confirm-close");
+    await invoke("exit_app");
   };
 
   if (!open) return null;
