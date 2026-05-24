@@ -35,25 +35,25 @@ export function CloseDialog() {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded-xl shadow-2xl p-6 w-80 flex flex-col gap-4">
-        <h2 className="text-[var(--color-text-primary)] font-semibold text-base">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+      <div className="bg-surface-elevated border border-border rounded-xl shadow-2xl p-6 w-80 flex flex-col gap-4">
+        <h2 className="text-text-primary font-semibold text-base">
           ¿Qué querés hacer?
         </h2>
-        <p className="text-[var(--color-text-secondary)] text-sm">
+        <p className="text-text-secondary text-sm">
           La app puede seguir ejecutándose en segundo plano o cerrarse completamente.
         </p>
         <div className="flex flex-col gap-2">
           <button
             onClick={minimize}
             autoFocus
-            className="w-full px-4 py-2 rounded-lg bg-[var(--color-accent)] text-[var(--color-accent-foreground)] font-medium text-sm hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+            className="w-full px-4 py-2 rounded-lg bg-accent text-accent-text font-medium text-sm hover:bg-accent-hover transition-colors focus:outline-none focus:ring-2 focus:ring-accent"
           >
             Minimizar a la bandeja
           </button>
           <button
             onClick={close}
-            className="w-full px-4 py-2 rounded-lg border border-[var(--color-border)] text-[var(--color-text-secondary)] text-sm hover:bg-[var(--color-bg-secondary)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--color-border)]"
+            className="w-full px-4 py-2 rounded-lg border border-border text-text-secondary text-sm hover:bg-surface transition-colors focus:outline-none focus:ring-2 focus:ring-border"
           >
             Cerrar completamente
           </button>
