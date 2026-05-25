@@ -52,7 +52,7 @@ const viewerExtensions = [
     HTMLAttributes: { target: "_blank", rel: "noopener noreferrer" },
   }),
   TaskList,
-  TaskItem.configure({ editable: false, nested: false }),
+  TaskItem.configure({ nested: false }),
 ];
 
 interface NoteViewerProps {

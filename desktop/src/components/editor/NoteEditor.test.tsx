@@ -493,7 +493,7 @@ describe("NoteEditor", () => {
       // CodeBlockLowlight is NOT mocked — it passes through as the real module object.
       // We verify StarterKit is configured with codeBlock: false (meaning our custom
       // CodeBlockLowlight takes over, not StarterKit's built-in).
-      const extensions: Array<unknown> = callArgs?.extensions ?? [];
+      const extensions = (callArgs?.extensions ?? []) as unknown as Array<unknown>;
       // At least 7 extensions: StarterKit, CodeBlockLowlight, CodeBlockTabExtension,
       // Link, TaskList, TaskItem, Markdown
       expect(extensions.length).toBeGreaterThanOrEqual(7);
@@ -510,8 +510,7 @@ describe("NoteEditor", () => {
       render(<NoteEditor note={mockNote} onSave={vi.fn()} />);
       const useEditorMock = vi.mocked(useEditor);
       const callArgs = useEditorMock.mock.calls[0]?.[0];
-      const extensions: Array<{ _ext?: string; name?: string; addKeyboardShortcuts?: unknown }> =
-        callArgs?.extensions ?? [];
+      const extensions = (callArgs?.extensions ?? []) as unknown as Array<{ _ext?: string; name?: string; addKeyboardShortcuts?: unknown }>;
       // The Markdown extension must be present (verified by mock)
       const markdownExt = extensions.find((e) => e._ext === "Markdown");
       expect(markdownExt).toBeDefined();
@@ -529,8 +528,7 @@ describe("NoteEditor", () => {
       render(<NoteEditor note={mockNote} onSave={vi.fn()} />);
       const useEditorMock = vi.mocked(useEditor);
       const callArgs = useEditorMock.mock.calls[0]?.[0];
-      const extensions: Array<{ _ext?: string; _opts?: Record<string, unknown> }> =
-        callArgs?.extensions ?? [];
+      const extensions = (callArgs?.extensions ?? []) as unknown as Array<{ _ext?: string; _opts?: Record<string, unknown> }>;
       const markdownExt = extensions.find((e) => e._ext === "Markdown");
       expect(markdownExt).toBeDefined();
       expect(markdownExt?._opts).toMatchObject({
@@ -543,8 +541,7 @@ describe("NoteEditor", () => {
       render(<NoteEditor note={mockNote} onSave={vi.fn()} />);
       const useEditorMock = vi.mocked(useEditor);
       const callArgs = useEditorMock.mock.calls[0]?.[0];
-      const extensions: Array<{ _ext?: string; _opts?: Record<string, unknown> }> =
-        callArgs?.extensions ?? [];
+      const extensions = (callArgs?.extensions ?? []) as unknown as Array<{ _ext?: string; _opts?: Record<string, unknown> }>;
       const markdownExt = extensions.find((e) => e._ext === "Markdown");
       expect(markdownExt?._opts?.transformCopiedText).toBe(false);
     });
@@ -553,8 +550,7 @@ describe("NoteEditor", () => {
       render(<NoteEditor note={mockNote} onSave={vi.fn()} />);
       const useEditorMock = vi.mocked(useEditor);
       const callArgs = useEditorMock.mock.calls[0]?.[0];
-      const extensions: Array<{ _ext?: string; _opts?: Record<string, unknown> }> =
-        callArgs?.extensions ?? [];
+      const extensions = (callArgs?.extensions ?? []) as unknown as Array<{ _ext?: string; _opts?: Record<string, unknown> }>;
       const linkExt = extensions.find((e) => e._ext === "Link");
       expect(linkExt).toBeDefined();
       expect(linkExt?._opts).toMatchObject({ autolink: true, openOnClick: false });
@@ -564,7 +560,7 @@ describe("NoteEditor", () => {
       render(<NoteEditor note={mockNote} onSave={vi.fn()} />);
       const useEditorMock = vi.mocked(useEditor);
       const callArgs = useEditorMock.mock.calls[0]?.[0];
-      const extensions: Array<{ _ext?: string }> = callArgs?.extensions ?? [];
+      const extensions = (callArgs?.extensions ?? []) as unknown as Array<{ _ext?: string }>;
       const taskList = extensions.find((e) => e._ext === "TaskList");
       expect(taskList).toBeDefined();
     });
@@ -573,8 +569,7 @@ describe("NoteEditor", () => {
       render(<NoteEditor note={mockNote} onSave={vi.fn()} />);
       const useEditorMock = vi.mocked(useEditor);
       const callArgs = useEditorMock.mock.calls[0]?.[0];
-      const extensions: Array<{ _ext?: string; _opts?: Record<string, unknown> }> =
-        callArgs?.extensions ?? [];
+      const extensions = (callArgs?.extensions ?? []) as unknown as Array<{ _ext?: string; _opts?: Record<string, unknown> }>;
       const taskItem = extensions.find((e) => e._ext === "TaskItem");
       expect(taskItem).toBeDefined();
       expect(taskItem?._opts).toMatchObject({ nested: false });

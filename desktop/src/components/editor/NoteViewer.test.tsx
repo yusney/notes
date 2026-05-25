@@ -84,20 +84,19 @@ describe("NoteViewer", () => {
       render(<NoteViewer note={mockNote} onEdit={vi.fn()} />);
       const useEditorMock = vi.mocked(useEditor);
       const callArgs = useEditorMock.mock.calls[0]?.[0];
-      const extensions: Array<{ _ext?: string }> = callArgs?.extensions ?? [];
+      const extensions = (callArgs?.extensions ?? []) as unknown as Array<{ _ext?: string }>;
       const taskList = extensions.find((e) => e._ext === "TaskList");
       expect(taskList).toBeDefined();
     });
 
-    it("configures TaskItem with editable: false for read-only checkboxes", () => {
+    it("configures TaskItem with nested: false (read-only enforced by useEditor editable: false)", () => {
       render(<NoteViewer note={mockNote} onEdit={vi.fn()} />);
       const useEditorMock = vi.mocked(useEditor);
       const callArgs = useEditorMock.mock.calls[0]?.[0];
-      const extensions: Array<{ _ext?: string; _opts?: Record<string, unknown> }> =
-        callArgs?.extensions ?? [];
+      const extensions = (callArgs?.extensions ?? []) as unknown as Array<{ _ext?: string; _opts?: Record<string, unknown> }>;
       const taskItem = extensions.find((e) => e._ext === "TaskItem");
       expect(taskItem).toBeDefined();
-      expect(taskItem?._opts).toMatchObject({ editable: false, nested: false });
+      expect(taskItem?._opts).toMatchObject({ nested: false });
     });
   });
 
@@ -146,8 +145,7 @@ describe("NoteViewer", () => {
       render(<NoteViewer note={mockNote} onEdit={vi.fn()} />);
       const useEditorMock = vi.mocked(useEditor);
       const callArgs = useEditorMock.mock.calls[0]?.[0];
-      const extensions: Array<{ _ext?: string; _opts?: Record<string, unknown> }> =
-        callArgs?.extensions ?? [];
+      const extensions = (callArgs?.extensions ?? []) as unknown as Array<{ _ext?: string; _opts?: Record<string, unknown> }>;
       const linkExt = extensions.find((e) => e._ext === "Link");
       expect(linkExt).toBeDefined();
       expect(linkExt?._opts).toMatchObject({ openOnClick: true });
@@ -157,8 +155,7 @@ describe("NoteViewer", () => {
       render(<NoteViewer note={mockNote} onEdit={vi.fn()} />);
       const useEditorMock = vi.mocked(useEditor);
       const callArgs = useEditorMock.mock.calls[0]?.[0];
-      const extensions: Array<{ _ext?: string; _opts?: Record<string, unknown> }> =
-        callArgs?.extensions ?? [];
+      const extensions = (callArgs?.extensions ?? []) as unknown as Array<{ _ext?: string; _opts?: Record<string, unknown> }>;
       const linkExt = extensions.find((e) => e._ext === "Link");
       const htmlAttrs = linkExt?._opts?.HTMLAttributes as Record<string, string> | undefined;
       expect(htmlAttrs?.target).toBe("_blank");
