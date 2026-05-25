@@ -253,3 +253,29 @@ html {
  * Extracted to a dedicated file for maintainability. Imported below.
  * ─────────────────────────────────────────────────────────────────────────── */
 @import "./styles/lowlight.css";
+
+/* ─── Task list — checkbox cursor & interactivity ───────────────────────────
+ * In the editor, checkboxes are interactive → pointer cursor.
+ * In the viewer, checkboxes are read-only   → no pointer events + default cursor.
+ */
+
+.note-editor .ProseMirror ul[data-type="taskList"] li label input[type="checkbox"] {
+  cursor: pointer;
+}
+
+.note-viewer .ProseMirror ul[data-type="taskList"] li label input[type="checkbox"] {
+  pointer-events: none;
+  cursor: default;
+}
+
+/* ─── Links in viewer ────────────────────────────────────────────────────────
+ * Make links visually distinct with a blue tint and underline.
+ * Editor links deliberately omit color here (they rely on default browser style)
+ * because the editor context is focused on editing, not reading.
+ */
+
+.note-viewer .ProseMirror a[href] {
+  color: var(--color-link, #60a5fa);
+  text-decoration: underline;
+  cursor: pointer;
+}

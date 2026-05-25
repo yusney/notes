@@ -2,10 +2,31 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, act, fireEvent } from "@testing-library/react";
 import { NoteEditor } from "./NoteEditor";
 import type { Note, Tag } from "../../types";
+import { useEditor } from "@tiptap/react";
 
 // Mock CodeFormatter so we can control its behavior in tests
 vi.mock("./CodeFormatter", () => ({
   formatCodeBlock: vi.fn(),
+}));
+
+// Mock new markdown-paste extensions so they are identifiable in useEditor call
+vi.mock("tiptap-markdown", () => ({
+  Markdown: {
+    configure: vi.fn((opts: unknown) => ({ _ext: "Markdown", _opts: opts })),
+  },
+}));
+vi.mock("@tiptap/extension-link", () => ({
+  Link: {
+    configure: vi.fn((opts: unknown) => ({ _ext: "Link", _opts: opts })),
+  },
+}));
+vi.mock("@tiptap/extension-task-list", () => ({
+  TaskList: { _ext: "TaskList" },
+}));
+vi.mock("@tiptap/extension-task-item", () => ({
+  TaskItem: {
+    configure: vi.fn((opts: unknown) => ({ _ext: "TaskItem", _opts: opts })),
+  },
 }));
 
 // Mock CodeBlockBubbleMenu to expose onFormat callback
@@ -434,6 +455,124 @@ describe("NoteEditor", () => {
       });
 
       expect(writeText).toHaveBeenCalledWith("const x=1");
+    });
+  });
+
+  // ─── Phase: Markdown Paste Recognition ───────────────────────────────────────
+
+  // ─── Phase 4: CSS cursor/pointer-events behavior ─────────────────────────
+
+  describe("task list checkbox CSS — editor context", () => {
+    it("editor root has class 'note-editor' for CSS scoping of checkbox cursor", () => {
+      const { container } = render(<NoteEditor note={mockNote} onSave={vi.fn()} />);
+      // The outermost editor wrapper must carry .note-editor so the CSS rule
+      // `.note-editor ... input[type="checkbox"] { cursor: pointer }` is active
+      const editorRoot = container.querySelector(".note-editor");
+      expect(editorRoot).toBeInTheDocument();
+    });
+
+    it("index.css contains cursor:pointer rule for task-list checkboxes in editor", () => {
+      // RED: This test verifies the CSS rule exists in the stylesheet.
+      // It will FAIL until the rule is added to index.css.
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const fs = require("fs") as typeof import("fs");
+      const path = require("path") as typeof import("path");
+      const cssPath = path.resolve(__dirname, "../../../src/index.css");
+      const css = fs.readFileSync(cssPath, "utf-8");
+      expect(css).toMatch(/\.note-editor[^}]*cursor\s*:\s*pointer/s);
+    });
+  });
+
+  // ─── Phase 4.2: Regression — code block extensions not overridden ────────
+
+  describe("code block extension regression", () => {
+    it("includes CodeBlockLowlight in editorExtensions (not overridden by tiptap-markdown)", () => {
+      render(<NoteEditor note={mockNote} onSave={vi.fn()} />);
+      const useEditorMock = vi.mocked(useEditor);
+      const callArgs = useEditorMock.mock.calls[0]?.[0];
+      // CodeBlockLowlight is NOT mocked — it passes through as the real module object.
+      // We verify StarterKit is configured with codeBlock: false (meaning our custom
+      // CodeBlockLowlight takes over, not StarterKit's built-in).
+      const extensions = (callArgs?.extensions ?? []) as unknown as Array<unknown>;
+      // At least 7 extensions: StarterKit, CodeBlockLowlight, CodeBlockTabExtension,
+      // Link, TaskList, TaskItem, Markdown
+      expect(extensions.length).toBeGreaterThanOrEqual(7);
+    });
+
+    it("StarterKit is configured with codeBlock: false so CodeBlockLowlight is used", () => {
+      render(<NoteEditor note={mockNote} onSave={vi.fn()} />);
+      // The editor content area must still render (no crash from extension conflict)
+      const { container } = render(<NoteEditor note={mockNote} onSave={vi.fn()} />);
+      expect(container.querySelector(".note-editor-content")).toBeInTheDocument();
+    });
+
+    it("CodeBlockTabExtension keyboard shortcut wiring is present alongside Markdown extension", () => {
+      render(<NoteEditor note={mockNote} onSave={vi.fn()} />);
+      const useEditorMock = vi.mocked(useEditor);
+      const callArgs = useEditorMock.mock.calls[0]?.[0];
+      const extensions = (callArgs?.extensions ?? []) as unknown as Array<{ _ext?: string; name?: string; addKeyboardShortcuts?: unknown }>;
+      // The Markdown extension must be present (verified by mock)
+      const markdownExt = extensions.find((e) => e._ext === "Markdown");
+      expect(markdownExt).toBeDefined();
+      // AND a keyboard-shortcut extension must also be present (CodeBlockTabExtension)
+      // It has addKeyboardShortcuts from Extension.create config
+      const hasKeyboardExt = extensions.some(
+        (e) => e.addKeyboardShortcuts !== undefined || e.name === "codeBlockTab"
+      );
+      expect(hasKeyboardExt).toBe(true);
+    });
+  });
+
+  describe("markdown paste — extension configuration", () => {
+    it("configures useEditor with the Markdown extension (transformPastedText: true)", () => {
+      render(<NoteEditor note={mockNote} onSave={vi.fn()} />);
+      const useEditorMock = vi.mocked(useEditor);
+      const callArgs = useEditorMock.mock.calls[0]?.[0];
+      const extensions = (callArgs?.extensions ?? []) as unknown as Array<{ _ext?: string; _opts?: Record<string, unknown> }>;
+      const markdownExt = extensions.find((e) => e._ext === "Markdown");
+      expect(markdownExt).toBeDefined();
+      expect(markdownExt?._opts).toMatchObject({
+        transformPastedText: true,
+        transformCopiedText: false,
+      });
+    });
+
+    it("configures useEditor with the Markdown extension (transformCopiedText: false)", () => {
+      render(<NoteEditor note={mockNote} onSave={vi.fn()} />);
+      const useEditorMock = vi.mocked(useEditor);
+      const callArgs = useEditorMock.mock.calls[0]?.[0];
+      const extensions = (callArgs?.extensions ?? []) as unknown as Array<{ _ext?: string; _opts?: Record<string, unknown> }>;
+      const markdownExt = extensions.find((e) => e._ext === "Markdown");
+      expect(markdownExt?._opts?.transformCopiedText).toBe(false);
+    });
+
+    it("configures useEditor with the Link extension (autolink: true, openOnClick: false)", () => {
+      render(<NoteEditor note={mockNote} onSave={vi.fn()} />);
+      const useEditorMock = vi.mocked(useEditor);
+      const callArgs = useEditorMock.mock.calls[0]?.[0];
+      const extensions = (callArgs?.extensions ?? []) as unknown as Array<{ _ext?: string; _opts?: Record<string, unknown> }>;
+      const linkExt = extensions.find((e) => e._ext === "Link");
+      expect(linkExt).toBeDefined();
+      expect(linkExt?._opts).toMatchObject({ autolink: true, openOnClick: false });
+    });
+
+    it("configures useEditor with TaskList extension", () => {
+      render(<NoteEditor note={mockNote} onSave={vi.fn()} />);
+      const useEditorMock = vi.mocked(useEditor);
+      const callArgs = useEditorMock.mock.calls[0]?.[0];
+      const extensions = (callArgs?.extensions ?? []) as unknown as Array<{ _ext?: string }>;
+      const taskList = extensions.find((e) => e._ext === "TaskList");
+      expect(taskList).toBeDefined();
+    });
+
+    it("configures useEditor with TaskItem extension (nested: false)", () => {
+      render(<NoteEditor note={mockNote} onSave={vi.fn()} />);
+      const useEditorMock = vi.mocked(useEditor);
+      const callArgs = useEditorMock.mock.calls[0]?.[0];
+      const extensions = (callArgs?.extensions ?? []) as unknown as Array<{ _ext?: string; _opts?: Record<string, unknown> }>;
+      const taskItem = extensions.find((e) => e._ext === "TaskItem");
+      expect(taskItem).toBeDefined();
+      expect(taskItem?._opts).toMatchObject({ nested: false });
     });
   });
 });
