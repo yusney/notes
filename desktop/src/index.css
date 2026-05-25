@@ -279,3 +279,37 @@ html {
   text-decoration: underline;
   cursor: pointer;
 }
+
+/* ─── Tables ─────────────────────────────────────────────────────────────────
+ * Shared styles for table rendering in both editor and viewer.
+ */
+
+.note-editor .ProseMirror table,
+.note-viewer .ProseMirror table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1rem 0;
+  overflow: hidden;
+}
+
+.note-editor .ProseMirror table td,
+.note-editor .ProseMirror table th,
+.note-viewer .ProseMirror table td,
+.note-viewer .ProseMirror table th {
+  border: 1px solid var(--color-border, #374151);
+  padding: 0.5rem 0.75rem;
+  vertical-align: top;
+  min-width: 1em;
+}
+
+.note-editor .ProseMirror table th,
+.note-viewer .ProseMirror table th {
+  background-color: var(--color-surface-secondary, #1f2937);
+  font-weight: 600;
+  text-align: left;
+}
+
+.note-editor .ProseMirror table tr:nth-child(even) td,
+.note-viewer .ProseMirror table tr:nth-child(even) td {
+  background-color: var(--color-surface-hover, rgba(255,255,255,0.03));
+}
