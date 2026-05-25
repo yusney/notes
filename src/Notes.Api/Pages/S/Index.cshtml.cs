@@ -24,6 +24,12 @@ public class IndexModel : PageModel
         _sanitizer = sanitizer;
     }
 
+    /// <summary>
+    /// Handles GET /s/{token}. Resolves the token via the shared link query;
+    /// if the link is missing, revoked, or expired, redirects to the NotFound page.
+    /// The note title is placed into ViewData["Title"] — Razor's @ViewData syntax
+    /// HTML-encodes it automatically, so no HtmlSanitizer pass is needed for the title.
+    /// </summary>
     public async Task<IActionResult> OnGetAsync()
     {
         var query = new GetSharedNoteByTokenQuery(Token);
