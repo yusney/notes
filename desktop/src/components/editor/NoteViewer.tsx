@@ -12,6 +12,7 @@ import { TableHeader } from "@tiptap/extension-table-header";
 import { all, createLowlight } from "lowlight";
 import type { Note } from "../../types";
 import type { NodeViewProps } from "@tiptap/react";
+import { ShareDialog } from "../share/ShareDialog";
 
 const lowlight = createLowlight(all);
 
@@ -69,6 +70,7 @@ interface NoteViewerProps {
 }
 
 export function NoteViewer({ note, onEdit }: NoteViewerProps) {
+  const [shareOpen, setShareOpen] = useState(false);
   const viewer = useEditor({
     extensions: viewerExtensions,
     content: note.content,
@@ -84,14 +86,26 @@ export function NoteViewer({ note, onEdit }: NoteViewerProps) {
     <div className="flex h-full flex-col overflow-hidden bg-surface">
       <div className="flex shrink-0 items-center justify-between border-b border-border bg-surface-elevated px-6 py-4">
         <h1 className="min-w-0 truncate text-xl font-semibold text-text-primary">{note.title}</h1>
-        <button
-          type="button"
-          onClick={onEdit}
-          className="ml-4 shrink-0 bg-accent px-4 py-1.5 text-sm font-bold text-accent-text transition-colors hover:bg-accent-hover"
-        >
-          Editar
-        </button>
+        <div className="ml-4 flex shrink-0 gap-2">
+          <button
+            type="button"
+            onClick={() => setShareOpen(true)}
+            aria-label="Compartir nota"
+            className="border border-accent bg-accent-subtle px-4 py-1.5 text-sm font-semibold text-accent transition-colors hover:bg-accent hover:text-accent-text"
+          >
+            Compartir
+          </button>
+          <button
+            type="button"
+            onClick={onEdit}
+            className="bg-accent px-4 py-1.5 text-sm font-bold text-accent-text transition-colors hover:bg-accent-hover"
+          >
+            Editar
+          </button>
+        </div>
       </div>
+
+      <ShareDialog noteId={note.id} isOpen={shareOpen} onClose={() => setShareOpen(false)} />
 
       <div className="note-viewer flex-1 overflow-x-hidden overflow-y-auto px-8 py-6">
         {note.content ? (

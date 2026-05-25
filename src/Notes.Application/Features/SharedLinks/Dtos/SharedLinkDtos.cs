@@ -13,4 +13,5 @@ public record SharedNoteDto(
     string Content,
     string Language,
     DateTime CreatedAt,
-    DateTime? UpdatedAt);
+    DateTime? UpdatedAt,
+    DateTime? ExpiresAt);

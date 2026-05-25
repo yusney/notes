@@ -56,6 +56,10 @@ describe("ShareDialog", () => {
 
     fireEvent.click(toggle);
 
-    expect(screen.getByLabelText(/expira el/i)).toBeInTheDocument();
+    // DayPicker renders a calendar — verify the month grid is present
+    expect(screen.getByRole("grid")).toBeInTheDocument();
+    // Hour/minute spinners are present
+    expect(screen.getAllByRole("button", { name: "+" }).length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByRole("button", { name: "−" }).length).toBeGreaterThanOrEqual(2);
   });
 });
