@@ -235,6 +235,8 @@ export function NoteEditor({ note, availableTags = [], onSave, onSaveAndExit, on
   const isSavingManually = useRef(false);
   const previousNoteId = useRef(note.id);
 
+  const editorRef = useRef<ReturnType<typeof useEditor>>(null);
+
   const editor = useEditor({
     extensions: editorExtensions,
     content: note.content,
@@ -245,17 +247,32 @@ export function NoteEditor({ note, availableTags = [], onSave, onSaveAndExit, on
       handlePaste(view, event) {
         const text = event.clipboardData?.getData("text/plain");
         if (!text) return false;
-        // Force all pastes through the markdown parser by inserting as plain text.
-        // This ensures markdown syntax (headings, tables, bold, etc.) is always parsed
-        // regardless of whether the clipboard also carries HTML.
+        // Always parse paste content as markdown, even when the clipboard carries HTML.
+        // We extract the plain text and feed it through tiptap-markdown's parser directly.
         event.preventDefault();
-        view.dispatch(
-          view.state.tr.insertText(text, view.state.selection.from, view.state.selection.to)
-        );
+        const currentEditor = editorRef.current;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const mdStorage = (currentEditor?.storage as any)?.markdown;
+        if (mdStorage?.parser) {
+          // Parse the plain text as markdown → HTML, then insert as HTML content.
+          // This ensures headings, tables, bold etc. always render correctly
+          // even when the clipboard also carries HTML from a web page.
+          const parsed: string = mdStorage.parser.parse(text);
+          currentEditor!.commands.insertContent(parsed, {
+            parseOptions: { preserveWhitespace: true },
+          });
+        } else {
+          view.dispatch(
+            view.state.tr.insertText(text, view.state.selection.from, view.state.selection.to)
+          );
+        }
         return true;
       },
     },
   });
+
+  // Keep ref in sync with editor instance
+  (editorRef as React.MutableRefObject<typeof editor>).current = editor;
 
   // Derived — always reflects current editor text without extra state
   const editorText = editor?.getText() ?? "";
