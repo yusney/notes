@@ -2,6 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { useEditor, EditorContent, Extension } from "@tiptap/react";
 import { StarterKit } from "@tiptap/starter-kit";
 import { CodeBlockLowlight } from "@tiptap/extension-code-block-lowlight";
+import { Link } from "@tiptap/extension-link";
+import { TaskList } from "@tiptap/extension-task-list";
+import { TaskItem } from "@tiptap/extension-task-item";
+import { Markdown } from "tiptap-markdown";
 import { all, createLowlight } from "lowlight";
 import { useAutoSave, type SaveStatus } from "../../hooks/useAutoSave";
 import type { Note, Tag } from "../../types";
@@ -27,6 +31,16 @@ const CodeBlockTabExtension = Extension.create({
     };
   },
 });
+
+const editorExtensions = [
+  StarterKit.configure({ codeBlock: false }),
+  CodeBlockLowlight.configure({ lowlight, defaultLanguage: null }),
+  CodeBlockTabExtension,
+  Link.configure({ autolink: true, openOnClick: false }),
+  TaskList,
+  TaskItem.configure({ nested: false }),
+  Markdown.configure({ transformPastedText: true, transformCopiedText: false }),
+];
 
 export function countEditorStats(text: string): { chars: number; words: number; lines: number } {
   const chars = text.length;
@@ -214,11 +228,7 @@ export function NoteEditor({ note, availableTags = [], onSave, onSaveAndExit, on
   const previousNoteId = useRef(note.id);
 
   const editor = useEditor({
-    extensions: [
-      StarterKit.configure({ codeBlock: false }),
-      CodeBlockLowlight.configure({ lowlight, defaultLanguage: null }),
-      CodeBlockTabExtension,
-    ],
+    extensions: editorExtensions,
     content: note.content,
     onUpdate: ({ editor }) => {
       setEditorContent(editor.getHTML());
