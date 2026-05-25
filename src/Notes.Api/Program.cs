@@ -1,5 +1,6 @@
 using System.Text;
 using FluentValidation;
+using Ganss.Xss;
 using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -97,6 +98,27 @@ builder.Services.AddControllers()
     });
 builder.Services.AddOpenApi();
 
+// ── Razor Pages ───────────────────────────────────────────────────────────────
+builder.Services.AddRazorPages();
+
+// ── HTML Sanitizer (shared singleton) ────────────────────────────────────────
+builder.Services.AddSingleton<HtmlSanitizer>(_ =>
+{
+    var sanitizer = new HtmlSanitizer();
+    sanitizer.AllowedTags.Clear();
+    foreach (var tag in new[]
+    {
+        "p", "h1", "h2", "h3", "h4", "h5", "h6",
+        "strong", "em", "b", "i", "ul", "ol", "li",
+        "code", "pre", "blockquote", "a", "br", "hr",
+        "span", "div", "table", "thead", "tbody", "tr", "th", "td", "img"
+    })
+    {
+        sanitizer.AllowedTags.Add(tag);
+    }
+    return sanitizer;
+});
+
 var app = builder.Build();
 
 // ── Middleware pipeline ────────────────────────────────────────────────────────
@@ -118,6 +140,8 @@ if (app.Environment.IsDevelopment())
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.UseStaticFiles();
+app.MapRazorPages();
 app.MapHealthChecks("/health");
 app.MapControllers();
 
