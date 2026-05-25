@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] — Notes</title>
+
+    @if (ViewData["OgTitle"] != null)
+    {
+        <meta property="og:title" content="@ViewData["OgTitle"]" />
+    }
+    @if (ViewData["OgDescription"] != null)
+    {
+        <meta property="og:description" content="@ViewData["OgDescription"]" />
+    }
+    <meta property="og:type" content="article" />
+
+    <link rel="stylesheet" href="/css/share.css" />
+</head>
+<body>
+    <div class="container">
+        @RenderBody()
+    </div>
+
+    <footer>
+        <p>Created with Notes</p>
+    </footer>
+</body>
+</html>
