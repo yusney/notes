@@ -2,6 +2,9 @@ import { useState, useEffect } from "react";
 import { EditorContent, useEditor, ReactNodeViewRenderer, NodeViewWrapper, NodeViewContent } from "@tiptap/react";
 import { StarterKit } from "@tiptap/starter-kit";
 import { CodeBlockLowlight } from "@tiptap/extension-code-block-lowlight";
+import { Link } from "@tiptap/extension-link";
+import { TaskList } from "@tiptap/extension-task-list";
+import { TaskItem } from "@tiptap/extension-task-item";
 import { all, createLowlight } from "lowlight";
 import type { Note } from "../../types";
 import type { NodeViewProps } from "@tiptap/react";
@@ -41,6 +44,17 @@ const CodeBlockWithCopyExtension = CodeBlockLowlight.extend({
   },
 });
 
+const viewerExtensions = [
+  StarterKit.configure({ codeBlock: false }),
+  CodeBlockWithCopyExtension.configure({ lowlight, defaultLanguage: null }),
+  Link.configure({
+    openOnClick: true,
+    HTMLAttributes: { target: "_blank", rel: "noopener noreferrer" },
+  }),
+  TaskList,
+  TaskItem.configure({ nested: false }),
+];
+
 interface NoteViewerProps {
   note: Note;
   onEdit: () => void;
@@ -48,10 +62,7 @@ interface NoteViewerProps {
 
 export function NoteViewer({ note, onEdit }: NoteViewerProps) {
   const viewer = useEditor({
-    extensions: [
-      StarterKit.configure({ codeBlock: false }),
-      CodeBlockWithCopyExtension.configure({ lowlight, defaultLanguage: null }),
-    ],
+    extensions: viewerExtensions,
     content: note.content,
     editable: false,
     immediatelyRender: false,
