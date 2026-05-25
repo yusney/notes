@@ -56,7 +56,7 @@ Chain strategy: pending
 
 - [x] 4.1 Add checkbox cursor/pointer-events styles and link color/underline overrides to `desktop/src/index.css`. ~20 lines.
 - [x] 4.2 Verify open question: test paste of fenced code block — confirm `CodeBlockLowlight` is not broken by `tiptap-markdown`. Add one regression test if needed. ~15 lines.
-- [ ] 4.3 Run `pnpm test` — all scenarios green. Fix any snapshot drift.
+- [x] 4.3 Run `pnpm test` — all scenarios green. Fix any snapshot drift.
 
 ---
 
