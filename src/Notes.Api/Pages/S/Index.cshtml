@@ -1,2 +1,27 @@
 @page "{token}"
 @model Notes.Api.Pages.S.IndexModel
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = Model.Note!.Title;
+    ViewData["OgTitle"] = Model.Note.Title;
+    ViewData["OgDescription"] = Model.Note.Title + " — shared note";
+}
+
+<article>
+    <header>
+        <h1>@Model.Note.Title</h1>
+        <div class="meta">
+            <span>Created @Model.Note.CreatedAt.ToString("MMMM d, yyyy")</span>
+            @if (Model.Note.UpdatedAt.HasValue)
+            {
+                <span> &middot; Updated @Model.Note.UpdatedAt.Value.ToString("MMMM d, yyyy")</span>
+            }
+        </div>
+    </header>
+
+    <div class="note-content">
+        @Html.Raw(Model.Note.SanitizedContent)
+    </div>
+
+    <a href="#" aria-label="Back to top">↑ Back to top</a>
+</article>
