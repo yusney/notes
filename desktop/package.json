@@ -1,7 +1,7 @@
 {
   "name": "desktop",
   "private": true,
-  "version": "0.3.3",
+  "version": "0.3.4",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -34,6 +34,7 @@
     "lowlight": "^3.3.0",
     "prettier": "^3.8.3",
     "react": "^19.1.0",
+    "react-day-picker": "^10.0.1",
     "react-dom": "^19.1.0",
     "react-router-dom": "^7.14.2",
     "tiptap-markdown": "^0.9.0",

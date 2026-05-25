@@ -42,7 +42,8 @@ public class IndexModel : PageModel
             Title: result.Value!.Title,
             SanitizedContent: _sanitizer.Sanitize(result.Value.Content),
             CreatedAt: result.Value.CreatedAt,
-            UpdatedAt: result.Value.UpdatedAt
+            UpdatedAt: result.Value.UpdatedAt,
+            ExpiresAt: result.Value.ExpiresAt
         );
 
         return Page();
@@ -53,4 +54,5 @@ public record SharedNoteViewModel(
     string Title,
     string SanitizedContent,
     DateTime CreatedAt,
-    DateTime? UpdatedAt);
+    DateTime? UpdatedAt,
+    DateTime? ExpiresAt);

@@ -34,6 +34,7 @@ public class GetSharedNoteByTokenQueryHandler : IRequestHandler<GetSharedNoteByT
             note.Content,
             note.Language,
             note.CreatedAt,
-            note.UpdatedAt));
+            note.UpdatedAt,
+            link.ExpiresAt));
     }
 }

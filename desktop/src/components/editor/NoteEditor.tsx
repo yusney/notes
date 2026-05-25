@@ -14,7 +14,6 @@ import { all, createLowlight } from "lowlight";
 import { useAutoSave, type SaveStatus } from "../../hooks/useAutoSave";
 import type { Note, Tag } from "../../types";
 import { TagInput } from "../notes/TagInput";
-import { ShareDialog } from "../share/ShareDialog";
 import { CodeBlockBubbleMenu } from "./CodeBlockBubbleMenu";
 import { formatCodeBlock } from "./CodeFormatter";
 import type { SupportedFormatLang } from "./CodeFormatter";
@@ -231,7 +230,6 @@ export function NoteEditor({ note, availableTags = [], onSave, onSaveAndExit, on
   const [tagNames, setTagNames] = useState<string[]>(
     (note.tags ?? []).map((t) => t.name)
   );
-  const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const isSavingManually = useRef(false);
   const previousNoteId = useRef(note.id);
 
@@ -375,8 +373,8 @@ export function NoteEditor({ note, availableTags = [], onSave, onSaveAndExit, on
   }
 
   return (
-    <div className="flex h-full flex-col bg-surface">
-      <div className="flex items-center justify-between border-b border-border bg-surface-elevated/85 px-8 py-4 backdrop-blur">
+    <div className="flex h-full flex-col overflow-hidden bg-surface">
+      <div className="shrink-0 flex items-center justify-between border-b border-border bg-surface-elevated/85 px-8 py-4 backdrop-blur">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-text-secondary">Editor</p>
           <SaveStatusIndicator status={status} />
@@ -392,13 +390,6 @@ export function NoteEditor({ note, availableTags = [], onSave, onSaveAndExit, on
             </button>
           )}
           <button
-            onClick={() => setShareDialogOpen(true)}
-            aria-label="Compartir nota"
-            className="border border-accent bg-accent-subtle px-4 py-2 text-sm font-semibold text-accent transition-colors hover:bg-accent hover:text-accent-text"
-          >
-            Compartir
-          </button>
-          <button
             onClick={handleManualSave}
             aria-label="Guardar nota"
             className="bg-accent px-4 py-2 text-sm font-bold text-accent-text transition-colors hover:bg-accent-hover"
@@ -408,13 +399,7 @@ export function NoteEditor({ note, availableTags = [], onSave, onSaveAndExit, on
         </div>
       </div>
 
-      <ShareDialog
-        noteId={note.id}
-        isOpen={shareDialogOpen}
-        onClose={() => setShareDialogOpen(false)}
-      />
-
-      <div className="mx-auto w-full max-w-4xl px-10 pt-8">
+      <div className="shrink-0 mx-auto w-full max-w-4xl px-10 pt-8">
         <input
           type="text"
           value={title}
@@ -424,7 +409,7 @@ export function NoteEditor({ note, availableTags = [], onSave, onSaveAndExit, on
         />
       </div>
 
-      <div className="mx-auto w-full max-w-4xl px-10 py-4">
+      <div className="shrink-0 mx-auto w-full max-w-4xl px-10 py-4">
         <TagInput
           availableTags={availableTags}
           selectedTagNames={tagNames}
@@ -432,7 +417,7 @@ export function NoteEditor({ note, availableTags = [], onSave, onSaveAndExit, on
         />
       </div>
 
-      <div className="note-editor mx-auto w-full max-w-4xl flex-1 overflow-hidden border border-b-0 border-border bg-surface-elevated flex flex-col">
+      <div className="note-editor mx-auto w-full max-w-4xl min-h-0 flex-1 overflow-hidden border border-b-0 border-border bg-surface-elevated flex flex-col">
         <EditorToolbar editor={editor} />
         {editor && (
           <CodeBlockBubbleMenu editor={editor} onFormat={handleFormatCodeBlock} />

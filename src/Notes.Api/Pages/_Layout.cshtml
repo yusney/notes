@@ -15,6 +15,15 @@
     }
     <meta property="og:type" content="article" />
 
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+    <!-- highlight.js -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+
     <link rel="stylesheet" href="/css/share.css" />
 </head>
 <body>
@@ -23,7 +32,41 @@
     </div>
 
     <footer>
-        <p>Created with Notes</p>
+        <p>Created with <a href="#">Notes</a></p>
     </footer>
+
+    <script>
+        // Syntax highlight
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('pre code').forEach(block => {
+                hljs.highlightElement(block);
+            });
+
+            // Copy buttons
+            document.querySelectorAll('.note-content pre').forEach(pre => {
+                const btn = document.createElement('button');
+                btn.className = 'copy-btn';
+                btn.textContent = 'Copiar';
+                pre.appendChild(btn);
+
+                btn.addEventListener('click', async () => {
+                    const code = pre.querySelector('code');
+                    const text = code ? code.innerText : pre.innerText;
+                    try {
+                        await navigator.clipboard.writeText(text);
+                        btn.textContent = '✓ Copiado';
+                        btn.classList.add('copied');
+                        setTimeout(() => {
+                            btn.textContent = 'Copiar';
+                            btn.classList.remove('copied');
+                        }, 2000);
+                    } catch {
+                        btn.textContent = 'Error';
+                        setTimeout(() => { btn.textContent = 'Copiar'; }, 2000);
+                    }
+                });
+            });
+        });
+    </script>
 </body>
 </html>

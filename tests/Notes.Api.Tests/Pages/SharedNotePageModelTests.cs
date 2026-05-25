@@ -34,7 +34,7 @@ public class SharedNotePageModelTests : IClassFixture<NotesApiFactory>
         DateTime? updatedAt = new DateTime(2025, 6, 1, 0, 0, 0, DateTimeKind.Utc);
 
         // Act — references Notes.Api.Pages.S.SharedNoteViewModel
-        var vm = new Notes.Api.Pages.S.SharedNoteViewModel(title, sanitizedContent, createdAt, updatedAt);
+        var vm = new Notes.Api.Pages.S.SharedNoteViewModel(title, sanitizedContent, createdAt, updatedAt, null);
 
         // Assert
         vm.Title.Should().Be(title);
@@ -50,7 +50,7 @@ public class SharedNotePageModelTests : IClassFixture<NotesApiFactory>
         var createdAt = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
         // Act
-        var vm = new Notes.Api.Pages.S.SharedNoteViewModel("Title", "<p>Content</p>", createdAt, null);
+        var vm = new Notes.Api.Pages.S.SharedNoteViewModel("Title", "<p>Content</p>", createdAt, null, null);
 
         // Assert — triangulation: different code path (nullable UpdatedAt)
         vm.UpdatedAt.Should().BeNull();

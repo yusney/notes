@@ -117,10 +117,10 @@ public class SharedNoteXssAndOgTests : IClassFixture<NotesApiFactory>
         // Assert — XSS payload must be absent from rendered output
         pageResp.StatusCode.Should().Be(HttpStatusCode.OK,
             "a valid token should render the note page");
-        html.Should().NotContain("<script>",
-            "the HtmlSanitizer must strip script tags before rendering");
         html.Should().NotContain("alert('xss')",
             "the XSS payload must not appear in any form in the rendered HTML");
+        html.Should().NotContain("<script>alert",
+            "inline script injection from note content must be stripped by HtmlSanitizer");
         html.Should().Contain("Safe content",
             "allowed content must still be rendered");
     }

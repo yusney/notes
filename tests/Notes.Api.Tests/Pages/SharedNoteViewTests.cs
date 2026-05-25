@@ -76,9 +76,11 @@ public class SharedNoteViewTests : IClassFixture<NotesApiFactory>
         var response = await client.GetAsync("/S/NotFound");
         var html = await response.Content.ReadAsStringAsync();
 
-        // Assert — footer must say "Created with Notes"
-        html.Should().Contain("Created with Notes",
+        // Assert — footer must contain branding ("Created with" + "Notes" link may be separate HTML nodes)
+        html.Should().Contain("Created with",
             "the layout footer must contain the branding text");
+        html.Should().Contain("<footer>",
+            "the layout must render a footer element");
     }
 
     // ── NotFound view tests ───────────────────────────────────────────────────
@@ -178,7 +180,7 @@ public class SharedNoteViewTests : IClassFixture<NotesApiFactory>
     }
 
     [Fact]
-    public async Task ShareCss_ContainsDarkModeMediaQuery()
+    public async Task ShareCss_ContainsDarkThemeVariables()
     {
         // Arrange
         var client = _factory.CreateClient();
@@ -187,8 +189,10 @@ public class SharedNoteViewTests : IClassFixture<NotesApiFactory>
         var response = await client.GetAsync("/css/share.css");
         var css = await response.Content.ReadAsStringAsync();
 
-        // Assert — dark mode media query
-        css.Should().Contain("prefers-color-scheme: dark",
-            "share.css must include a dark mode media query");
+        // Assert — dark theme uses CSS custom properties (not a media query — it's always dark)
+        css.Should().Contain("--surface:",
+            "share.css must define the --surface CSS variable for the dark theme");
+        css.Should().Contain("--text-primary:",
+            "share.css must define the --text-primary CSS variable for the dark theme");
     }
 }

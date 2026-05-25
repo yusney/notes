@@ -191,7 +191,7 @@ export function MainLayout() {
         onLogout={logout}
       />
 
-      <div className="flex w-80 min-w-[200px] shrink flex-col border-r border-border bg-surface">
+      <div className="flex w-80 min-w-[200px] shrink-0 flex-col border-r border-border bg-surface overflow-hidden h-full">
         <div className="border-b border-border p-4 pb-3">
           <SearchBar onSearch={handleSearchNotes} />
         </div>
@@ -235,7 +235,7 @@ export function MainLayout() {
         )}
       </div>
 
-      <main className="min-w-0 flex-1 overflow-hidden">
+      <main className="min-w-0 flex-1 overflow-hidden h-full">
         {activeNote ? (
           isEditing ? (
             <NoteEditor
