@@ -2,10 +2,31 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, act, fireEvent } from "@testing-library/react";
 import { NoteEditor } from "./NoteEditor";
 import type { Note, Tag } from "../../types";
+import { useEditor } from "@tiptap/react";
 
 // Mock CodeFormatter so we can control its behavior in tests
 vi.mock("./CodeFormatter", () => ({
   formatCodeBlock: vi.fn(),
+}));
+
+// Mock new markdown-paste extensions so they are identifiable in useEditor call
+vi.mock("tiptap-markdown", () => ({
+  Markdown: {
+    configure: vi.fn((opts: unknown) => ({ _ext: "Markdown", _opts: opts })),
+  },
+}));
+vi.mock("@tiptap/extension-link", () => ({
+  Link: {
+    configure: vi.fn((opts: unknown) => ({ _ext: "Link", _opts: opts })),
+  },
+}));
+vi.mock("@tiptap/extension-task-list", () => ({
+  TaskList: { _ext: "TaskList" },
+}));
+vi.mock("@tiptap/extension-task-item", () => ({
+  TaskItem: {
+    configure: vi.fn((opts: unknown) => ({ _ext: "TaskItem", _opts: opts })),
+  },
 }));
 
 // Mock CodeBlockBubbleMenu to expose onFormat callback
@@ -434,6 +455,65 @@ describe("NoteEditor", () => {
       });
 
       expect(writeText).toHaveBeenCalledWith("const x=1");
+    });
+  });
+
+  // ─── Phase: Markdown Paste Recognition ───────────────────────────────────────
+
+  describe("markdown paste — extension configuration", () => {
+    it("configures useEditor with the Markdown extension (transformPastedText: true)", () => {
+      render(<NoteEditor note={mockNote} onSave={vi.fn()} />);
+      const useEditorMock = vi.mocked(useEditor);
+      const callArgs = useEditorMock.mock.calls[0]?.[0];
+      const extensions: Array<{ _ext?: string; _opts?: Record<string, unknown> }> =
+        callArgs?.extensions ?? [];
+      const markdownExt = extensions.find((e) => e._ext === "Markdown");
+      expect(markdownExt).toBeDefined();
+      expect(markdownExt?._opts).toMatchObject({
+        transformPastedText: true,
+        transformCopiedText: false,
+      });
+    });
+
+    it("configures useEditor with the Markdown extension (transformCopiedText: false)", () => {
+      render(<NoteEditor note={mockNote} onSave={vi.fn()} />);
+      const useEditorMock = vi.mocked(useEditor);
+      const callArgs = useEditorMock.mock.calls[0]?.[0];
+      const extensions: Array<{ _ext?: string; _opts?: Record<string, unknown> }> =
+        callArgs?.extensions ?? [];
+      const markdownExt = extensions.find((e) => e._ext === "Markdown");
+      expect(markdownExt?._opts?.transformCopiedText).toBe(false);
+    });
+
+    it("configures useEditor with the Link extension (autolink: true, openOnClick: false)", () => {
+      render(<NoteEditor note={mockNote} onSave={vi.fn()} />);
+      const useEditorMock = vi.mocked(useEditor);
+      const callArgs = useEditorMock.mock.calls[0]?.[0];
+      const extensions: Array<{ _ext?: string; _opts?: Record<string, unknown> }> =
+        callArgs?.extensions ?? [];
+      const linkExt = extensions.find((e) => e._ext === "Link");
+      expect(linkExt).toBeDefined();
+      expect(linkExt?._opts).toMatchObject({ autolink: true, openOnClick: false });
+    });
+
+    it("configures useEditor with TaskList extension", () => {
+      render(<NoteEditor note={mockNote} onSave={vi.fn()} />);
+      const useEditorMock = vi.mocked(useEditor);
+      const callArgs = useEditorMock.mock.calls[0]?.[0];
+      const extensions: Array<{ _ext?: string }> = callArgs?.extensions ?? [];
+      const taskList = extensions.find((e) => e._ext === "TaskList");
+      expect(taskList).toBeDefined();
+    });
+
+    it("configures useEditor with TaskItem extension (nested: false)", () => {
+      render(<NoteEditor note={mockNote} onSave={vi.fn()} />);
+      const useEditorMock = vi.mocked(useEditor);
+      const callArgs = useEditorMock.mock.calls[0]?.[0];
+      const extensions: Array<{ _ext?: string; _opts?: Record<string, unknown> }> =
+        callArgs?.extensions ?? [];
+      const taskItem = extensions.find((e) => e._ext === "TaskItem");
+      expect(taskItem).toBeDefined();
+      expect(taskItem?._opts).toMatchObject({ nested: false });
     });
   });
 });
