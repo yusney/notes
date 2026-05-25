@@ -101,6 +101,46 @@ describe("NoteViewer", () => {
     });
   });
 
+  describe("task list checkbox CSS — viewer context (read-only)", () => {
+    it("viewer root has class 'note-viewer' for CSS scoping of pointer-events: none on checkboxes", () => {
+      const { container } = render(<NoteViewer note={mockNote} onEdit={vi.fn()} />);
+      // The outermost viewer wrapper must carry .note-viewer so the CSS rule
+      // `.note-viewer ... input[type="checkbox"] { pointer-events: none; cursor: default }`
+      // is active and checkboxes are non-interactive
+      const viewerRoot = container.querySelector(".note-viewer");
+      expect(viewerRoot).toBeInTheDocument();
+    });
+
+    it("index.css contains pointer-events:none rule for checkboxes in viewer", () => {
+      // RED: verifies CSS rule exists. Fails until rule is added to index.css.
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const fs = require("fs") as typeof import("fs");
+      const path = require("path") as typeof import("path");
+      const cssPath = path.resolve(__dirname, "../../../src/index.css");
+      const css = fs.readFileSync(cssPath, "utf-8");
+      expect(css).toMatch(/\.note-viewer[^}]*pointer-events\s*:\s*none/s);
+    });
+  });
+
+  describe("link CSS — viewer context", () => {
+    it("viewer root has class 'note-viewer' for CSS scoping of link color and underline", () => {
+      const { container } = render(<NoteViewer note={mockNote} onEdit={vi.fn()} />);
+      // .note-viewer scoping ensures links get color + underline override via CSS
+      const viewerRoot = container.querySelector(".note-viewer");
+      expect(viewerRoot).toBeInTheDocument();
+    });
+
+    it("index.css contains link color and text-decoration rules in viewer", () => {
+      // RED: verifies CSS rule exists. Fails until rule is added to index.css.
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const fs = require("fs") as typeof import("fs");
+      const path = require("path") as typeof import("path");
+      const cssPath = path.resolve(__dirname, "../../../src/index.css");
+      const css = fs.readFileSync(cssPath, "utf-8");
+      expect(css).toMatch(/\.note-viewer[^}]*text-decoration\s*:\s*underline/s);
+    });
+  });
+
   describe("link rendering", () => {
     it("configures Link extension with openOnClick: true", () => {
       render(<NoteViewer note={mockNote} onEdit={vi.fn()} />);
