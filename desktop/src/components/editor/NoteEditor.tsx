@@ -241,6 +241,20 @@ export function NoteEditor({ note, availableTags = [], onSave, onSaveAndExit, on
     onUpdate: ({ editor }) => {
       setEditorContent(editor.getHTML());
     },
+    editorProps: {
+      handlePaste(view, event) {
+        const text = event.clipboardData?.getData("text/plain");
+        if (!text) return false;
+        // Force all pastes through the markdown parser by inserting as plain text.
+        // This ensures markdown syntax (headings, tables, bold, etc.) is always parsed
+        // regardless of whether the clipboard also carries HTML.
+        event.preventDefault();
+        view.dispatch(
+          view.state.tr.insertText(text, view.state.selection.from, view.state.selection.to)
+        );
+        return true;
+      },
+    },
   });
 
   // Derived — always reflects current editor text without extra state
