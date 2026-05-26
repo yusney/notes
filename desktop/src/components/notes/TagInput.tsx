@@ -56,6 +56,7 @@ export function TagInput({ availableTags, selectedTagNames, onChange }: TagInput
       />
       <datalist id="available-tags">
         {availableTags.map((tag) => (
+          // eslint-disable-next-line react-doctor/control-has-associated-label -- datalist <option> values are self-labelling
           <option key={tag.id} value={tag.name} />
         ))}
       </datalist>

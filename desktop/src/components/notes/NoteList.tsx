@@ -67,7 +67,7 @@ export function NoteList({
             type="button"
             onClick={onCreateNote}
             aria-label="Nueva nota"
-            className="grid h-9 w-9 place-items-center rounded-full bg-accent text-lg leading-none text-accent-text transition-colors hover:bg-accent-hover"
+            className="grid size-9 place-items-center rounded-full bg-accent text-lg leading-none text-accent-text transition-colors hover:bg-accent-hover"
           >
             +
           </button>
