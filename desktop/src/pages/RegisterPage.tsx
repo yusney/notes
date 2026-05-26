@@ -1,4 +1,4 @@
-import { useState, FormEvent } from "react";
+import { useReducer, FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../stores/useAuthStore";
 import { PasswordInput } from "../components/ui/PasswordInput";
@@ -11,21 +11,47 @@ function validatePassword(password: string): string | null {
   return null;
 }
 
+interface RegisterState {
+  name: string;
+  email: string;
+  password: string;
+  rememberMe: boolean;
+  fieldErrors: { name?: string; email?: string; password?: string };
+}
+
+type RegisterAction =
+  | { type: "set-name"; value: string }
+  | { type: "set-email"; value: string }
+  | { type: "set-password"; value: string }
+  | { type: "set-remember-me"; value: boolean }
+  | { type: "set-field-errors"; value: RegisterState["fieldErrors"] };
+
+const INITIAL_STATE: RegisterState = {
+  name: "",
+  email: "",
+  password: "",
+  rememberMe: true,
+  fieldErrors: {},
+};
+
+function registerReducer(state: RegisterState, action: RegisterAction): RegisterState {
+  switch (action.type) {
+    case "set-name": return { ...state, name: action.value };
+    case "set-email": return { ...state, email: action.value };
+    case "set-password": return { ...state, password: action.value };
+    case "set-remember-me": return { ...state, rememberMe: action.value };
+    case "set-field-errors": return { ...state, fieldErrors: action.value };
+  }
+}
+
 export function RegisterPage() {
   const { register, isLoading, error, clearError } = useAuthStore();
   const navigate = useNavigate();
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [rememberMe, setRememberMe] = useState(true);
-  const [fieldErrors, setFieldErrors] = useState<{
-    name?: string;
-    email?: string;
-    password?: string;
-  }>({});
+  const [state, dispatch] = useReducer(registerReducer, INITIAL_STATE);
+  const { name, email, password, rememberMe, fieldErrors } = state;
 
   function validate() {
-    const errors: typeof fieldErrors = {};
+    const errors: RegisterState["fieldErrors"] = {};
     if (!name.trim()) errors.name = "El nombre es requerido";
     if (!email.trim()) errors.email = "El email es requerido";
     const pwError = validatePassword(password);
@@ -37,7 +63,7 @@ export function RegisterPage() {
     e.preventDefault();
     clearError();
     const errors = validate();
-    setFieldErrors(errors);
+    dispatch({ type: "set-field-errors", value: errors });
     if (Object.keys(errors).length > 0) return;
 
     try {
@@ -77,7 +103,7 @@ export function RegisterPage() {
                 id="name"
                 type="text"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => dispatch({ type: "set-name", value: e.target.value })}
                 className="w-full pl-10 pr-3 py-2 bg-surface-elevated border-b-2 border-input-border text-sm text-text-primary placeholder:text-text-secondary focus:border-accent focus:outline-none"
                 autoComplete="name"
               />
@@ -99,7 +125,7 @@ export function RegisterPage() {
                 id="email"
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => dispatch({ type: "set-email", value: e.target.value })}
                 className="w-full pl-10 pr-3 py-2 bg-surface-elevated border-b-2 border-input-border text-sm text-text-primary placeholder:text-text-secondary focus:border-accent focus:outline-none"
                 autoComplete="email"
               />
@@ -118,7 +144,7 @@ export function RegisterPage() {
               id="password"
               icon="lock"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => dispatch({ type: "set-password", value: e.target.value })}
               autoComplete="new-password"
             />
             {fieldErrors.password && (
@@ -133,7 +159,7 @@ export function RegisterPage() {
               id="remember-me"
               type="checkbox"
               checked={rememberMe}
-              onChange={(e) => setRememberMe(e.target.checked)}
+              onChange={(e) => dispatch({ type: "set-remember-me", value: e.target.checked })}
               className="size-4 border-border bg-surface text-accent"
             />
             <label htmlFor="remember-me" className="text-xs text-text-secondary cursor-pointer select-none">

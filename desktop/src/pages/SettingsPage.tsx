@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useReducer, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useTheme } from "../hooks/useTheme";
 import type { Theme } from "../hooks/useTheme";
@@ -22,39 +22,63 @@ const ORDER_OPTIONS: { value: SortOrder; label: string }[] = [
   { value: "asc", label: "Ascendente" },
 ];
 
+interface SettingsState {
+  sortBy: SortBy;
+  sortOrder: SortOrder;
+  isSaving: boolean;
+  success: boolean;
+  error: string | null;
+}
+
+type SettingsAction =
+  | { type: "set-prefs"; sortBy: SortBy; sortOrder: SortOrder }
+  | { type: "set-sort-by"; value: SortBy }
+  | { type: "set-sort-order"; value: SortOrder }
+  | { type: "save-start" }
+  | { type: "save-success" }
+  | { type: "save-error"; value: string };
+
+const INITIAL_STATE: SettingsState = {
+  sortBy: "creation",
+  sortOrder: "desc",
+  isSaving: false,
+  success: false,
+  error: null,
+};
+
+function settingsReducer(state: SettingsState, action: SettingsAction): SettingsState {
+  switch (action.type) {
+    case "set-prefs": return { ...state, sortBy: action.sortBy, sortOrder: action.sortOrder };
+    case "set-sort-by": return { ...state, sortBy: action.value };
+    case "set-sort-order": return { ...state, sortOrder: action.value };
+    case "save-start": return { ...state, isSaving: true, success: false, error: null };
+    case "save-success": return { ...state, isSaving: false, success: true };
+    case "save-error": return { ...state, isSaving: false, error: action.value };
+  }
+}
+
 export function SettingsPage() {
   const { theme, setTheme } = useTheme();
-  const {
-    fetchPreferences,
-    updatePreferences,
-    isLoading: prefsLoading,
-  } = usePreferencesStore();
-  const [sortBy, setSortBy] = useState<SortBy>("creation");
-  const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
-  const [isSaving, setIsSaving] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { fetchPreferences, updatePreferences, isLoading: prefsLoading } = usePreferencesStore();
+  const [state, dispatch] = useReducer(settingsReducer, INITIAL_STATE);
+  const { sortBy, sortOrder, isSaving, success, error } = state;
 
-  // eslint-disable-next-line react-doctor/exhaustive-deps -- fetchPreferences is a stable Zustand action, adding it would cause infinite re-runs
+  /* eslint-disable react-doctor/exhaustive-deps -- fetchPreferences is a stable Zustand action, adding it would cause infinite re-runs */
   useEffect(() => {
     fetchPreferences().then(() => {
       const prefs = usePreferencesStore.getState();
-      setSortBy(prefs.sortBy);
-      setSortOrder(prefs.sortOrder); // eslint-disable-line react-doctor/exhaustive-deps
+      dispatch({ type: "set-prefs", sortBy: prefs.sortBy, sortOrder: prefs.sortOrder });
     });
   }, []);
+  /* eslint-enable react-doctor/exhaustive-deps */
 
   const handleSave = async () => {
-    setError(null);
-    setSuccess(false);
-    setIsSaving(true);
+    dispatch({ type: "save-start" });
     try {
       await updatePreferences({ sortBy, sortOrder });
-      setSuccess(true);
+      dispatch({ type: "save-success" });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al guardar");
-    } finally {
-      setIsSaving(false);
+      dispatch({ type: "save-error", value: err instanceof Error ? err.message : "Error al guardar" });
     }
   };
 
@@ -89,7 +113,7 @@ export function SettingsPage() {
               id="select-sort-by"
               options={SORT_OPTIONS}
               value={sortBy}
-              onChange={(v) => setSortBy(v as SortBy)}
+              onChange={(v) => dispatch({ type: "set-sort-by", value: v as SortBy })}
               ariaLabel="Ordenar por defecto"
             />
           </div>
@@ -100,7 +124,7 @@ export function SettingsPage() {
               id="select-sort-order"
               options={ORDER_OPTIONS}
               value={sortOrder}
-              onChange={(v) => setSortOrder(v as SortOrder)}
+              onChange={(v) => dispatch({ type: "set-sort-order", value: v as SortOrder })}
               ariaLabel="Orden de clasificación"
             />
           </div>

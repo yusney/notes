@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useReducer, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { apiClient } from "../api/client";
 import { PasswordInput } from "../components/ui/PasswordInput";
@@ -9,56 +9,87 @@ interface UserProfile {
   provider: string;
 }
 
-export function ProfilePage() {
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [name, setName] = useState("");
-  const [nameSuccess, setNameSuccess] = useState(false);
-  const [nameError, setNameError] = useState<string | null>(null);
+interface ProfileState {
+  profile: UserProfile | null;
+  name: string;
+  nameSuccess: boolean;
+  nameError: string | null;
+  currentPassword: string;
+  newPassword: string;
+  passwordSuccess: boolean;
+  passwordError: string | null;
+  isLoading: boolean;
+}
 
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [passwordSuccess, setPasswordSuccess] = useState(false);
-  const [passwordError, setPasswordError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+type ProfileAction =
+  | { type: "set-profile"; value: UserProfile }
+  | { type: "set-name"; value: string }
+  | { type: "name-success" }
+  | { type: "name-error"; value: string }
+  | { type: "set-current-password"; value: string }
+  | { type: "set-new-password"; value: string }
+  | { type: "password-success" }
+  | { type: "password-error"; value: string }
+  | { type: "set-loading"; value: boolean };
+
+const INITIAL_STATE: ProfileState = {
+  profile: null,
+  name: "",
+  nameSuccess: false,
+  nameError: null,
+  currentPassword: "",
+  newPassword: "",
+  passwordSuccess: false,
+  passwordError: null,
+  isLoading: false,
+};
+
+function profileReducer(state: ProfileState, action: ProfileAction): ProfileState {
+  switch (action.type) {
+    case "set-profile": return { ...state, profile: action.value, name: action.value.name };
+    case "set-name": return { ...state, name: action.value };
+    case "name-success": return { ...state, nameSuccess: true, nameError: null };
+    case "name-error": return { ...state, nameSuccess: false, nameError: action.value };
+    case "set-current-password": return { ...state, currentPassword: action.value };
+    case "set-new-password": return { ...state, newPassword: action.value };
+    case "password-success": return { ...state, passwordSuccess: true, passwordError: null, currentPassword: "", newPassword: "" };
+    case "password-error": return { ...state, passwordSuccess: false, passwordError: action.value };
+    case "set-loading": return { ...state, isLoading: action.value };
+  }
+}
+
+export function ProfilePage() {
+  const [state, dispatch] = useReducer(profileReducer, INITIAL_STATE);
+  const { profile, name, nameSuccess, nameError, currentPassword, newPassword, passwordSuccess, passwordError, isLoading } = state;
 
   useEffect(() => {
     apiClient
       .get<UserProfile>("/api/user/profile")
-      .then((data) => {
-        setProfile(data);
-        setName(data.name);
-      })
+      .then((data) => dispatch({ type: "set-profile", value: data }))
       .catch(() => {});
   }, []);
 
   const handleSaveName = async () => {
-    setNameError(null);
-    setNameSuccess(false);
+    dispatch({ type: "name-error", value: "" });
     try {
       await apiClient.put("/api/user/profile", { name });
-      setNameSuccess(true);
+      dispatch({ type: "name-success" });
     } catch (err) {
-      setNameError(err instanceof Error ? err.message : "Error al guardar");
+      dispatch({ type: "name-error", value: err instanceof Error ? err.message : "Error al guardar" });
     }
   };
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    setPasswordError(null);
-    setPasswordSuccess(false);
-    setIsLoading(true);
+    dispatch({ type: "password-error", value: "" });
+    dispatch({ type: "set-loading", value: true });
     try {
-      await apiClient.put("/api/user/password", {
-        currentPassword,
-        newPassword,
-      });
-      setPasswordSuccess(true);
-      setCurrentPassword("");
-      setNewPassword("");
+      await apiClient.put("/api/user/password", { currentPassword, newPassword });
+      dispatch({ type: "password-success" });
     } catch (err) {
-      setPasswordError(err instanceof Error ? err.message : "Error al cambiar contraseña");
+      dispatch({ type: "password-error", value: err instanceof Error ? err.message : "Error al cambiar contraseña" });
     } finally {
-      setIsLoading(false);
+      dispatch({ type: "set-loading", value: false });
     }
   };
 
@@ -98,7 +129,7 @@ export function ProfilePage() {
                 id="display-name"
                 type="text"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => dispatch({ type: "set-name", value: e.target.value })}
                 className="w-full border-b-2 border-input-border px-1 py-2 text-sm bg-surface-elevated text-text-primary focus:border-accent focus:outline-none"
               />
               {nameError && <p className="text-xs text-danger">{nameError}</p>}
@@ -126,7 +157,7 @@ export function ProfilePage() {
                 <PasswordInput
                   id="current-password"
                   value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  onChange={(e) => dispatch({ type: "set-current-password", value: e.target.value })}
                 />
               </div>
               <div>
@@ -136,7 +167,7 @@ export function ProfilePage() {
                 <PasswordInput
                   id="new-password"
                   value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
+                  onChange={(e) => dispatch({ type: "set-new-password", value: e.target.value })}
                 />
               </div>
               {passwordError && <p className="text-xs text-danger">{passwordError}</p>}
@@ -146,7 +177,7 @@ export function ProfilePage() {
                 disabled={isLoading}
                 className="text-sm px-4 py-2 bg-accent text-accent-text hover:bg-accent-hover disabled:opacity-50 transition-colors"
               >
-                {isLoading ? "Guardando..." : "Cambiar contraseña"}
+                {isLoading ? "Guardando…" : "Cambiar contraseña"}
               </button>
             </form>
           </section>
