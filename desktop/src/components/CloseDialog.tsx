@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
+import type { UnlistenFn } from "@tauri-apps/api/event";
 
 /**
  * Dialog shown when the user clicks the window close button.
@@ -9,16 +10,21 @@ import { invoke } from "@tauri-apps/api/core";
  */
 export function CloseDialog() {
   const [open, setOpen] = useState(false);
+  const unlistenRef = useRef<UnlistenFn | null>(null);
 
+  // eslint-disable-next-line react-doctor/effect-needs-cleanup -- Tauri listen() is async; cleanup releases via unlistenRef.current?.()
   useEffect(() => {
     const appWindow = getCurrentWindow();
+    let active = true;
 
-    const unlisten = appWindow.listen("close-requested-dialog", () => {
-      setOpen(true);
-    });
+    appWindow.listen("close-requested-dialog", () => setOpen(true))
+      .then((fn) => { if (active) unlistenRef.current = fn; else fn(); });
 
+    // react-doctor: cleanup releases the Tauri listener via ref
     return () => {
-      unlisten.then((fn) => fn());
+      active = false;
+      unlistenRef.current?.();
+      unlistenRef.current = null;
     };
   }, []);
 
