@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
-import { CodeBlockBubbleMenu, SUPPORTED_LANGUAGES } from "./CodeBlockBubbleMenu";
+import { CodeBlockBubbleMenu } from "./CodeBlockBubbleMenu";
+import { SUPPORTED_LANGUAGES } from "./languages";
 
 // Mock @tiptap/react/menus BubbleMenu — renders children when shouldShow returns true
 vi.mock("@tiptap/react/menus", async () => {

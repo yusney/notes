@@ -3,27 +3,24 @@ import { useParams } from "react-router-dom";
 import { apiClient } from "../api/client";
 import type { SharedNoteDto } from "../types";
 
+type State =
+  | { status: "loading" }
+  | { status: "found"; note: SharedNoteDto }
+  | { status: "not-found" };
+
 export function SharedNotePage() {
   const { token } = useParams<{ token: string }>();
-  const [note, setNote] = useState<SharedNoteDto | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [notFound, setNotFound] = useState(false);
+  const [state, setState] = useState<State>({ status: "loading" });
 
   useEffect(() => {
     if (!token) return;
     apiClient
       .get<SharedNoteDto>(`/share/${token}`)
-      .then((data) => {
-        setNote(data);
-        setLoading(false);
-      })
-      .catch(() => {
-        setNotFound(true);
-        setLoading(false);
-      });
+      .then((data) => setState({ status: "found", note: data }))
+      .catch(() => setState({ status: "not-found" }));
   }, [token]);
 
-  if (loading) {
+  if (state.status === "loading") {
     return (
       <div className="flex items-center justify-center h-screen bg-surface">
         <p className="text-text-secondary">Cargando nota...</p>
@@ -31,13 +28,15 @@ export function SharedNotePage() {
     );
   }
 
-  if (notFound || !note) {
+  if (state.status === "not-found") {
     return (
       <div className="flex items-center justify-center h-screen bg-surface">
         <p className="text-text-secondary">Nota no encontrada o enlace expirado.</p>
       </div>
     );
   }
+
+  const { note } = state;
 
   return (
     <div className="min-h-screen bg-surface">

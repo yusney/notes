@@ -21,6 +21,7 @@ export function SharedLinksList({ links, onRevoke }: SharedLinksListProps) {
             )}
           </div>
           <button
+            type="button"
             onClick={() => onRevoke(link.token)}
             aria-label="revocar"
             className="border border-danger px-3 py-1.5 text-xs font-medium text-danger transition-colors hover:bg-danger hover:text-accent-text"

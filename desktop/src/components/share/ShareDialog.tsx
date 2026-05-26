@@ -138,12 +138,14 @@ export function ShareDialog({ noteId, isOpen, onClose }: ShareDialogProps) {
 
             <div className="mt-5 flex justify-end gap-2">
               <button
+                type="button"
                 onClick={handleClose}
                 className="border border-border px-4 py-2 text-sm text-text-secondary transition-colors hover:bg-surface hover:text-text-primary"
               >
                 Cancelar
               </button>
               <button
+                type="button"
                 onClick={handleCreate}
                 disabled={isLoading || (hasExpiry && !selectedDay)}
                 className="bg-accent px-4 py-2 text-sm font-bold text-accent-text transition-colors hover:bg-accent-hover disabled:opacity-50"
@@ -160,12 +162,14 @@ export function ShareDialog({ noteId, isOpen, onClose }: ShareDialogProps) {
             </code>
             <div className="mt-5 flex justify-end gap-2">
               <button
+                type="button"
                 onClick={handleCopy}
                 className="bg-accent px-4 py-2 text-sm font-bold text-accent-text transition-colors hover:bg-accent-hover"
               >
                 Copiar enlace
               </button>
               <button
+                type="button"
                 onClick={handleClose}
                 className="border border-border px-4 py-2 text-sm text-text-secondary transition-colors hover:bg-surface hover:text-text-primary"
               >

@@ -21,6 +21,7 @@ export function Sidebar({ tabs, activeTabId, onTabSelect, onCreateTab, userName,
       <div className="flex items-center justify-between px-4 py-3">
         <span className="text-xs font-semibold uppercase tracking-[0.22em] text-text-secondary">Espacios</span>
         <button
+          type="button"
           onClick={onCreateTab}
           aria-label="Nueva tab"
           className="grid h-8 w-8 place-items-center rounded-full border border-border bg-surface text-lg leading-none text-accent transition-colors hover:border-accent hover:bg-accent hover:text-accent-text"
@@ -38,6 +39,7 @@ export function Sidebar({ tabs, activeTabId, onTabSelect, onCreateTab, userName,
             {tabs.map((tab) => (
               <li key={tab.id}>
                 <button
+                  type="button"
                   onClick={() => onTabSelect(tab.id)}
                   aria-current={activeTabId === tab.id ? "true" : undefined}
                   className={`w-full px-3 py-2.5 text-left text-sm transition-colors ${
@@ -61,6 +63,7 @@ export function Sidebar({ tabs, activeTabId, onTabSelect, onCreateTab, userName,
             {userName && <p className="mt-1 truncate text-sm font-semibold text-text-primary">{userName}</p>}
             {onLogout && (
               <button
+                type="button"
                 onClick={onLogout}
                 className="mt-3 w-full border border-border px-3 py-2 text-xs font-semibold text-text-secondary transition-colors hover:border-danger hover:bg-danger/10 hover:text-danger"
               >

@@ -62,9 +62,13 @@ export function MainLayout() {
         sortOrder: prefs.sortOrder ?? "desc",
       });
       // Now fetch with correct sort preferences
-      await useNoteStore.getState().fetchTabs();
+      // fetchTabs and fetchTags are independent — run in parallel
+      await Promise.all([
+        useNoteStore.getState().fetchTabs(),
+        useTagStore.getState().fetchTags(),
+      ]);
+      // fetchNotes runs after fetchTabs so the active tab is available
       await useNoteStore.getState().fetchNotes();
-      await useTagStore.getState().fetchTags();
     }
     init();
   }, [isAuthenticated]);
@@ -258,6 +262,7 @@ export function MainLayout() {
                 Usá la búsqueda, tags, favoritos y espacios para encontrar contexto rápido sin romper el foco de escritura.
               </p>
               <button
+                type="button"
                 onClick={handleCreateNote}
                 className="mt-6 rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-accent-text transition-colors hover:bg-accent-hover"
               >
