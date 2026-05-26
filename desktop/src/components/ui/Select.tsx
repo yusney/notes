@@ -29,6 +29,7 @@ export function Select({
 
   const selected = options.find((o) => o.value === value);
   const label = selected?.label ?? value;
+  const listboxId = id ? `${id}-listbox` : undefined;
 
   // Close on outside click
   useEffect(() => {
@@ -103,6 +104,7 @@ export function Select({
         aria-expanded={open}
         aria-label={ariaLabel}
         aria-haspopup="listbox"
+        aria-controls={listboxId}
         onClick={() => setOpen(!open)}
         onKeyDown={handleTriggerKey}
         className="flex w-full items-center justify-between border border-border bg-surface-elevated px-3 py-2 text-sm text-text-primary transition-colors hover:border-accent/50 focus:outline-none focus:border-accent"
@@ -119,6 +121,7 @@ export function Select({
       {open && (
         <ul
           ref={listRef}
+          id={listboxId}
           role="listbox"
           aria-label={ariaLabel}
           onKeyDown={handleListKey}

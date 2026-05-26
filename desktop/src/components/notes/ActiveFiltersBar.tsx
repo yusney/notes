@@ -57,6 +57,7 @@ export function ActiveFiltersBar({
           {resultCount} {resultCount === 1 ? "nota" : "notas"} · {SORT_LABELS[sortBy]}
         </span>
         <button
+          type="button"
           onClick={onClearAll}
           className="text-xs font-medium text-accent hover:text-accent-hover transition-colors"
         >
@@ -89,6 +90,7 @@ function FilterPill({ label, onRemove }: { label: string; onRemove: () => void }
     >
       {label}
       <button
+        type="button"
         onClick={onRemove}
         aria-label={`Eliminar filtro: ${label}`}
         className="ml-0.5 text-text-secondary hover:text-text-primary"

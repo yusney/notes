@@ -105,6 +105,7 @@ export function SettingsPage() {
           {success && <p className="text-xs text-accent">Configuración guardada</p>}
 
           <button
+            type="button"
             onClick={handleSave}
             disabled={isSaving}
             aria-label="Guardar configuración"

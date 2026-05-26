@@ -50,6 +50,7 @@ export function NoteList({
         <div className="flex items-center gap-2">
           {onFavoriteFilterToggle && (
             <button
+              type="button"
               onClick={onFavoriteFilterToggle}
               aria-label="Solo favoritos"
               aria-pressed={isFavoriteOnly}
@@ -63,6 +64,7 @@ export function NoteList({
             </button>
           )}
           <button
+            type="button"
             onClick={onCreateNote}
             aria-label="Nueva nota"
             className="grid h-9 w-9 place-items-center rounded-full bg-accent text-lg leading-none text-accent-text transition-colors hover:bg-accent-hover"
@@ -93,6 +95,7 @@ export function NoteList({
                 <span className="font-medium text-text-primary">"{searchQuery}"</span>
                 <p className="mt-2">
                   <button
+                    type="button"
                     onClick={onCreateNote}
                     className="font-medium text-accent hover:text-accent-hover"
                   >
@@ -104,6 +107,7 @@ export function NoteList({
               <>
                 <p>Crea tu primera nota</p>
                 <button
+                  type="button"
                   onClick={onCreateNote}
                   className="mt-3 rounded-full bg-accent px-4 py-2 text-xs font-semibold text-accent-text transition-colors hover:bg-accent-hover"
                 >
@@ -131,6 +135,7 @@ export function NoteList({
                   <p className="min-w-0 flex-1 truncate text-sm font-semibold text-text-primary">{note.title}</p>
                   {onToggleFavorite && (
                     <button
+                      type="button"
                       onClick={(e) => { e.stopPropagation(); onToggleFavorite(note.id); }}
                       aria-label="Favorito"
                       aria-pressed={note.isFavorite ?? false}
@@ -157,6 +162,7 @@ export function NoteList({
               </div>
               {onDeleteNote && (
                 <button
+                  type="button"
                   onClick={(e) => { e.stopPropagation(); onDeleteNote(note.id); }}
                   aria-label="eliminar nota"
                   className="absolute bottom-3 right-3 hidden rounded-full px-2 py-1 text-xs font-semibold text-danger transition-colors hover:bg-danger/10 hover:text-danger-hover group-hover:flex"

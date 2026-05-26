@@ -27,12 +27,14 @@ export function ShareWarningDialog({
         </p>
         <div className="flex justify-end gap-2">
           <button
+            type="button"
             onClick={onCancel}
             className="border border-border px-4 py-2 text-sm text-text-secondary transition-colors hover:bg-surface hover:text-text-primary"
           >
             Cancelar
           </button>
           <button
+            type="button"
             onClick={onConfirm}
             className="bg-danger px-4 py-2 text-sm font-bold text-accent-text transition-colors hover:bg-danger-hover"
           >

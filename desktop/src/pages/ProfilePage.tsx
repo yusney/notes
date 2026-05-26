@@ -103,6 +103,7 @@ export function ProfilePage() {
               {nameError && <p className="text-xs text-danger">{nameError}</p>}
               {nameSuccess && <p className="text-xs text-accent">Nombre guardado</p>}
               <button
+                type="button"
                 onClick={handleSaveName}
                 aria-label="Guardar nombre"
                 className="text-sm px-4 py-2 bg-accent text-accent-text hover:bg-accent-hover transition-colors"

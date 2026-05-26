@@ -25,6 +25,7 @@ export function TagFilter({ tags, selectedTagIds, onChange }: TagFilterProps) {
         </span>
         {selectedTagIds.length > 0 && (
           <button
+            type="button"
             onClick={() => onChange([])}
             className="text-[10px] font-medium text-accent hover:text-accent-hover"
           >

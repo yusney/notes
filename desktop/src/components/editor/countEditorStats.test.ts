@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { countEditorStats } from "./NoteEditor";
+import { countEditorStats } from "./countEditorStats";
 
 describe("countEditorStats", () => {
   it("returns zero chars, zero words, one line for empty string", () => {

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useReducer, useRef } from "react";
 import { useEditor, EditorContent, Extension } from "@tiptap/react";
 import { StarterKit } from "@tiptap/starter-kit";
 import { CodeBlockLowlight } from "@tiptap/extension-code-block-lowlight";
@@ -17,6 +17,7 @@ import { TagInput } from "../notes/TagInput";
 import { CodeBlockBubbleMenu } from "./CodeBlockBubbleMenu";
 import { formatCodeBlock } from "./CodeFormatter";
 import type { SupportedFormatLang } from "./CodeFormatter";
+import { countEditorStats } from "./countEditorStats";
 
 const lowlight = createLowlight(all);
 
@@ -48,13 +49,6 @@ const editorExtensions = [
   TableHeader,
   Markdown.configure({ transformPastedText: true, transformCopiedText: false }),
 ];
-
-export function countEditorStats(text: string): { chars: number; words: number; lines: number } {
-  const chars = text.length;
-  const words = text.trim() === "" ? 0 : text.trim().split(/\s+/).length;
-  const lines = text === "" ? 1 : text.split("\n").length;
-  return { chars, words, lines };
-}
 
 function SaveStatusIndicator({ status }: { status: SaveStatus }) {
   if (status === "saving" || status === "pending") {
@@ -224,12 +218,37 @@ interface NoteEditorProps {
   onCancel?: () => void;
 }
 
-export function NoteEditor({ note, availableTags = [], onSave, onSaveAndExit, onCancel }: NoteEditorProps) {
-  const [title, setTitle] = useState(note.title);
-  const [editorContent, setEditorContent] = useState(note.content);
-  const [tagNames, setTagNames] = useState<string[]>(
-    (note.tags ?? []).map((t) => t.name)
-  );
+const EMPTY_TAGS: Tag[] = [];
+
+type EditorState = { title: string; editorContent: string; tagNames: string[] };
+type EditorAction =
+  | { type: "set-title"; value: string }
+  | { type: "set-content"; value: string }
+  | { type: "set-tags"; names: string[] }
+  | { type: "sync-note"; note: Note };
+
+function editorReducer(state: EditorState, action: EditorAction): EditorState {
+  switch (action.type) {
+    case "set-title": return { ...state, title: action.value };
+    case "set-content": return { ...state, editorContent: action.value };
+    case "set-tags": return { ...state, tagNames: action.names };
+    case "sync-note": return {
+      title: action.note.title,
+      editorContent: action.note.content,
+      tagNames: (action.note.tags ?? []).map((t) => t.name),
+    };
+  }
+}
+
+export function NoteEditor({ note, availableTags = EMPTY_TAGS, onSave, onSaveAndExit, onCancel }: NoteEditorProps) {
+  const [{ title, editorContent, tagNames }, dispatch] = useReducer(editorReducer, {
+    title: note.title,
+    editorContent: note.content,
+    tagNames: (note.tags ?? []).map((t) => t.name),
+  });
+  const setTitle = (v: string) => dispatch({ type: "set-title", value: v });
+  const setEditorContent = (v: string) => dispatch({ type: "set-content", value: v });
+  const setTagNames = (names: string[]) => dispatch({ type: "set-tags", names });
   const isSavingManually = useRef(false);
   const previousNoteId = useRef(note.id);
 
@@ -278,9 +297,7 @@ export function NoteEditor({ note, availableTags = [], onSave, onSaveAndExit, on
   useEffect(() => {
     if (previousNoteId.current === note.id) return;
     previousNoteId.current = note.id;
-    setTitle(note.title);
-    setEditorContent(note.content);
-    setTagNames((note.tags ?? []).map((t) => t.name));
+    dispatch({ type: "sync-note", note });
     editor?.commands.setContent(note.content, { emitUpdate: false });
   }, [editor, note]);
 
@@ -382,6 +399,7 @@ export function NoteEditor({ note, availableTags = [], onSave, onSaveAndExit, on
         <div className="flex gap-2">
           {onCancel && (
             <button
+              type="button"
               onClick={onCancel}
               aria-label="Cancelar edición"
               className="border border-border bg-surface-elevated px-4 py-2 text-sm font-semibold text-text-primary transition-colors hover:bg-surface"
@@ -390,6 +408,7 @@ export function NoteEditor({ note, availableTags = [], onSave, onSaveAndExit, on
             </button>
           )}
           <button
+            type="button"
             onClick={handleManualSave}
             aria-label="Guardar nota"
             className="bg-accent px-4 py-2 text-sm font-bold text-accent-text transition-colors hover:bg-accent-hover"
