@@ -47,7 +47,8 @@ export function TagInput({ availableTags, selectedTagNames, onChange }: TagInput
       <input
         list="available-tags"
         type="text"
-        placeholder="Agregar etiqueta y presionar Enter..."
+        aria-label="Agregar etiqueta"
+        placeholder="Agregar etiqueta y presionar Enter…"
         value={inputValue}
         onChange={(e) => setInputValue(e.target.value)}
         onKeyDown={handleKeyDown}

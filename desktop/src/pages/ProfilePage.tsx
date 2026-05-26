@@ -93,6 +93,7 @@ export function ProfilePage() {
               <label htmlFor="display-name" className="block text-xs text-text-secondary">
                 Nombre
               </label>
+              {/* eslint-disable-next-line react-doctor/control-has-associated-label -- label is associated via htmlFor="display-name" */}
               <input
                 id="display-name"
                 type="text"

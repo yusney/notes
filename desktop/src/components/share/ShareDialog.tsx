@@ -1,3 +1,4 @@
+/* eslint-disable react-doctor/no-noninteractive-element-interactions -- <dialog> is a native interactive element; onMouseDown on root closes on backdrop click */
 import { useState } from "react";
 import { DayPicker } from "react-day-picker";
 import "react-day-picker/style.css";
@@ -69,6 +70,7 @@ export function ShareDialog({ noteId, isOpen, onClose }: ShareDialogProps) {
           <>
             <div className="space-y-4">
               <label className="flex items-center gap-2 text-sm text-text-primary cursor-pointer">
+                {/* eslint-disable-next-line react-doctor/control-has-associated-label -- label is implicit: input is inside <label> */}
                 <input
                   type="checkbox"
                   checked={hasExpiry}
@@ -98,7 +100,7 @@ export function ShareDialog({ noteId, isOpen, onClose }: ShareDialogProps) {
                       <button
                         type="button"
                         onClick={() => setHour((h) => (h === 0 ? 23 : h - 1))}
-                        className="w-7 h-7 border border-border bg-surface text-text-primary hover:bg-surface-elevated text-sm"
+                        className="size-7 border border-border bg-surface text-text-primary hover:bg-surface-elevated text-sm"
                       >−</button>
                       <span className="w-8 text-center text-sm font-mono text-text-primary">
                         {String(hour).padStart(2, "0")}
@@ -106,7 +108,7 @@ export function ShareDialog({ noteId, isOpen, onClose }: ShareDialogProps) {
                       <button
                         type="button"
                         onClick={() => setHour((h) => (h === 23 ? 0 : h + 1))}
-                        className="w-7 h-7 border border-border bg-surface text-text-primary hover:bg-surface-elevated text-sm"
+                        className="size-7 border border-border bg-surface text-text-primary hover:bg-surface-elevated text-sm"
                       >+</button>
                     </div>
                     <span className="text-text-secondary font-mono">:</span>
@@ -114,7 +116,7 @@ export function ShareDialog({ noteId, isOpen, onClose }: ShareDialogProps) {
                       <button
                         type="button"
                         onClick={() => setMinute((m) => (m === 0 ? 59 : m - 1))}
-                        className="w-7 h-7 border border-border bg-surface text-text-primary hover:bg-surface-elevated text-sm"
+                        className="size-7 border border-border bg-surface text-text-primary hover:bg-surface-elevated text-sm"
                       >−</button>
                       <span className="w-8 text-center text-sm font-mono text-text-primary">
                         {String(minute).padStart(2, "0")}
@@ -122,7 +124,7 @@ export function ShareDialog({ noteId, isOpen, onClose }: ShareDialogProps) {
                       <button
                         type="button"
                         onClick={() => setMinute((m) => (m === 59 ? 0 : m + 1))}
-                        className="w-7 h-7 border border-border bg-surface text-text-primary hover:bg-surface-elevated text-sm"
+                        className="size-7 border border-border bg-surface text-text-primary hover:bg-surface-elevated text-sm"
                       >+</button>
                     </div>
                   </div>

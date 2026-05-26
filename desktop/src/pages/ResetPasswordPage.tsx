@@ -62,7 +62,7 @@ export function ResetPasswordPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-surface">
         <div className="bg-surface-elevated border border-border p-8 w-full max-w-sm text-center">
-          <p className="text-sm text-text-secondary">Verificando enlace...</p>
+          <p className="text-sm text-text-secondary">Verificando enlace…</p>
         </div>
       </div>
     );

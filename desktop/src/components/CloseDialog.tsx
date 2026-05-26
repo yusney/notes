@@ -13,6 +13,7 @@ export function CloseDialog() {
   const unlistenRef = useRef<UnlistenFn | null>(null);
 
   // eslint-disable-next-line react-doctor/effect-needs-cleanup -- Tauri listen() is async; cleanup releases via unlistenRef.current?.()
+  // eslint-disable-next-line react-doctor/exhaustive-deps -- empty deps intentional: runs once on mount; setOpen is a stable setState reference
   useEffect(() => {
     const appWindow = getCurrentWindow();
     let active = true;
@@ -58,6 +59,7 @@ export function CloseDialog() {
             Minimizar a la bandeja
           </button>
           <button
+            type="button"
             onClick={close}
             className="w-full px-4 py-2 rounded-lg border border-border text-text-secondary text-sm hover:bg-surface transition-colors focus:outline-none focus:ring-2 focus:ring-border"
           >
