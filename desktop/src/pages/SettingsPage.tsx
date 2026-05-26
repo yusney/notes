@@ -72,8 +72,9 @@ export function SettingsPage() {
 
         <section className="space-y-4">
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-text-primary">Tema</label>
+            <label htmlFor="select-theme" className="block text-sm font-medium text-text-primary">Tema</label>
             <Select
+              id="select-theme"
               options={THEME_OPTIONS}
               value={theme}
               onChange={(v) => setTheme(v as Theme)}
@@ -82,8 +83,9 @@ export function SettingsPage() {
           </div>
 
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-text-primary">Ordenar por defecto</label>
+            <label htmlFor="select-sort-by" className="block text-sm font-medium text-text-primary">Ordenar por defecto</label>
             <Select
+              id="select-sort-by"
               options={SORT_OPTIONS}
               value={sortBy}
               onChange={(v) => setSortBy(v as SortBy)}
@@ -92,8 +94,9 @@ export function SettingsPage() {
           </div>
 
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-text-primary">Orden</label>
+            <label htmlFor="select-sort-order" className="block text-sm font-medium text-text-primary">Orden</label>
             <Select
+              id="select-sort-order"
               options={ORDER_OPTIONS}
               value={sortOrder}
               onChange={(v) => setSortOrder(v as SortOrder)}

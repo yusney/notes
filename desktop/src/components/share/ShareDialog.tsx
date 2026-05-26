@@ -49,11 +49,11 @@ export function ShareDialog({ noteId, isOpen, onClose }: ShareDialogProps) {
   const today = new Date();
 
   return (
-    <div
-      role="dialog"
+    <dialog
+      open
       aria-modal="true"
       aria-label="compartir nota"
-      className="fixed inset-0 z-50 flex items-center justify-center"
+      className="fixed inset-0 z-50 flex items-center justify-center border-0 bg-transparent p-0 m-0 w-full h-full max-w-none max-h-none"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) handleClose();
       }}
@@ -179,6 +179,6 @@ export function ShareDialog({ noteId, isOpen, onClose }: ShareDialogProps) {
           </>
         )}
       </div>
-    </div>
+    </dialog>
   );
 }

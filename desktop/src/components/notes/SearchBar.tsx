@@ -46,7 +46,6 @@ export function SearchBar({
         </span>
         <input
           type="search"
-          role="searchbox"
           value={value}
           onChange={handleChange}
           placeholder="Buscar en título y contenido..."
