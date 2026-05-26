@@ -24,7 +24,7 @@ export function Sidebar({ tabs, activeTabId, onTabSelect, onCreateTab, userName,
           type="button"
           onClick={onCreateTab}
           aria-label="Nueva tab"
-          className="grid h-8 w-8 place-items-center rounded-full border border-border bg-surface text-lg leading-none text-accent transition-colors hover:border-accent hover:bg-accent hover:text-accent-text"
+          className="grid size-8 place-items-center rounded-full border border-border bg-surface text-lg leading-none text-accent transition-colors hover:border-accent hover:bg-accent hover:text-accent-text"
         >
           +
         </button>

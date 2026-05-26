@@ -52,7 +52,7 @@ const editorExtensions = [
 
 function SaveStatusIndicator({ status }: { status: SaveStatus }) {
   if (status === "saving" || status === "pending") {
-    return <span className="text-xs font-medium text-text-secondary">Guardando...</span>;
+    return <span className="text-xs font-medium text-text-secondary">Guardando…</span>;
   }
   if (status === "saved") {
     return <span className="text-xs font-medium text-accent">Guardado ✓</span>;

@@ -39,7 +39,7 @@ export function NoteList({
 
   return (
     <div className="flex h-full w-80 flex-col border-r border-border bg-surface">
-      <div className="border-b border-border px-4 py-4">
+      <div className="border-b border-border p-4">
         <div className="flex items-center justify-between">
           <div>
             <span className="text-xs font-semibold uppercase tracking-[0.22em] text-text-secondary">Notas</span>

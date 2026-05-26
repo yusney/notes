@@ -73,7 +73,7 @@ export function ShareDialog({ noteId, isOpen, onClose }: ShareDialogProps) {
                   type="checkbox"
                   checked={hasExpiry}
                   onChange={(e) => setHasExpiry(e.target.checked)}
-                  className="h-4 w-4"
+                  className="size-4"
                 />
                 Fecha de expiración
               </label>

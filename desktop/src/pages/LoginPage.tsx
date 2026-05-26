@@ -107,7 +107,7 @@ export function LoginPage() {
                 type="checkbox"
                 checked={rememberMe}
                 onChange={(e) => setRememberMe(e.target.checked)}
-                className="h-4 w-4 border-border bg-surface text-accent"
+                className="size-4 border-border bg-surface text-accent"
               />
               <label htmlFor="remember-me" className="text-xs text-text-secondary cursor-pointer select-none">
                 Recordarme
