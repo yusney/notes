@@ -12,8 +12,7 @@ export function CloseDialog() {
   const [open, setOpen] = useState(false);
   const unlistenRef = useRef<UnlistenFn | null>(null);
 
-  // eslint-disable-next-line react-doctor/effect-needs-cleanup -- Tauri listen() is async; cleanup releases via unlistenRef.current?.()
-  // eslint-disable-next-line react-doctor/exhaustive-deps -- empty deps intentional: runs once on mount; setOpen is a stable setState reference
+  // eslint-disable-next-line react-doctor/effect-needs-cleanup, react-doctor/exhaustive-deps -- Tauri listen() is async; cleanup via unlistenRef; empty deps intentional (runs once)
   useEffect(() => {
     const appWindow = getCurrentWindow();
     let active = true;

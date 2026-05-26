@@ -15,12 +15,11 @@ interface IconProps {
 }
 
 export function Icon({ name, className }: IconProps) {
-  // eslint-disable-next-line react-doctor/no-danger -- SVGs are hardcoded module constants, not user input
   return (
     <span
       className={className}
       aria-hidden="true"
-      dangerouslySetInnerHTML={{ __html: ICONS[name] }}
+      dangerouslySetInnerHTML={{ __html: ICONS[name] }} // eslint-disable-line react-doctor/no-danger -- SVGs are hardcoded module constants, not user input
     />
   );
 }

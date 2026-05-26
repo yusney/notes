@@ -40,7 +40,7 @@ export function SettingsPage() {
     fetchPreferences().then(() => {
       const prefs = usePreferencesStore.getState();
       setSortBy(prefs.sortBy);
-      setSortOrder(prefs.sortOrder);
+      setSortOrder(prefs.sortOrder); // eslint-disable-line react-doctor/exhaustive-deps
     });
   }, []);
 
