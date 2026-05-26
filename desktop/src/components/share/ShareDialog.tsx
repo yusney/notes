@@ -1,5 +1,5 @@
 /* eslint-disable react-doctor/no-noninteractive-element-interactions -- <dialog> is a native interactive element; onMouseDown on root closes on backdrop click */
-import { useState } from "react";
+import { useReducer } from "react";
 import { DayPicker } from "react-day-picker";
 import "react-day-picker/style.css";
 import { API_BASE_URL } from "../../api/client";
@@ -11,12 +11,44 @@ interface ShareDialogProps {
   onClose: () => void;
 }
 
+interface ShareState {
+  hasExpiry: boolean;
+  selectedDay: Date | undefined;
+  hour: number;
+  minute: number;
+  createdToken: string | null;
+}
+
+type ShareAction =
+  | { type: "set-expiry"; value: boolean }
+  | { type: "set-day"; value: Date | undefined }
+  | { type: "set-hour"; value: number }
+  | { type: "set-minute"; value: number }
+  | { type: "set-token"; value: string }
+  | { type: "reset" };
+
+const INITIAL_STATE: ShareState = {
+  hasExpiry: false,
+  selectedDay: undefined,
+  hour: 23,
+  minute: 59,
+  createdToken: null,
+};
+
+function shareReducer(state: ShareState, action: ShareAction): ShareState {
+  switch (action.type) {
+    case "set-expiry": return { ...state, hasExpiry: action.value };
+    case "set-day": return { ...state, selectedDay: action.value };
+    case "set-hour": return { ...state, hour: action.value };
+    case "set-minute": return { ...state, minute: action.value };
+    case "set-token": return { ...state, createdToken: action.value };
+    case "reset": return INITIAL_STATE;
+  }
+}
+
 export function ShareDialog({ noteId, isOpen, onClose }: ShareDialogProps) {
-  const [hasExpiry, setHasExpiry] = useState(false);
-  const [selectedDay, setSelectedDay] = useState<Date | undefined>(undefined);
-  const [hour, setHour] = useState(23);
-  const [minute, setMinute] = useState(59);
-  const [createdToken, setCreatedToken] = useState<string | null>(null);
+  const [state, dispatch] = useReducer(shareReducer, INITIAL_STATE);
+  const { hasExpiry, selectedDay, hour, minute, createdToken } = state;
   const { createShareLink, isLoading } = useShareStore();
 
   if (!isOpen) return null;
@@ -29,7 +61,7 @@ export function ShareDialog({ noteId, isOpen, onClose }: ShareDialogProps) {
       expiresAt = d.toISOString();
     }
     const link = await createShareLink(noteId, expiresAt);
-    setCreatedToken(link.token);
+    dispatch({ type: "set-token", value: link.token });
   };
 
   const handleCopy = () => {
@@ -39,11 +71,7 @@ export function ShareDialog({ noteId, isOpen, onClose }: ShareDialogProps) {
   };
 
   const handleClose = () => {
-    setCreatedToken(null);
-    setHasExpiry(false);
-    setSelectedDay(undefined);
-    setHour(23);
-    setMinute(59);
+    dispatch({ type: "reset" });
     onClose();
   };
 
@@ -74,7 +102,7 @@ export function ShareDialog({ noteId, isOpen, onClose }: ShareDialogProps) {
                 <input
                   type="checkbox"
                   checked={hasExpiry}
-                  onChange={(e) => setHasExpiry(e.target.checked)}
+                  onChange={(e) => dispatch({ type: "set-expiry", value: e.target.checked })}
                   className="size-4"
                 />
                 Fecha de expiración
@@ -87,7 +115,7 @@ export function ShareDialog({ noteId, isOpen, onClose }: ShareDialogProps) {
                     <DayPicker
                       mode="single"
                       selected={selectedDay}
-                      onSelect={setSelectedDay}
+                      onSelect={(day) => dispatch({ type: "set-day", value: day })}
                       disabled={{ before: today }}
                       startMonth={today}
                     />
@@ -99,7 +127,7 @@ export function ShareDialog({ noteId, isOpen, onClose }: ShareDialogProps) {
                     <div className="flex items-center gap-1">
                       <button
                         type="button"
-                        onClick={() => setHour((h) => (h === 0 ? 23 : h - 1))}
+                        onClick={() => dispatch({ type: "set-hour", value: hour === 0 ? 23 : hour - 1 })}
                         className="size-7 border border-border bg-surface text-text-primary hover:bg-surface-elevated text-sm"
                       >−</button>
                       <span className="w-8 text-center text-sm font-mono text-text-primary">
@@ -107,7 +135,7 @@ export function ShareDialog({ noteId, isOpen, onClose }: ShareDialogProps) {
                       </span>
                       <button
                         type="button"
-                        onClick={() => setHour((h) => (h === 23 ? 0 : h + 1))}
+                        onClick={() => dispatch({ type: "set-hour", value: hour === 23 ? 0 : hour + 1 })}
                         className="size-7 border border-border bg-surface text-text-primary hover:bg-surface-elevated text-sm"
                       >+</button>
                     </div>
@@ -115,7 +143,7 @@ export function ShareDialog({ noteId, isOpen, onClose }: ShareDialogProps) {
                     <div className="flex items-center gap-1">
                       <button
                         type="button"
-                        onClick={() => setMinute((m) => (m === 0 ? 59 : m - 1))}
+                        onClick={() => dispatch({ type: "set-minute", value: minute === 0 ? 59 : minute - 1 })}
                         className="size-7 border border-border bg-surface text-text-primary hover:bg-surface-elevated text-sm"
                       >−</button>
                       <span className="w-8 text-center text-sm font-mono text-text-primary">
@@ -123,7 +151,7 @@ export function ShareDialog({ noteId, isOpen, onClose }: ShareDialogProps) {
                       </span>
                       <button
                         type="button"
-                        onClick={() => setMinute((m) => (m === 59 ? 0 : m + 1))}
+                        onClick={() => dispatch({ type: "set-minute", value: minute === 59 ? 0 : minute + 1 })}
                         className="size-7 border border-border bg-surface text-text-primary hover:bg-surface-elevated text-sm"
                       >+</button>
                     </div>
