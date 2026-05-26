@@ -35,6 +35,7 @@ export function SettingsPage() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // eslint-disable-next-line react-doctor/exhaustive-deps -- fetchPreferences is a stable Zustand action, adding it would cause infinite re-runs
   useEffect(() => {
     fetchPreferences().then(() => {
       const prefs = usePreferencesStore.getState();

@@ -44,6 +44,7 @@ export function SharedNotePage() {
         <h1 className="text-3xl font-bold text-text-primary mb-6">{note.title}</h1>
         <div
           className="prose prose-sm max-w-none text-text-primary"
+          // eslint-disable-next-line react-doctor/no-danger -- note.content is sanitized server-side with HtmlSanitizer before storage
           dangerouslySetInnerHTML={{ __html: note.content }}
         />
       </div>

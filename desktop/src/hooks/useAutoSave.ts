@@ -26,6 +26,7 @@ export function useAutoSave({
     latestOnSave.current = onSave;
   }, [onSave]);
 
+  // eslint-disable-next-line react-doctor/no-adjust-state-on-prop-change -- debounce pattern: status must reset to "pending" when value/delay changes
   useEffect(() => {
     if (isFirstRender.current) {
       isFirstRender.current = false;

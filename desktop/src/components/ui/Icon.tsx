@@ -15,6 +15,7 @@ interface IconProps {
 }
 
 export function Icon({ name, className }: IconProps) {
+  // eslint-disable-next-line react-doctor/no-danger -- SVGs are hardcoded module constants, not user input
   return (
     <span
       className={className}

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { apiClient } from "../api/client";
 import { useAuthStore } from "../stores/useAuthStore";
 
@@ -42,17 +42,19 @@ export function useTheme() {
     return stored ?? "dark";
   });
 
-  const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>(() => {
-    const stored = localStorage.getItem(THEME_KEY);
-    return resolveTheme(stored, getSystemPrefersDark());
-  });
+  const [systemPrefersDark, setSystemPrefersDark] = useState(() => getSystemPrefersDark());
+
+  // Derived — no separate state needed
+  const resolvedTheme = useMemo(
+    () => resolveTheme(theme, systemPrefersDark),
+    [theme, systemPrefersDark]
+  );
 
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
+  // Apply theme to DOM and persist whenever resolved changes
   useEffect(() => {
-    const resolved = resolveTheme(theme, getSystemPrefersDark());
-    setResolvedTheme(resolved);
-    applyThemeToDocument(resolved);
+    applyThemeToDocument(resolvedTheme);
     localStorage.setItem(THEME_KEY, theme);
 
     // Sync with API only when authenticated (fire-and-forget)
@@ -61,21 +63,15 @@ export function useTheme() {
     apiClient
       .put("/api/user/preferences", { theme: apiTheme })
       .catch(() => {});
-  }, [theme, isAuthenticated]);
+  }, [resolvedTheme, theme, isAuthenticated]);
 
   // Listen to system preference changes
   useEffect(() => {
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    const handler = () => {
-      if (theme === "system") {
-        const resolved = resolveTheme("system", mq.matches);
-        setResolvedTheme(resolved);
-        applyThemeToDocument(resolved);
-      }
-    };
+    const handler = () => setSystemPrefersDark(mq.matches);
     mq.addEventListener("change", handler);
     return () => mq.removeEventListener("change", handler);
-  }, [theme]);
+  }, []);
 
   // Initial sync from API — only when authenticated
   useEffect(() => {
@@ -86,9 +82,6 @@ export function useTheme() {
         if (data?.theme) {
           setThemeState(data.theme as Theme);
           localStorage.setItem(THEME_KEY, data.theme);
-          const resolved = resolveTheme(data.theme, getSystemPrefersDark());
-          setResolvedTheme(resolved);
-          applyThemeToDocument(resolved);
         }
       })
       .catch(() => {});

@@ -19,6 +19,7 @@ export function useOAuthLogin() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // eslint-disable-next-line react-doctor/no-fetch-in-effect -- this is a Tauri deep-link listener, not a data-fetching effect
   useEffect(() => {
     async function handleUrls(urls: string[] | null) {
       if (!urls) return;
