@@ -25,7 +25,7 @@ export function Select({
   const [open, setOpen] = useState(false);
   const [focusIdx, setFocusIdx] = useState(-1);
   const containerRef = useRef<HTMLDivElement>(null);
-  const listRef = useRef<HTMLUListElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
 
   const selected = options.find((o) => o.value === value);
   const label = selected?.label ?? value;
@@ -119,7 +119,7 @@ export function Select({
       </button>
 
       {open && (
-        <ul
+        <div
           ref={listRef}
           id={listboxId}
           role="listbox"
@@ -128,12 +128,19 @@ export function Select({
           className="absolute z-50 mt-1 w-full max-h-48 overflow-y-auto border border-border bg-surface-elevated"
         >
           {options.map((opt, idx) => (
-            <li
+            <div
               key={opt.value}
               role="option"
               aria-selected={opt.value === value}
               onClick={() => handleOptionClick(opt.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  handleOptionClick(opt.value);
+                }
+              }}
               onMouseEnter={() => setFocusIdx(idx)}
+              tabIndex={-1}
               className={`cursor-pointer px-3 py-2 text-sm transition-colors ${
                 opt.value === value
                   ? "bg-accent-subtle text-text-primary font-medium"
@@ -143,9 +150,9 @@ export function Select({
               }`}
             >
               {opt.label}
-            </li>
+            </div>
           ))}
-        </ul>
+        </div>
       )}
     </div>
   );
