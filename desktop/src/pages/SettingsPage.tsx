@@ -58,7 +58,7 @@ export function SettingsPage() {
     }
   };
 
-  if (prefsLoading) return <div className="p-6 text-sm text-text-secondary">Cargando...</div>;
+  if (prefsLoading) return <div className="p-6 text-sm text-text-secondary">Cargando…</div>;
 
   return (
     <div className="min-h-screen bg-surface">
@@ -115,7 +115,7 @@ export function SettingsPage() {
             aria-label="Guardar configuración"
             className="text-sm px-4 py-2 bg-accent text-accent-text hover:bg-accent-hover disabled:opacity-50 transition-colors"
           >
-            {isSaving ? "Guardando..." : "Guardar configuración"}
+            {isSaving ? "Guardando…" : "Guardar configuración"}
           </button>
         </section>
       </div>

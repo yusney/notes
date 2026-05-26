@@ -23,7 +23,7 @@ export function SharedNotePage() {
   if (state.status === "loading") {
     return (
       <div className="flex items-center justify-center h-screen bg-surface">
-        <p className="text-text-secondary">Cargando nota...</p>
+        <p className="text-text-secondary">Cargando nota…</p>
       </div>
     );
   }

@@ -221,7 +221,7 @@ export function MainLayout() {
           </div>
         )}
         {isLoading ? (
-          <div className="flex flex-1 items-center justify-center text-sm text-text-secondary">Cargando notas...</div>
+          <div className="flex flex-1 items-center justify-center text-sm text-text-secondary">Cargando notas…</div>
         ) : (
           <NoteList
             notes={visibleNotes}
