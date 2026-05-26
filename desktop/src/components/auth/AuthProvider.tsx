@@ -14,7 +14,7 @@ function LoadingScreen() {
         <div className="mx-auto mb-6 h-3 w-48 overflow-hidden rounded-full bg-border">
           <div className="h-full w-2/3 animate-pulse rounded-full bg-accent/60" />
         </div>
-        <p className="text-sm font-medium text-text-secondary">Restaurando sesión...</p>
+        <p className="text-sm font-medium text-text-secondary">Restaurando sesión…</p>
       </div>
     </div>
   );

@@ -119,9 +119,8 @@ export function NoteList({
         ) : (
           notes.map((note) => (
             <li key={note.id} className="group relative mb-2">
-              <div
-                role="button"
-                tabIndex={0}
+              <button
+                type="button"
                 onClick={() => onNoteSelect(note.id)}
                 onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onNoteSelect(note.id); } }}
                 aria-current={activeNoteId === note.id ? "true" : undefined}
@@ -159,7 +158,7 @@ export function NoteList({
                     ))}
                   </div>
                 )}
-              </div>
+              </button>
               {onDeleteNote && (
                 <button
                   type="button"

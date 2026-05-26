@@ -1,3 +1,4 @@
+/* eslint-disable react-doctor/prefer-tag-over-role -- div[role=group] is correct; <fieldset> is semantically wrong for a filter list */
 import type { Tag } from "../../types";
 
 interface TagFilterProps {

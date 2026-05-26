@@ -1,3 +1,4 @@
+/* eslint-disable react-doctor/prefer-tag-over-role -- ARIA combobox/listbox/option pattern has no native HTML equivalent */
 import { useState, useRef, useEffect } from "react";
 
 export interface SelectOption {
@@ -123,6 +124,7 @@ export function Select({
           ref={listRef}
           id={listboxId}
           role="listbox"
+          tabIndex={-1}
           aria-label={ariaLabel}
           onKeyDown={handleListKey}
           className="absolute z-50 mt-1 w-full max-h-48 overflow-y-auto border border-border bg-surface-elevated"

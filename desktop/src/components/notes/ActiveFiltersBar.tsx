@@ -64,7 +64,7 @@ export function ActiveFiltersBar({
           Limpiar filtros
         </button>
       </div>
-      <div className="flex flex-wrap items-center gap-1.5" role="list" aria-label="Filtros activos">
+      <ul className="flex flex-wrap items-center gap-1.5" aria-label="Filtros activos">
         {activeTabName && (
           <FilterPill label={`Espacio: ${activeTabName}`} onRemove={onClearTab} />
         )}
@@ -77,15 +77,14 @@ export function ActiveFiltersBar({
         {isFavoriteOnly && (
           <FilterPill label="★ Solo favoritos" onRemove={onClearFavorites} />
         )}
-      </div>
+      </ul>
     </div>
   );
 }
 
 function FilterPill({ label, onRemove }: { label: string; onRemove: () => void }) {
   return (
-    <span
-      role="listitem"
+    <li
       className="inline-flex items-center gap-1 border border-accent bg-accent-subtle px-2.5 py-0.5 font-mono text-xs uppercase text-text-primary"
     >
       {label}
@@ -97,6 +96,6 @@ function FilterPill({ label, onRemove }: { label: string; onRemove: () => void }
       >
         ✕
       </button>
-    </span>
+    </li>
   );
 }

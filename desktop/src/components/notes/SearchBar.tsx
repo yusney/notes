@@ -26,7 +26,7 @@ export function SearchBar({
     };
   }, []);
 
-  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+  function onQueryChange(e: React.ChangeEvent<HTMLInputElement>) {
     const q = e.target.value;
     setValue(q);
     scheduleSearch(q);
@@ -46,13 +46,15 @@ export function SearchBar({
         </span>
         <input
           type="search"
+          aria-label="Buscar notas"
           value={value}
-          onChange={handleChange}
-          placeholder="Buscar en título y contenido..."
+          onChange={onQueryChange}
+          placeholder="Buscar en título y contenido…"
           className="w-full border-b-2 border-input-border bg-surface py-2.5 pl-9 pr-8 text-sm text-text-primary placeholder:text-text-secondary focus:border-accent focus:bg-surface-elevated focus:outline-none"
         />
         {value && (
           <button
+            type="button"
             onClick={handleClear}
             aria-label="Limpiar búsqueda"
             className="absolute right-2 text-text-secondary hover:text-text-primary"

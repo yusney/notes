@@ -62,6 +62,7 @@ export function ForgotPasswordPage() {
             </label>
             <div className="relative">
               <Icon name="mail" className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary pointer-events-none" />
+              {/* eslint-disable-next-line react-doctor/control-has-associated-label -- label is associated via htmlFor="email" */}
               <input
                 id="email"
                 type="email"

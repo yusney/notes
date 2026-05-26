@@ -1,3 +1,4 @@
+/* eslint-disable react-doctor/prefer-tag-over-role -- div[role=status] is correct ARIA live region; no native HTML equivalent */
 import { useEffect, useReducer, useRef } from "react";
 import { useEditor, EditorContent, Extension } from "@tiptap/react";
 import { StarterKit } from "@tiptap/starter-kit";
@@ -79,7 +80,7 @@ function ToolbarButton({ onClick, active, title, children }: ToolbarButtonProps)
       aria-label={title}
       aria-pressed={active}
       className={[
-        "flex h-7 w-7 items-center justify-center text-xs font-bold transition-colors",
+        "flex size-7 items-center justify-center text-xs font-bold transition-colors",
         active
           ? "bg-border text-text-primary"
           : "text-text-secondary hover:bg-surface hover:text-text-primary",
@@ -421,6 +422,7 @@ export function NoteEditor({ note, availableTags = EMPTY_TAGS, onSave, onSaveAnd
       <div className="shrink-0 mx-auto w-full max-w-4xl px-10 pt-8">
         <input
           type="text"
+          aria-label="Título de la nota"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Título de la nota"

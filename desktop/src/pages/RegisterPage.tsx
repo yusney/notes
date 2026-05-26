@@ -72,6 +72,7 @@ export function RegisterPage() {
             </label>
             <div className="relative">
               <Icon name="person" className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary pointer-events-none" />
+              {/* eslint-disable-next-line react-doctor/control-has-associated-label -- label is associated via htmlFor="name" */}
               <input
                 id="name"
                 type="text"
@@ -93,6 +94,7 @@ export function RegisterPage() {
             </label>
             <div className="relative">
               <Icon name="mail" className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary pointer-events-none" />
+              {/* eslint-disable-next-line react-doctor/control-has-associated-label -- label is associated via htmlFor="email" */}
               <input
                 id="email"
                 type="email"
@@ -126,6 +128,7 @@ export function RegisterPage() {
 
           {/* Remember me */}
           <div className="flex items-center gap-2">
+            {/* eslint-disable-next-line react-doctor/control-has-associated-label -- label is associated via htmlFor="remember-me" */}
             <input
               id="remember-me"
               type="checkbox"
