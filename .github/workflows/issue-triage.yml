@@ -14,68 +14,67 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Process Issue with GitHub Models AI
-        id: ai_analysis
-        uses: github/ai-actions/chat@v1
-        with:
-          model: gpt-5.4-mini
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          response-format: json
-          system-prompt: |
-            You are an expert repository maintainer and senior software engineer for "Notes", a personal knowledge management system built with ASP.NET Core (Clean Architecture, CQRS with MediatR, EF Core + PostgreSQL) and a cross-platform desktop app (Tauri v2 + React + TypeScript).
-
-            Your role is to triage, refine, and structure incoming issues so they are immediately actionable for the development team. When you receive an issue:
-
-            - If it is written in a language other than English, translate it — but do not stop there. Rewrite it professionally and clearly, preserving the full intent and essence of what the author is asking. Fix grammar, remove ambiguity, and make technical details precise.
-            - If the author's description is vague or incomplete, use your knowledge of the repository's architecture to infer the most likely affected area (e.g., Notes.Api, Notes.Application, Notes.Domain, Notes.Infrastructure, desktop frontend) and mention it in the structured output.
-            - Classify it correctly: "bug" for defects or broken behavior, "enhancement" for new features or improvements, "problem" for configuration, environment, or usage issues.
-            - Do NOT invent steps or behaviors the author did not describe. If context is missing, note it explicitly under the relevant section.
-          prompt: |
-            Analyze and improve the following GitHub Issue for the "Notes" repository:
-            Title: ${{ github.event.issue.title }}
-            Body: ${{ github.event.issue.body }}
-
-            Tasks to execute:
-            1. Title: Translate and rewrite the title to be concise, clear, and action-oriented (e.g., "Add note templates support" or "Fix null reference in NoteRepository.GetByIdAsync").
-            2. Body: Rewrite and enhance the body. Preserve the author's intent but improve clarity, completeness, and professionalism. Structure it with these exact sections:
-               - ## Description
-               - ## Context / Steps to Reproduce
-               - ## Expected Behavior
-               - ## Affected Area (infer from the repository structure if not stated: e.g., API, Application layer, Desktop UI, Database)
-            3. Classification: Categorize strictly into ONE label: "bug", "enhancement", or "problem".
-
-            You must respond ONLY with a valid JSON object matching this schema:
-            {
-              "translated_title": "string",
-              "structured_body": "string",
-              "label": "bug" | "enhancement" | "problem"
-            }
-
-      - name: Update and Label Issue
+      # TODO: Integrar IA real (OpenAI, GitHub Models, etc.) cuando haya API key disponible.
+      # El action github/ai-actions/chat@v1 no existe. Mientras tanto, hacemos triage por keywords.
+      - name: Keyword-based triage
+        id: triage
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            // Parse the JSON response returned by the AI step
-            const aiResult = JSON.parse(`${{ steps.ai_analysis.outputs.response }}`);
+            const title = (context.payload.issue.title || "").toLowerCase();
+            const body = (context.payload.issue.body || "").toLowerCase();
+            const combined = title + " " + body;
 
+            // Detectar idioma simple (si hay muchas palabras en español, lo marcamos)
+            const spanishWords = ["error", "bug", "problema", "falla", "fallo", "no funciona", "crash"];
+            const isSpanish = spanishWords.some(w => combined.includes(w));
+
+            // Clasificación por keywords
+            let label = "problem";
+            if (
+              /\b(bug|fix|error|crash|broken|falla|fallo|no funciona|excepción|exception)\b/.test(combined)
+            ) {
+              label = "bug";
+            } else if (
+              /\b(feature|enhancement|add|nuevo|implementar|support|mejorar|propuesta)\b/.test(combined)
+            ) {
+              label = "enhancement";
+            } else if (
+              /\b(problem|question|duda|config|setup|instalación|deploy)\b/.test(combined)
+            ) {
+              label = "problem";
+            }
+
+            core.setOutput("label", label);
+            core.setOutput("is_spanish", isSpanish ? "true" : "false");
+
+      - name: Label issue
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const label = `${{ steps.triage.outputs.label }}`;
             const issueNumber = context.issue.number;
             const owner = context.repo.owner;
             const repo = context.repo.repo;
 
-            // 1. Update the issue with the refined title and structured body
-            await github.rest.issues.update({
-              owner: owner,
-              repo: repo,
+            await github.rest.issues.addLabels({
+              owner,
+              repo,
               issue_number: issueNumber,
-              title: aiResult.translated_title,
-              body: aiResult.structured_body + "\n\n---\n*🤖 Automatically triaged and enhanced by AI.*"
+              labels: [label, "pending-approval"],
             });
 
-            // 2. Apply the classification label and the pending-approval control label
-            await github.rest.issues.addLabels({
-              owner: owner,
-              repo: repo,
+            // Comentario informativo
+            const isSpanish = `${{ steps.triage.outputs.is_spanish }}` === "true";
+            const langNote = isSpanish
+              ? "\n\n> Se detectó español en el issue. Cuando la integración con IA esté activa, se traducirá automáticamente al inglés."
+              : "";
+
+            await github.rest.issues.createComment({
+              owner,
+              repo,
               issue_number: issueNumber,
-              labels: [aiResult.label, 'pending-approval']
+              body: `🤖 Triage automático aplicado.\n\n- **Clasificación:** \`${label}\`\n- **Estado:** pendiente de aprobación del equipo.${langNote}\n\n---\n*Workflow de triage en modo keyword (sin IA) hasta que se configure una API key de OpenAI/GitHub Models.*`,
             });
