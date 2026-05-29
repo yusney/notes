@@ -1,4 +1,4 @@
-name: "Issue Triage & Translation"
+name: "Issue Triage & Enhancement"
 
 on:
   issues:
@@ -18,25 +18,31 @@ jobs:
         id: ai_analysis
         uses: github/ai-actions/chat@v1
         with:
-          # Usamos GPT-4o disponible de forma gratuita para flujos de trabajo de GitHub
-          model: gpt-4o
+          model: gpt-5.4-mini
           github-token: ${{ secrets.GITHUB_TOKEN }}
           response-format: json
           system-prompt: |
-            You are an expert repository maintainer and triage assistant.
-            Your job is to analyze incoming issues, translate them to English if necessary, classify them, and format them cleanly.
+            You are an expert repository maintainer and senior software engineer for "Notes", a personal knowledge management system built with ASP.NET Core (Clean Architecture, CQRS with MediatR, EF Core + PostgreSQL) and a cross-platform desktop app (Tauri v2 + React + TypeScript).
+
+            Your role is to triage, refine, and structure incoming issues so they are immediately actionable for the development team. When you receive an issue:
+
+            - If it is written in a language other than English, translate it — but do not stop there. Rewrite it professionally and clearly, preserving the full intent and essence of what the author is asking. Fix grammar, remove ambiguity, and make technical details precise.
+            - If the author's description is vague or incomplete, use your knowledge of the repository's architecture to infer the most likely affected area (e.g., Notes.Api, Notes.Application, Notes.Domain, Notes.Infrastructure, desktop frontend) and mention it in the structured output.
+            - Classify it correctly: "bug" for defects or broken behavior, "enhancement" for new features or improvements, "problem" for configuration, environment, or usage issues.
+            - Do NOT invent steps or behaviors the author did not describe. If context is missing, note it explicitly under the relevant section.
           prompt: |
-            Analyze the following GitHub Issue:
+            Analyze and improve the following GitHub Issue for the "Notes" repository:
             Title: ${{ github.event.issue.title }}
             Body: ${{ github.event.issue.body }}
 
             Tasks to execute:
-            1. Language: If the Title or Body is not in English, translate them to English. Keep technical terms, code blocks, and logs intact.
-            2. Classification: Categorize the issue strictly into ONE of these labels: "bug", "enhancement" (use this for new features/implementations), or "problem".
-            3. Formatting: Structure the body cleanly using professional Markdown with these exact sections:
+            1. Title: Translate and rewrite the title to be concise, clear, and action-oriented (e.g., "Add note templates support" or "Fix null reference in NoteRepository.GetByIdAsync").
+            2. Body: Rewrite and enhance the body. Preserve the author's intent but improve clarity, completeness, and professionalism. Structure it with these exact sections:
                - ## Description
                - ## Context / Steps to Reproduce
                - ## Expected Behavior
+               - ## Affected Area (infer from the repository structure if not stated: e.g., API, Application layer, Desktop UI, Database)
+            3. Classification: Categorize strictly into ONE label: "bug", "enhancement", or "problem".
 
             You must respond ONLY with a valid JSON object matching this schema:
             {
@@ -50,23 +56,23 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            // Parseamos la respuesta JSON que nos devolvió el paso de la IA
+            // Parse the JSON response returned by the AI step
             const aiResult = JSON.parse(`${{ steps.ai_analysis.outputs.response }}`);
 
             const issueNumber = context.issue.number;
             const owner = context.repo.owner;
             const repo = context.repo.repo;
 
-            // 1. Actualizamos el Issue con el título traducido y el cuerpo estructurado
+            // 1. Update the issue with the refined title and structured body
             await github.rest.issues.update({
               owner: owner,
               repo: repo,
               issue_number: issueNumber,
               title: aiResult.translated_title,
-              body: aiResult.structured_body + "\n\n---\n*🤖 Automated triage and translation powered by AI.*"
+              body: aiResult.structured_body + "\n\n---\n*🤖 Automatically triaged and enhanced by AI.*"
             });
 
-            // 2. Le añadimos la etiqueta de clasificación y tu etiqueta de control
+            // 2. Apply the classification label and the pending-approval control label
             await github.rest.issues.addLabels({
               owner: owner,
               repo: repo,
