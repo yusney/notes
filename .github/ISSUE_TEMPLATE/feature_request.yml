@@ -1,0 +1,78 @@
+name: "Nueva funcionalidad"
+description: "Proponer una nueva funcionalidad para Notes"
+title: "[Feature]: "
+labels:
+  - feature
+  - backlog
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Gracias por proponer una nueva funcionalidad.
+        Completa esta plantilla para poder priorizarla y planificar su implementación.
+
+  - type: textarea
+    id: objetivo
+    attributes:
+      label: Objetivo
+      description: ¿Qué problema de usuario o necesidad quieres resolver?
+      placeholder: "Ej.: Quiero guardar plantillas de nota para reutilizarlas rápidamente."
+    validations:
+      required: true
+
+  - type: textarea
+    id: propuesta
+    attributes:
+      label: Propuesta funcional
+      description: Describe la funcionalidad esperada desde el punto de vista del usuario.
+      placeholder: "Ej.: Desde la vista de notas puedo crear, editar y aplicar plantillas."
+    validations:
+      required: true
+
+  - type: textarea
+    id: criterio_exito
+    attributes:
+      label: Criterios de éxito
+      description: ¿Cómo sabremos que la funcionalidad está bien implementada?
+      placeholder: |
+        - [ ] Se puede crear una plantilla
+        - [ ] Se puede aplicar una plantilla al crear una nota
+        - [ ] Se guardan por usuario
+    validations:
+      required: true
+
+  - type: dropdown
+    id: prioridad
+    attributes:
+      label: Prioridad
+      description: Selecciona el nivel de prioridad.
+      options:
+        - Alta
+        - Media
+        - Baja
+    validations:
+      required: true
+
+  - type: dropdown
+    id: impacto
+    attributes:
+      label: Impacto esperado
+      options:
+        - Alto
+        - Medio
+        - Bajo
+    validations:
+      required: true
+
+  - type: textarea
+    id: alcance
+    attributes:
+      label: Alcance técnico (opcional)
+      description: Módulos potencialmente afectados (API, Desktop, DB, etc.).
+      placeholder: "Ej.: Notes.Api, Notes.Application, desktop/src/pages"
+
+  - type: textarea
+    id: contexto_adicional
+    attributes:
+      label: Contexto adicional (opcional)
+      description: Enlaces, mockups, referencias u otra información útil.

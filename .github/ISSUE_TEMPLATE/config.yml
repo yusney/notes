@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: "Preguntas generales"
+    url: "https://github.com/yusney/notes/discussions"
+    about: "Usa Discussions para dudas y conversación general."
