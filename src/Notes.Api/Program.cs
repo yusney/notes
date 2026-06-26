@@ -1,8 +1,11 @@
+using System.Globalization;
+using System.Net;
 using System.Text;
 using FluentValidation;
 using Ganss.Xss;
 using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Notes.Application;
@@ -63,6 +66,47 @@ builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationSc
 
 builder.Services.AddAuthorization();
 
+// ── Trusted reverse proxies (Cloudflare) ────────────────────────────────────
+// Without KnownIPNetworks below, UseForwardedHeaders would either trust
+// X-Forwarded-* from any caller (allowing IP/host/protocol spoofing) or trust
+// nothing (its default — KnownProxies/KnownNetworks only include loopback).
+// We restrict trust to Cloudflare's published CIDRs so only their edge can
+// rewrite client identity.
+//
+// Update ForwardedHeaders:KnownProxies in appsettings.json when Cloudflare
+// publishes new ranges at https://www.cloudflare.com/ips/.
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders =
+        ForwardedHeaders.XForwardedFor |
+        ForwardedHeaders.XForwardedHost |
+        ForwardedHeaders.XForwardedProto;
+
+    var cidrs = builder.Configuration
+        .GetSection("ForwardedHeaders:KnownProxies")
+        .Get<string[]>() ?? Array.Empty<string>();
+
+    foreach (var cidr in cidrs)
+    {
+        try
+        {
+            var (ip, prefix) = ParseCidr(cidr);
+            // Fully qualified: ForwardedHeadersOptions also exposes the obsolete
+            // Microsoft.AspNetCore.HttpOverrides.IPNetwork via KnownNetworks,
+            // so a bare "new IPNetwork(...)" is ambiguous.
+            options.KnownIPNetworks.Add(new System.Net.IPNetwork(ip, prefix));
+        }
+        catch (Exception ex)
+        {
+            // Don't crash startup on a single malformed entry — surface it on
+            // stderr (captured by the container orchestrator) and keep going
+            // with the rest of the list.
+            Console.Error.WriteLine(
+                $"[ForwardedHeaders] Skipping invalid CIDR '{cidr}': {ex.Message}");
+        }
+    }
+});
+
 // ── CORS ──────────────────────────────────────────────────────────────────────
 builder.Services.AddCors(options =>
 {
@@ -122,6 +166,11 @@ builder.Services.AddSingleton<HtmlSanitizer>(_ =>
 var app = builder.Build();
 
 // ── Middleware pipeline ────────────────────────────────────────────────────────
+// UseForwardedHeaders MUST come first. Downstream middleware (rate limiter,
+// auth, controllers, OAuth callback URLs) reads HttpContext.Connection's IP,
+// Request.Host, and Request.Scheme — those values are only rewritten if this
+// runs before them.
+app.UseForwardedHeaders();
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseMiddleware<RateLimitingMiddleware>();
 app.UseCors();
@@ -166,6 +215,30 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.Run();
+
+// Parse a CIDR string like "1.2.3.0/24" or "2400:cb00::/32" into the components
+// System.Net.IPNetwork needs. Kept local so it stays near the only consumer.
+static (IPAddress Ip, int Prefix) ParseCidr(string cidr)
+{
+    var parts = cidr.Split('/');
+    if (parts.Length != 2)
+    {
+        throw new FormatException(
+            $"Expected 'ip/prefix' (got '{cidr}').");
+    }
+
+    var ip = IPAddress.Parse(parts[0].Trim());
+    var prefix = int.Parse(parts[1].Trim(), CultureInfo.InvariantCulture);
+
+    var maxPrefix = ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork ? 32 : 128;
+    if (prefix < 0 || prefix > maxPrefix)
+    {
+        throw new ArgumentOutOfRangeException(
+            nameof(cidr), $"Prefix must be 0-{maxPrefix} for this address family.");
+    }
+
+    return (ip, prefix);
+}
 
 // Make Program accessible for WebApplicationFactory in integration tests
 public partial class Program { }
