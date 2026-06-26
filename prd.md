@@ -578,7 +578,7 @@ notes/
 | **Versionado** | Tags `v1.0.0`, `v1.1.0` en GitHub disparan build de desktop |
 | **Auto-update** | Tauri updater integrado. La app notifica cuando hay nueva versión y se actualiza automáticamente. |
 | **Firma** | Binarios firmados (Windows: certificado, macOS: notarización Apple, Linux: GPG opcional) |
-| **Backend URL** | Configurable en `tauri.conf.json` o variable de entorno. Default: `https://api.donduque.dev` |
+| **Backend URL** | Configurable en `tauri.conf.json` o variable de entorno. Default: `https://notes-api.donduque.dev` |
 
 ### Configuración de Desarrollo (Tauri)
 
