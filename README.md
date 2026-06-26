@@ -104,7 +104,7 @@ Copy `.env.example` to `.env` and fill in the values.
 | `OAuth__Google__ClientSecret` | Google OAuth 2.0 client secret |
 | `OAuth__GitHub__ClientId` | GitHub OAuth App client ID |
 | `OAuth__GitHub__ClientSecret` | GitHub OAuth App client secret |
-| `OAuth__PublicBaseUrl` | **Required in production.** Public HTTPS root of the API (e.g. `https://api.notes.donduque.dev`). Needed when the API runs behind a reverse proxy that terminates TLS; without it the redirect URI sent to Google/GitHub uses `http://` and the login fails with `redirect_uri_mismatch`. Leave empty for local dev. |
+| `OAuth__PublicBaseUrl` | **Required in production.** Public HTTPS root of the API (e.g. `https://notes-api.donduque.dev`). Needed when the API runs behind a reverse proxy that terminates TLS; without it the redirect URI sent to Google/GitHub uses `http://` and the login fails with `redirect_uri_mismatch`. Leave empty for local dev. |
 
 #### Authorized redirect URIs to register in each provider
 
