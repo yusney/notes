@@ -76,12 +76,15 @@ describe("Pagination", () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it("does not render anything when there is only one page", () => {
-    const { container } = render(
+  it("renders with both buttons disabled when there is only one page", () => {
+    render(
       <Pagination page={1} pageSize={10} totalCount={5} onPageChange={vi.fn()} />
     );
 
-    expect(container.firstChild).toBeNull();
+    expect(screen.getByText(/mostrando 1-5 de 5 notas/i)).toBeInTheDocument();
+    expect(screen.getByText(/página 1 de 1/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /anterior/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /siguiente/i })).toBeDisabled();
   });
 
   it("computes end as totalCount when last page is not full", () => {

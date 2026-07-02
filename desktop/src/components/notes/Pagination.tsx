@@ -8,7 +8,10 @@ interface PaginationProps {
 export function Pagination({ page, pageSize, totalCount, onPageChange }: PaginationProps) {
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
-  if (totalCount === 0 || totalPages <= 1) return null;
+  // Hide only when there are no notes at all. With a single page we still
+  // render the info bar ("Mostrando X de Y · Página 1 de 1") with both nav
+  // buttons disabled, so the user always sees count feedback.
+  if (totalCount === 0) return null;
 
   const start = (page - 1) * pageSize + 1;
   const end = Math.min(page * pageSize, totalCount);
