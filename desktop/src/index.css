@@ -369,3 +369,8 @@ html {
   opacity: 0.35;
   cursor: not-allowed;
 }
+
+/* Native modal dialog backdrop (used by the generic Modal component) */
+dialog::backdrop {
+  background: rgba(0, 0, 0, 0.6);
+}

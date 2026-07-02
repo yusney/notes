@@ -1,6 +1,20 @@
 import "@testing-library/jest-dom";
 import { vi } from "vitest";
 
+// Polyfill HTMLDialogElement.showModal() and close() for JSDOM
+if (typeof HTMLDialogElement !== "undefined") {
+  HTMLDialogElement.prototype.showModal = function () {
+    this.open = true;
+    const event = new Event("show", { bubbles: true });
+    this.dispatchEvent(event);
+  };
+  HTMLDialogElement.prototype.close = function () {
+    this.open = false;
+    const event = new Event("close", { bubbles: true });
+    this.dispatchEvent(event);
+  };
+}
+
 // Mock Tauri APIs
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn((cmd: string) => {
