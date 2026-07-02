@@ -78,7 +78,12 @@ describe("useNoteStore - new features", () => {
 
   it("fetchNotes includes sortBy, sortOrder, isFavoriteOnly params", async () => {
     useNoteStore.setState({ sortBy: "alphabetical", sortOrder: "asc", isFavoriteOnly: true });
-    vi.mocked(apiClient.get).mockResolvedValueOnce([]);
+    vi.mocked(apiClient.get).mockResolvedValueOnce({
+      items: [],
+      totalCount: 0,
+      page: 1,
+      pageSize: 10,
+    });
 
     await useNoteStore.getState().fetchNotes();
 

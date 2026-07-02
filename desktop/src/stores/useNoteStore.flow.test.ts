@@ -57,7 +57,12 @@ describe("Notes favorites complete flow (store integration)", () => {
       makeNote("n2", "Beta Note"),
       makeNote("n3", "Gamma Note"),
     ];
-    vi.mocked(apiClient.get).mockResolvedValueOnce(notes);
+    vi.mocked(apiClient.get).mockResolvedValueOnce({
+      items: notes,
+      totalCount: 3,
+      page: 1,
+      pageSize: 10,
+    });
 
     await useNoteStore.getState().fetchNotes();
 
@@ -85,7 +90,12 @@ describe("Notes favorites complete flow (store integration)", () => {
     expect(useNoteStore.getState().isFavoriteOnly).toBe(true);
 
     const favNotes = [makeNote("n1", "Alpha Note", true), makeNote("n3", "Gamma Note", true)];
-    vi.mocked(apiClient.get).mockResolvedValueOnce(favNotes);
+    vi.mocked(apiClient.get).mockResolvedValueOnce({
+      items: favNotes,
+      totalCount: 2,
+      page: 1,
+      pageSize: 10,
+    });
 
     await useNoteStore.getState().fetchNotes();
 

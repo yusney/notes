@@ -16,6 +16,8 @@ const SORT_ORDER = {
 export type SortBy = (typeof SORT_BY)[keyof typeof SORT_BY];
 export type SortOrder = (typeof SORT_ORDER)[keyof typeof SORT_ORDER];
 
+const PAGE_SIZE_DEFAULT = 10;
+
 interface EntityCreatedResponse {
   id: string;
 }
@@ -72,9 +74,24 @@ function normalizeNote(note: ApiNoteDto, fallback?: Note): Note {
   };
 }
 
+function normalizePagedResponse(
+  response: ApiNoteDto[] | ApiPagedNotesResponse,
+  fallbackPageSize: number
+): { items: ApiNoteDto[]; totalCount: number; page: number; pageSize: number } {
+  if (Array.isArray(response)) {
+    return {
+      items: response,
+      totalCount: response.length,
+      page: 1,
+      pageSize: fallbackPageSize,
+    };
+  }
+  return response;
+}
+
 function normalizeNotesResponse(response: ApiNoteDto[] | ApiPagedNotesResponse, existingNotes: Note[]): Note[] {
-  const notes = Array.isArray(response) ? response : response.items;
-  return notes.map((note) => normalizeNote(note, existingNotes.find((existing) => existing.id === note.id)));
+  const items = Array.isArray(response) ? response : response.items;
+  return items.map((note) => normalizeNote(note, existingNotes.find((existing) => existing.id === note.id)));
 }
 
 function toApiSortBy(sortBy: SortBy): string {
@@ -100,6 +117,10 @@ interface NoteStore {
   isFavoriteOnly: boolean;
   isLoading: boolean;
   error: string | null;
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
 
   // Tab actions
   fetchTabs: () => Promise<void>;
@@ -133,6 +154,12 @@ interface NoteStore {
   setSortBy: (sortBy: SortBy) => void;
   setSortOrder: (sortOrder: SortOrder) => void;
   setFavoriteFilter: (isFavoriteOnly: boolean) => void;
+
+  // Pagination
+  setPage: (page: number) => Promise<void>;
+  nextPage: () => Promise<void>;
+  prevPage: () => Promise<void>;
+  resetPage: () => void;
 }
 
 export const useNoteStore = create<NoteStore>((set, get) => ({
@@ -148,6 +175,10 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
   isFavoriteOnly: false,
   isLoading: false,
   error: null,
+  page: 1,
+  pageSize: PAGE_SIZE_DEFAULT,
+  totalCount: 0,
+  totalPages: 1,
 
   fetchTabs: async () => {
     set({ isLoading: true, error: null });
@@ -188,25 +219,29 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     }));
   },
 
-  setActiveTab: (tabId) => set({ activeTabId: tabId, activeNoteId: null }),
+  setActiveTab: (tabId) => set({ activeTabId: tabId, activeNoteId: null, page: 1 }),
 
   fetchNotes: async (tabId) => {
     set({ isLoading: true, error: null });
     try {
       const params = new URLSearchParams();
       if (tabId) params.set("tabId", tabId);
-      const { selectedTagIds, sortBy, sortOrder, isFavoriteOnly, searchQuery, notes } = get();
+      const { selectedTagIds, sortBy, sortOrder, isFavoriteOnly, searchQuery, notes, page, pageSize } = get();
       if (searchQuery.trim()) params.set("query", searchQuery.trim());
       for (const id of selectedTagIds) params.append("tagIds", id);
       params.set("sortBy", toApiSortBy(sortBy));
       params.set("sortOrder", toApiSortOrder(sortOrder));
       if (isFavoriteOnly) params.set("isFavoriteOnly", "true");
+      params.set("page", String(page));
+      params.set("pageSize", String(pageSize));
       const query = params.toString();
       const url = query ? `/api/notes?${query}` : "/api/notes";
       const response = await apiClient.get<ApiNoteDto[] | ApiPagedNotesResponse>(url);
-      const fetchedNotes = normalizeNotesResponse(response, notes);
+      const paged = normalizePagedResponse(response, pageSize);
+      const fetchedNotes = normalizeNotesResponse(paged, notes);
       const fetchedIds = fetchedNotes.map((note) => note.id);
       const fetchedById = new Map(fetchedNotes.map((note) => [note.id, note]));
+      const totalPages = Math.max(1, Math.ceil(paged.totalCount / paged.pageSize));
 
       set({
         notes: [
@@ -214,6 +249,10 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
           ...fetchedNotes.filter((note) => !notes.some((existing) => existing.id === note.id)),
         ],
         visibleNoteIds: fetchedIds,
+        page: paged.page,
+        pageSize: paged.pageSize,
+        totalCount: paged.totalCount,
+        totalPages,
         isLoading: false,
       });
     } catch {
@@ -294,7 +333,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
 
   setActiveNote: (noteId) => set({ activeNoteId: noteId }),
 
-  setSearchQuery: (query) => set({ searchQuery: query }),
+  setSearchQuery: (query) => set({ searchQuery: query, page: 1 }),
 
   notesForActiveTab: () => {
     const { notes, activeTabId } = get();
@@ -303,35 +342,45 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
   },
 
   filteredNotes: () => {
-    const { visibleNoteIds, searchQuery } = get();
+    const { visibleNoteIds } = get();
     const activeTabNotes = get().notesForActiveTab();
 
-    if (visibleNoteIds.length === 0) {
-      if (!searchQuery.trim()) return activeTabNotes;
-      const q = searchQuery.toLowerCase();
-      return activeTabNotes.filter(
-        (note) =>
-          note.title.toLowerCase().includes(q) ||
-          note.content.toLowerCase().includes(q)
-      );
-    }
+    if (visibleNoteIds.length === 0) return activeTabNotes;
 
     const visibleIdSet = new Set(visibleNoteIds);
     return activeTabNotes.filter((note) => visibleIdSet.has(note.id));
   },
 
-  setSelectedTagIds: (ids) => set({ selectedTagIds: ids }),
+  setSelectedTagIds: (ids) => set({ selectedTagIds: ids, page: 1 }),
 
   toggleTagFilter: (id) =>
     set((s) => ({
       selectedTagIds: s.selectedTagIds.includes(id)
         ? s.selectedTagIds.filter((t) => t !== id)
         : [...s.selectedTagIds, id],
+      page: 1,
     })),
 
-  clearTagFilters: () => set({ selectedTagIds: [] }),
+  clearTagFilters: () => set({ selectedTagIds: [], page: 1 }),
 
-  setSortBy: (sortBy) => set({ sortBy }),
-  setSortOrder: (sortOrder) => set({ sortOrder }),
-  setFavoriteFilter: (isFavoriteOnly) => set({ isFavoriteOnly }),
+  setSortBy: (sortBy) => set({ sortBy, page: 1 }),
+  setSortOrder: (sortOrder) => set({ sortOrder, page: 1 }),
+  setFavoriteFilter: (isFavoriteOnly) => set({ isFavoriteOnly, page: 1 }),
+
+  setPage: async (page) => {
+    const { totalPages, page: currentPage } = get();
+    if (page < 1 || page > totalPages || page === currentPage) return;
+    set({ page });
+    await get().fetchNotes();
+  },
+
+  nextPage: async () => {
+    await get().setPage(get().page + 1);
+  },
+
+  prevPage: async () => {
+    await get().setPage(get().page - 1);
+  },
+
+  resetPage: () => set({ page: 1 }),
 }));
