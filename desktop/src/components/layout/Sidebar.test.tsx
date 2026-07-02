@@ -72,4 +72,14 @@ describe("Sidebar", () => {
 
     expect(onCreateTab).toHaveBeenCalledTimes(1);
   });
+
+  // ── Move-note DnD wiring ─────────────────────────────────────────────────
+
+  it("renders a data-testid=\"tab-{id}\" on each tab <li> for droppable wiring", () => {
+    renderSidebar();
+
+    expect(screen.getByTestId("tab-t1")).toBeInTheDocument();
+    expect(screen.getByTestId("tab-t2")).toBeInTheDocument();
+    expect(screen.getByTestId("tab-t3")).toBeInTheDocument();
+  });
 });
