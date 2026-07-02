@@ -1,6 +1,7 @@
 import type { Note } from "../../types";
 import type { SortBy } from "../../stores/useNoteStore";
 import { Select } from "../ui/Select";
+import { Pagination } from "./Pagination";
 
 const SORT_OPTIONS: { value: SortBy; label: string }[] = [
   { value: "creation", label: "Fecha de creación" },
@@ -20,6 +21,12 @@ interface NoteListProps {
   onSortChange?: (sortBy: SortBy) => void;
   isFavoriteOnly?: boolean;
   onFavoriteFilterToggle?: () => void;
+  pagination?: {
+    page: number;
+    pageSize: number;
+    totalCount: number;
+    onPageChange: (page: number) => void;
+  };
 }
 
 export function NoteList({
@@ -34,6 +41,7 @@ export function NoteList({
   onSortChange,
   isFavoriteOnly = false,
   onFavoriteFilterToggle,
+  pagination,
 }: NoteListProps) {
   const totalTags = notes.reduce((count, note) => count + (note.tags?.length ?? 0), 0);
 
@@ -173,6 +181,14 @@ export function NoteList({
           ))
         )}
       </ul>
+      {pagination && (
+        <Pagination
+          page={pagination.page}
+          pageSize={pagination.pageSize}
+          totalCount={pagination.totalCount}
+          onPageChange={pagination.onPageChange}
+        />
+      )}
     </div>
   );
 }
