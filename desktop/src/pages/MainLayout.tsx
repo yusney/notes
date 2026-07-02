@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { DndContext, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { Sidebar } from "../components/layout/Sidebar";
 import { NoteList } from "../components/notes/NoteList";
 import { NoteEditor } from "../components/editor/NoteEditor";
@@ -9,6 +10,7 @@ import { CreateTabDialog } from "../components/CreateTabDialog";
 import { FloatingActionButton } from "../components/ui/FloatingActionButton";
 import { TagFilter } from "../components/notes/TagFilter";
 import { ActiveFiltersBar } from "../components/notes/ActiveFiltersBar";
+import { UndoMoveToast } from "../components/notes/UndoMoveToast";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import { useNoteStore } from "../stores/useNoteStore";
 import { useAuthStore } from "../stores/useAuthStore";
@@ -37,6 +39,7 @@ export function MainLayout() {
     createNote,
     updateNote,
     deleteNote,
+    moveNoteToTab,
     toggleFavorite,
     getShareWarning,
     exportNotes,
@@ -175,6 +178,28 @@ export function MainLayout() {
     onExport: exportNotes,
   });
 
+  // ── DnD wiring ───────────────────────────────────────────────────────
+  // PointerSensor for mouse/touch drag; KeyboardSensor for a11y
+  // (space to pick up, arrows to navigate, enter to drop, escape to cancel).
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor)
+  );
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over) return; // dropped outside any droppable
+    const noteId = String(active.id);
+    const destTabId = String(over.id);
+    if (!noteId || !destTabId) return;
+    // moveNoteToTab now sets the store error and re-throws on PUT failure.
+    // Swallow at the call site so we don't get an unhandled rejection in
+    // the synthetic event handler; the user already sees the error banner.
+    moveNoteToTab(noteId, destTabId).catch(() => {
+      /* surfaced via store.error → MainLayout banner */
+    });
+  }
+
   async function handleDeleteNote(noteId: string) {
     const warning = await getShareWarning(noteId);
     if (warning.hasActiveShares) {
@@ -191,120 +216,137 @@ export function MainLayout() {
   }
 
   return (
-    <div className="relative flex h-screen overflow-hidden bg-surface text-text-primary">
-      <Sidebar
-        tabs={tabs}
-        activeTabId={activeTabId}
-        onTabSelect={(id) => {
-          setActiveTab(id);
-          fetchNotes(id);
-        }}
-        onCreateTab={handleCreateTab}
-        userName={user?.name}
-        onLogout={logout}
-      />
-
-      <div className="flex w-80 min-w-[200px] shrink-0 flex-col border-r border-border bg-surface overflow-hidden h-full">
-        <div className="border-b border-border p-4 pb-3">
-          <SearchBar onSearch={handleSearchNotes} />
-        </div>
-        <div className="border-b border-border px-4 py-2">
-          <TagFilter tags={tags} selectedTagIds={selectedTagIds} onChange={handleTagFilterChange} />
-        </div>
-        <ActiveFiltersBar
-          resultCount={visibleNotes.length}
-          activeTabName={activeTabName}
-          searchQuery={searchQuery}
-          selectedTags={tags.filter((t) => selectedTagIds.includes(t.id))}
-          isFavoriteOnly={isFavoriteOnly}
-          sortBy={sortBy}
-          onClearTab={() => { setActiveTab(null); fetchNotes(); }}
-          onClearSearch={() => { setSearchQuery(""); fetchNotes(activeTabId ?? undefined); }}
-          onRemoveTag={(tagId) => { handleTagFilterChange(selectedTagIds.filter((id) => id !== tagId)); }}
-          onClearFavorites={() => { setFavoriteFilter(false); fetchNotes(activeTabId ?? undefined); }}
-          onClearAll={handleClearFilters}
+    <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+      <div className="relative flex h-screen overflow-hidden bg-surface text-text-primary">
+        <Sidebar
+          tabs={tabs}
+          activeTabId={activeTabId}
+          onTabSelect={(id) => {
+            setActiveTab(id);
+            fetchNotes(id);
+          }}
+          onCreateTab={handleCreateTab}
+          userName={user?.name}
+          onLogout={logout}
         />
-        {error && (
-          <div role="alert" className="mx-4 mb-2 border border-danger bg-danger/10 px-3 py-2 text-xs text-danger">
-            {error}
+
+        <div className="flex w-80 min-w-[200px] shrink-0 flex-col border-r border-border bg-surface overflow-hidden h-full">
+          <div className="border-b border-border p-4 pb-3">
+            <SearchBar onSearch={handleSearchNotes} />
           </div>
-        )}
-        {isLoading ? (
-          <div className="flex flex-1 items-center justify-center text-sm text-text-secondary">Cargando notas…</div>
-        ) : (
-          <NoteList
-            notes={visibleNotes}
-            activeNoteId={activeNoteId}
-            onNoteSelect={handleSelectNote}
-            onCreateNote={handleCreateNote}
-            onDeleteNote={handleDeleteNote}
-            onToggleFavorite={toggleFavorite}
+          <div className="border-b border-border px-4 py-2">
+            <TagFilter tags={tags} selectedTagIds={selectedTagIds} onChange={handleTagFilterChange} />
+          </div>
+          <ActiveFiltersBar
+            resultCount={visibleNotes.length}
+            activeTabName={activeTabName}
             searchQuery={searchQuery}
-            sortBy={sortBy}
-            onSortChange={handleSortChange}
+            selectedTags={tags.filter((t) => selectedTagIds.includes(t.id))}
             isFavoriteOnly={isFavoriteOnly}
-            onFavoriteFilterToggle={handleFavoriteFilterToggle}
-            pagination={{
-              page,
-              pageSize,
-              totalCount,
-              onPageChange: (p) => { void setPage(p); },
-            }}
+            sortBy={sortBy}
+            onClearTab={() => { setActiveTab(null); fetchNotes(); }}
+            onClearSearch={() => { setSearchQuery(""); fetchNotes(activeTabId ?? undefined); }}
+            onRemoveTag={(tagId) => { handleTagFilterChange(selectedTagIds.filter((id) => id !== tagId)); }}
+            onClearFavorites={() => { setFavoriteFilter(false); fetchNotes(activeTabId ?? undefined); }}
+            onClearAll={handleClearFilters}
           />
-        )}
-      </div>
-
-      <main className="min-w-0 flex-1 overflow-hidden h-full">
-        {activeNote ? (
-          isEditing ? (
-            <NoteEditor
-              key={activeNote.id}
-              note={activeNote}
-              availableTags={tags}
-              onSave={handleSaveNote}
-              onSaveAndExit={handleSaveAndExit}
-              onCancel={() => setIsEditing(false)}
-            />
-          ) : (
-            <NoteViewer note={activeNote} onEdit={() => setIsEditing(true)} />
-          )
-        ) : (
-          <div className="flex h-full items-center justify-center bg-surface p-10 text-text-secondary">
-            <div className="max-w-md border border-border bg-surface-elevated/75 p-8 text-center backdrop-blur">
-              <p className="text-xs font-semibold uppercase tracking-[0.25em] text-accent">Sin nota activa</p>
-              <h1 className="mt-3 text-3xl font-semibold tracking-tight text-text-primary">Elegí una nota o empezá una nueva.</h1>
-              <p className="mt-3 text-sm leading-6 text-text-secondary">
-                Usá la búsqueda, tags, favoritos y espacios para encontrar contexto rápido sin romper el foco de escritura.
-              </p>
-              <button
-                type="button"
-                onClick={handleCreateNote}
-                className="mt-6 rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-accent-text transition-colors hover:bg-accent-hover"
-              >
-                Empezar nota
-              </button>
+          {error && (
+            <div role="alert" className="mx-4 mb-2 border border-danger bg-danger/10 px-3 py-2 text-xs text-danger">
+              {error}
             </div>
-          </div>
-        )}
-      </main>
+          )}
+          {isLoading ? (
+            <div className="flex flex-1 items-center justify-center text-sm text-text-secondary">Cargando notas…</div>
+          ) : (
+            <NoteList
+              notes={visibleNotes}
+              tabs={tabs}
+              activeNoteId={activeNoteId}
+              onNoteSelect={handleSelectNote}
+              onCreateNote={handleCreateNote}
+              onDeleteNote={handleDeleteNote}
+              onToggleFavorite={toggleFavorite}
+              enableDrag={true}
+              onMoveToTab={(noteId, tabId) => {
+                // Same swallow-and-surface-error pattern as handleDragEnd:
+                // the store sets `error` and re-throws; we catch so a failed
+                // move from the menu doesn't generate an unhandled rejection
+                // in this synthetic event handler.
+                moveNoteToTab(noteId, tabId).catch(() => {
+                  /* surfaced via store.error → MainLayout banner */
+                });
+              }}
+              searchQuery={searchQuery}
+              sortBy={sortBy}
+              onSortChange={handleSortChange}
+              isFavoriteOnly={isFavoriteOnly}
+              onFavoriteFilterToggle={handleFavoriteFilterToggle}
+              pagination={{
+                page,
+                pageSize,
+                totalCount,
+                onPageChange: (p) => { void setPage(p); },
+              }}
+            />
+          )}
+        </div>
 
-      <ShareWarningDialog
-        isOpen={deleteWarning !== null}
-        activeShareCount={deleteWarning?.count ?? 0}
-        onConfirm={handleConfirmDelete}
-        onCancel={() => setDeleteWarning(null)}
-      />
+        <main className="min-w-0 flex-1 overflow-hidden h-full">
+          {activeNote ? (
+            isEditing ? (
+              <NoteEditor
+                key={activeNote.id}
+                note={activeNote}
+                availableTags={tags}
+                onSave={handleSaveNote}
+                onSaveAndExit={handleSaveAndExit}
+                onCancel={() => setIsEditing(false)}
+              />
+            ) : (
+              <div data-testid={`editor-${activeNote.id}`} className="h-full">
+                <NoteViewer note={activeNote} onEdit={() => setIsEditing(true)} />
+              </div>
+            )
+          ) : (
+            <div className="flex h-full items-center justify-center bg-surface p-10 text-text-secondary">
+              <div className="max-w-md border border-border bg-surface-elevated/75 p-8 text-center backdrop-blur">
+                <p className="text-xs font-semibold uppercase tracking-[0.25em] text-accent">Sin nota activa</p>
+                <h1 className="mt-3 text-3xl font-semibold tracking-tight text-text-primary">Elegí una nota o empezá una nueva.</h1>
+                <p className="mt-3 text-sm leading-6 text-text-secondary">
+                  Usá la búsqueda, tags, favoritos y espacios para encontrar contexto rápido sin romper el foco de escritura.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleCreateNote}
+                  className="mt-6 rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-accent-text transition-colors hover:bg-accent-hover"
+                >
+                  Empezar nota
+                </button>
+              </div>
+            </div>
+          )}
+        </main>
 
-      <CreateTabDialog
-        open={isCreateTabDialogOpen}
-        onClose={() => setIsCreateTabDialogOpen(false)}
-        onCreate={handleCreateTabSubmit}
-      />
+        <ShareWarningDialog
+          isOpen={deleteWarning !== null}
+          activeShareCount={deleteWarning?.count ?? 0}
+          onConfirm={handleConfirmDelete}
+          onCancel={() => setDeleteWarning(null)}
+        />
 
-      <FloatingActionButton
-        aria-label="Crear nota"
-        onClick={handleCreateNote}
-      />
-    </div>
+        <CreateTabDialog
+          open={isCreateTabDialogOpen}
+          onClose={() => setIsCreateTabDialogOpen(false)}
+          onCreate={handleCreateTabSubmit}
+        />
+
+        <FloatingActionButton
+          aria-label="Crear nota"
+          onClick={handleCreateNote}
+        />
+
+        <UndoMoveToast />
+      </div>
+    </DndContext>
   );
 }
