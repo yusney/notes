@@ -11,7 +11,7 @@ public sealed class Note
 
     public Guid Id { get; }
     public Guid UserId { get; }
-    public Guid TabId { get; }
+    public Guid TabId { get; private set; }
     public string Title { get; private set; }
     public string Content { get; private set; }
     public string Language { get; private set; }
@@ -52,6 +52,12 @@ public sealed class Note
 
         Title = title;
         Content = content;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void ChangeTab(Guid newTabId)
+    {
+        TabId = newTabId;
         UpdatedAt = DateTime.UtcNow;
     }
 

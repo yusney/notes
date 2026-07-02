@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { useDroppable } from "@dnd-kit/core";
 import type { Tab } from "../../types";
 
 interface SidebarProps {
@@ -37,20 +38,12 @@ export function Sidebar({ tabs, activeTabId, onTabSelect, onCreateTab, userName,
         ) : (
           <ul className="space-y-1">
             {tabs.map((tab) => (
-              <li key={tab.id}>
-                <button
-                  type="button"
-                  onClick={() => onTabSelect(tab.id)}
-                  aria-current={activeTabId === tab.id ? "true" : undefined}
-                  className={`w-full px-3 py-2.5 text-left text-sm transition-colors ${
-                    activeTabId === tab.id
-                      ? "bg-accent-subtle border-l-2 border-accent text-text-primary"
-                      : "text-text-secondary hover:bg-surface hover:text-text-primary"
-                  }`}
-                >
-                  {tab.name}
-                </button>
-              </li>
+              <DroppableTab
+                key={tab.id}
+                tab={tab}
+                isActive={activeTabId === tab.id}
+                onTabSelect={onTabSelect}
+              />
             ))}
           </ul>
         )}
@@ -88,5 +81,45 @@ export function Sidebar({ tabs, activeTabId, onTabSelect, onCreateTab, userName,
         </Link>
       </div>
     </aside>
+  );
+}
+
+/**
+ * One droppable tab <li>. Extracted so it can call the useDroppable hook
+ * (hooks can't be called in a parent's .map callback).
+ *
+ * The setNodeRef attaches @dnd-kit's droppable registration to the <li>;
+ * the inner <button> handles selection clicks as before.
+ */
+function DroppableTab({
+  tab,
+  isActive,
+  onTabSelect,
+}: {
+  tab: Tab;
+  isActive: boolean;
+  onTabSelect: (tabId: string) => void;
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id: tab.id });
+
+  return (
+    <li
+      ref={setNodeRef}
+      data-testid={`tab-${tab.id}`}
+      className={`${isOver ? "ring-2 ring-accent" : ""}`}
+    >
+      <button
+        type="button"
+        onClick={() => onTabSelect(tab.id)}
+        aria-current={isActive ? "true" : undefined}
+        className={`w-full px-3 py-2.5 text-left text-sm transition-colors ${
+          isActive
+            ? "bg-accent-subtle border-l-2 border-accent text-text-primary"
+            : "text-text-secondary hover:bg-surface hover:text-text-primary"
+        }`}
+      >
+        {tab.name}
+      </button>
+    </li>
   );
 }

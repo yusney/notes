@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Notes.Application.Features.Notes.Commands.CreateNote;
 using Notes.Application.Features.Notes.Commands.DeleteNote;
+using Notes.Application.Features.Notes.Commands.MoveNoteToTab;
 using Notes.Application.Features.Notes.Commands.ToggleFavorite;
 using Notes.Application.Features.Notes.Commands.UpdateNote;
 using Notes.Application.Features.Notes.Queries.ExportNotes;
@@ -124,6 +125,24 @@ public class NotesController : ControllerBase
         return Ok(result.Value);
     }
 
+    // PUT /api/notes/{id}/tab
+    [HttpPut("{id:guid}/tab")]
+    public async Task<IActionResult> MoveNoteTab(Guid id, [FromBody] MoveNoteToTabRequest? body, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId == Guid.Empty) return Unauthorized();
+
+        if (body is null || body.TabId == Guid.Empty)
+            return BadRequest(new { errors = new[] { "tabId is required." } });
+
+        var result = await _mediator.Send(new MoveNoteToTabCommand(userId, id, body.TabId), ct);
+
+        if (!result.IsSuccess)
+            return NotFound(new { errors = result.Errors });
+
+        return NoContent();
+    }
+
     // POST /api/notes/{noteId}/share
     [HttpPost("{noteId:guid}/share")]
     public async Task<IActionResult> CreateShareLink(
@@ -229,3 +248,5 @@ public record UpdateNoteRequest(
     List<string>? TagNames = null);
 
 public record CreateShareLinkRequest(DateTime? ExpiresAt = null);
+
+public record MoveNoteToTabRequest(Guid TabId);
