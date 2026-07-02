@@ -13,6 +13,9 @@ export function CreateTabDialog({ open, onClose, onCreate }: CreateTabDialogProp
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
 
+  // When the dialog opens, the native showModal() moves focus to the first
+  // focusable control (the name input) — no autoFocus prop or effect needed.
+
   const validateAndSubmit = () => {
     const trimmed = name.trim();
     if (!trimmed) {
@@ -53,7 +56,6 @@ export function CreateTabDialog({ open, onClose, onCreate }: CreateTabDialogProp
             }}
             placeholder="Ej: Trabajo, Personal, Proyectos"
             maxLength={MAX_TAB_NAME_LENGTH}
-            autoFocus
             className="w-full border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder-text-secondary outline-none focus:border-accent"
             aria-label="Nombre del espacio"
           />

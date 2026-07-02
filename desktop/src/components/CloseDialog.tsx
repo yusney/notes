@@ -40,7 +40,12 @@ export function CloseDialog() {
   };
 
   return (
-    <Modal open={open} onClose={() => setOpen(false)} title="¿Qué querés hacer?">
+    <Modal
+      open={open}
+      onClose={() => setOpen(false)}
+      title="¿Qué querés hacer?"
+      closeOnEscape={false}
+    >
       <p className="text-text-secondary text-sm">
         La app puede seguir ejecutándose en segundo plano o cerrarse completamente.
       </p>
