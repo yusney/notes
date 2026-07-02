@@ -45,6 +45,10 @@ beforeEach(() => {
     selectedTagIds: [],
     isLoading: false,
     error: null,
+    page: 1,
+    pageSize: 10,
+    totalCount: 0,
+    totalPages: 1,
   });
   vi.restoreAllMocks();
 });
@@ -84,7 +88,7 @@ describe("useNoteStore", () => {
       global.fetch = vi.fn().mockResolvedValueOnce({
         ok: true,
         status: 200,
-        json: async () => ({ items: mockNotes, totalCount: 2, page: 1, pageSize: 20 }),
+        json: async () => ({ items: mockNotes, totalCount: 2, page: 1, pageSize: 10 }),
       });
 
       useNoteStore.setState({ activeTabId: "tab-1" });
@@ -95,6 +99,76 @@ describe("useNoteStore", () => {
       });
 
       expect(result.current.notes).toHaveLength(2);
+    });
+
+    it("fetchNotes sends page=1 and pageSize=10 query params", async () => {
+      global.fetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ items: mockNotes, totalCount: 2, page: 1, pageSize: 10 }),
+      });
+
+      const { result } = renderHook(() => useNoteStore());
+
+      await act(async () => {
+        await result.current.fetchNotes();
+      });
+
+      const calledUrl = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
+      expect(calledUrl).toContain("page=1");
+      expect(calledUrl).toContain("pageSize=10");
+    });
+
+    it("fetchNotes stores totalCount and totalPages from response", async () => {
+      global.fetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ items: mockNotes, totalCount: 25, page: 1, pageSize: 10 }),
+      });
+
+      const { result } = renderHook(() => useNoteStore());
+
+      await act(async () => {
+        await result.current.fetchNotes();
+      });
+
+      expect(result.current.totalCount).toBe(25);
+      expect(result.current.totalPages).toBe(3);
+    });
+
+    it("fetchNotes sets visibleNoteIds to current page only", async () => {
+      const page1 = [mockNotes[0]];
+      global.fetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ items: page1, totalCount: 25, page: 1, pageSize: 10 }),
+      });
+
+      const { result } = renderHook(() => useNoteStore());
+
+      await act(async () => {
+        await result.current.fetchNotes();
+      });
+
+      expect(result.current.visibleNoteIds).toEqual(["n1"]);
+    });
+
+    it("fetchNotes sends the current page in URL when page state is set", async () => {
+      useNoteStore.setState({ page: 3 });
+      global.fetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ items: [], totalCount: 0, page: 3, pageSize: 10 }),
+      });
+
+      const { result } = renderHook(() => useNoteStore());
+
+      await act(async () => {
+        await result.current.fetchNotes();
+      });
+
+      const calledUrl = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
+      expect(calledUrl).toContain("page=3");
     });
 
     it("notesForActiveTab returns only notes matching activeTabId", () => {
@@ -117,7 +191,8 @@ describe("useNoteStore", () => {
   });
 
   describe("search", () => {
-    it("setSearchQuery updates searchQuery", () => {
+    it("setSearchQuery updates searchQuery and resets page to 1", () => {
+      useNoteStore.setState({ page: 4 });
       const { result } = renderHook(() => useNoteStore());
 
       act(() => {
@@ -125,26 +200,48 @@ describe("useNoteStore", () => {
       });
 
       expect(result.current.searchQuery).toBe("react");
+      expect(result.current.page).toBe(1);
     });
 
-    it("filteredNotes returns notes matching searchQuery in title", () => {
-      useNoteStore.setState({ notes: mockNotes, searchQuery: "react" });
+    it("filteredNotes returns notes in visibleNoteIds (server-paginated) for active tab", () => {
+      useNoteStore.setState({
+        notes: mockNotes,
+        visibleNoteIds: ["n1", "n2"],
+        activeTabId: null,
+      });
+      const { result } = renderHook(() => useNoteStore());
+
+      const filtered = result.current.filteredNotes();
+
+      expect(filtered).toHaveLength(2);
+    });
+
+    it("filteredNotes only returns notes that are on the current page", () => {
+      useNoteStore.setState({
+        notes: mockNotes,
+        visibleNoteIds: ["n1"],
+        activeTabId: null,
+      });
       const { result } = renderHook(() => useNoteStore());
 
       const filtered = result.current.filteredNotes();
 
       expect(filtered).toHaveLength(1);
-      expect(filtered[0].title).toBe("React Hooks");
+      expect(filtered[0].id).toBe("n1");
     });
 
-    it("filteredNotes returns notes matching searchQuery in content", () => {
-      useNoteStore.setState({ notes: mockNotes, searchQuery: "TS" });
+    it("filteredNotes respects activeTabId filter", () => {
+      useNoteStore.setState({
+        notes: mockNotes,
+        visibleNoteIds: ["n1", "n2"],
+        activeTabId: "tab-1",
+      });
       const { result } = renderHook(() => useNoteStore());
 
       const filtered = result.current.filteredNotes();
 
       expect(filtered).toHaveLength(1);
-      expect(filtered[0].id).toBe("n2");
+      expect(filtered[0].id).toBe("n1");
     });
   });
 
@@ -255,7 +352,7 @@ describe("useNoteStore", () => {
       global.fetch = vi.fn().mockResolvedValueOnce({
         ok: true,
         status: 200,
-        json: async () => [],
+        json: async () => ({ items: [], totalCount: 0, page: 1, pageSize: 10 }),
       });
 
       const { result } = renderHook(() => useNoteStore());
@@ -267,6 +364,211 @@ describe("useNoteStore", () => {
       const calledUrl = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
       expect(calledUrl).toContain("tagIds=t1");
       expect(calledUrl).toContain("tagIds=t2");
+    });
+  });
+
+  describe("pagination", () => {
+    it("initial state has page=1, pageSize=10, totalCount=0, totalPages=1", () => {
+      const state = useNoteStore.getState();
+      expect(state.page).toBe(1);
+      expect(state.pageSize).toBe(10);
+      expect(state.totalCount).toBe(0);
+      expect(state.totalPages).toBe(1);
+    });
+
+    it("setPage(n) updates page and triggers fetchNotes", async () => {
+      useNoteStore.setState({ page: 1, totalCount: 25, totalPages: 3 });
+      global.fetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ items: [], totalCount: 25, page: 2, pageSize: 10 }),
+      });
+
+      await act(async () => {
+        await useNoteStore.getState().setPage(2);
+      });
+
+      expect(useNoteStore.getState().page).toBe(2);
+      const calledUrl = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
+      expect(calledUrl).toContain("page=2");
+    });
+
+    it("setPage(n) is clamped to [1, totalPages]", async () => {
+      useNoteStore.setState({ page: 2, totalCount: 25, totalPages: 3 });
+      const fetchSpy = vi.fn();
+      global.fetch = fetchSpy;
+
+      await act(async () => {
+        await useNoteStore.getState().setPage(0);
+      });
+      expect(useNoteStore.getState().page).toBe(2);
+      expect(fetchSpy).not.toHaveBeenCalled();
+
+      await act(async () => {
+        await useNoteStore.getState().setPage(99);
+      });
+      expect(useNoteStore.getState().page).toBe(2);
+      expect(fetchSpy).not.toHaveBeenCalled();
+    });
+
+    it("nextPage increments page and fetches", async () => {
+      useNoteStore.setState({ page: 1, totalCount: 25, totalPages: 3 });
+      global.fetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ items: [], totalCount: 25, page: 2, pageSize: 10 }),
+      });
+
+      await act(async () => {
+        await useNoteStore.getState().nextPage();
+      });
+
+      expect(useNoteStore.getState().page).toBe(2);
+    });
+
+    it("prevPage decrements page and fetches", async () => {
+      useNoteStore.setState({ page: 2, totalCount: 25, totalPages: 3 });
+      global.fetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ items: [], totalCount: 25, page: 1, pageSize: 10 }),
+      });
+
+      await act(async () => {
+        await useNoteStore.getState().prevPage();
+      });
+
+      expect(useNoteStore.getState().page).toBe(1);
+    });
+
+    it("nextPage is a no-op on last page", async () => {
+      useNoteStore.setState({ page: 3, totalCount: 25, totalPages: 3 });
+      const fetchSpy = vi.fn();
+      global.fetch = fetchSpy;
+
+      await act(async () => {
+        await useNoteStore.getState().nextPage();
+      });
+      expect(useNoteStore.getState().page).toBe(3);
+      expect(fetchSpy).not.toHaveBeenCalled();
+    });
+
+    it("prevPage is a no-op on first page", async () => {
+      useNoteStore.setState({ page: 1, totalCount: 25, totalPages: 3 });
+      const fetchSpy = vi.fn();
+      global.fetch = fetchSpy;
+
+      await act(async () => {
+        await useNoteStore.getState().prevPage();
+      });
+      expect(useNoteStore.getState().page).toBe(1);
+      expect(fetchSpy).not.toHaveBeenCalled();
+    });
+
+    it("resetPage sets page to 1", () => {
+      useNoteStore.setState({ page: 4 });
+      useNoteStore.getState().resetPage();
+      expect(useNoteStore.getState().page).toBe(1);
+    });
+
+    it("setActiveTab resets page to 1", () => {
+      useNoteStore.setState({ page: 4 });
+      useNoteStore.getState().setActiveTab("tab-1");
+      expect(useNoteStore.getState().page).toBe(1);
+    });
+
+    it("setSortBy resets page to 1", () => {
+      useNoteStore.setState({ page: 4 });
+      useNoteStore.getState().setSortBy("alphabetical");
+      expect(useNoteStore.getState().page).toBe(1);
+    });
+
+    it("setSortOrder resets page to 1", () => {
+      useNoteStore.setState({ page: 4 });
+      useNoteStore.getState().setSortOrder("asc");
+      expect(useNoteStore.getState().page).toBe(1);
+    });
+
+    it("setSelectedTagIds resets page to 1", () => {
+      useNoteStore.setState({ page: 4 });
+      useNoteStore.getState().setSelectedTagIds(["t1"]);
+      expect(useNoteStore.getState().page).toBe(1);
+    });
+
+    it("toggleTagFilter resets page to 1", () => {
+      useNoteStore.setState({ page: 4 });
+      useNoteStore.getState().toggleTagFilter("t1");
+      expect(useNoteStore.getState().page).toBe(1);
+    });
+
+    it("clearTagFilters resets page to 1", () => {
+      useNoteStore.setState({ page: 4, selectedTagIds: ["t1"] });
+      useNoteStore.getState().clearTagFilters();
+      expect(useNoteStore.getState().page).toBe(1);
+    });
+
+    it("setFavoriteFilter resets page to 1", () => {
+      useNoteStore.setState({ page: 4 });
+      useNoteStore.getState().setFavoriteFilter(true);
+      expect(useNoteStore.getState().page).toBe(1);
+    });
+
+    it("setPage does NOT reset filters (only changes page)", async () => {
+      useNoteStore.setState({
+        page: 1,
+        totalCount: 25,
+        totalPages: 3,
+        searchQuery: "react",
+        selectedTagIds: ["t1"],
+        sortBy: "alphabetical",
+      });
+      global.fetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ items: [], totalCount: 25, page: 2, pageSize: 10 }),
+      });
+
+      await act(async () => {
+        await useNoteStore.getState().setPage(2);
+      });
+
+      const state = useNoteStore.getState();
+      expect(state.searchQuery).toBe("react");
+      expect(state.selectedTagIds).toEqual(["t1"]);
+      expect(state.sortBy).toBe("alphabetical");
+    });
+
+    it("fetchNotes stores totalPages=1 when totalCount=0", async () => {
+      global.fetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ items: [], totalCount: 0, page: 1, pageSize: 10 }),
+      });
+
+      await act(async () => {
+        await useNoteStore.getState().fetchNotes();
+      });
+
+      expect(useNoteStore.getState().totalPages).toBe(1);
+    });
+
+    it("fetchNotes stores totalPages=1 when totalCount fits in one page", async () => {
+      global.fetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          items: mockNotes,
+          totalCount: 2,
+          page: 1,
+          pageSize: 10,
+        }),
+      });
+
+      await act(async () => {
+        await useNoteStore.getState().fetchNotes();
+      });
+
+      expect(useNoteStore.getState().totalPages).toBe(1);
     });
   });
 });

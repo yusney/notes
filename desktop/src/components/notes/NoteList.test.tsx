@@ -130,4 +130,57 @@ describe("NoteList", () => {
 
     expect(onDeleteNote).toHaveBeenCalledWith("n1");
   });
+
+  it("renders Pagination when pagination prop is provided and totalCount > pageSize", () => {
+    render(
+      <NoteList
+        notes={mockNotes}
+        activeNoteId={null}
+        onNoteSelect={vi.fn()}
+        onCreateNote={vi.fn()}
+        pagination={{
+          page: 1,
+          pageSize: 10,
+          totalCount: 25,
+          onPageChange: vi.fn(),
+        }}
+      />
+    );
+
+    expect(screen.getByText(/mostrando 1-10 de 25 notas/i)).toBeInTheDocument();
+    expect(screen.getByText(/página 1 de 3/i)).toBeInTheDocument();
+  });
+
+  it("does not render Pagination when pagination prop is not provided", () => {
+    render(
+      <NoteList notes={mockNotes} activeNoteId={null} onNoteSelect={vi.fn()} onCreateNote={vi.fn()} />
+    );
+
+    expect(screen.queryByText(/mostrando/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/página/i)).not.toBeInTheDocument();
+  });
+
+  it("calls pagination onPageChange with correct page when Anterior/Siguiente clicked", () => {
+    const onPageChange = vi.fn();
+    render(
+      <NoteList
+        notes={mockNotes}
+        activeNoteId={null}
+        onNoteSelect={vi.fn()}
+        onCreateNote={vi.fn()}
+        pagination={{
+          page: 2,
+          pageSize: 10,
+          totalCount: 25,
+          onPageChange,
+        }}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /siguiente/i }));
+    expect(onPageChange).toHaveBeenCalledWith(3);
+
+    fireEvent.click(screen.getByRole("button", { name: /anterior/i }));
+    expect(onPageChange).toHaveBeenCalledWith(1);
+  });
 });
