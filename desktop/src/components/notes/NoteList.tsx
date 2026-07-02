@@ -1,8 +1,10 @@
+import { useState } from "react";
 import type { Note, Tab } from "../../types";
 import type { SortBy } from "../../stores/useNoteStore";
 import { useDraggable } from "@dnd-kit/core";
 import { Select } from "../ui/Select";
 import { Pagination } from "./Pagination";
+import { MoveToTabMenu } from "./MoveToTabMenu";
 
 const SORT_OPTIONS: { value: SortBy; label: string }[] = [
   { value: "creation", label: "Fecha de creación" },
@@ -20,7 +22,8 @@ const EMPTY_TABS: Tab[] = [];
 interface NoteListProps {
   notes: Note[];
   /**
-   * Available tabs — used to render the tab badge eyebrow on each note row.
+   * Available tabs — used to render the tab badge eyebrow on each note row
+   * AND to populate the "Mover a..." accessible menu's tab options.
    * If a note's `tabId` isn't found in this list, the eyebrow is omitted.
    */
   tabs?: Tab[];
@@ -29,7 +32,22 @@ interface NoteListProps {
   onCreateNote: () => void;
   onDeleteNote?: (noteId: string) => void;
   onToggleFavorite?: (noteId: string) => void;
-  onMoveNote?: (noteId: string) => void;
+  /**
+   * Controls whether the drag handle (the @dnd-kit pickup affordance) is
+   * rendered on each row. The actual move-on-drop logic lives in MainLayout's
+   * DndContext onDragEnd — this prop is purely a render gate. Default: false.
+   *
+   * The drag flow is one of TWO ways to move a note between tabs; the other
+   * is the explicit "Mover a..." menu gated on `onMoveToTab`. Both can coexist.
+   */
+  enableDrag?: boolean;
+  /**
+   * Callback for the accessible "Mover a..." menu. When provided, each row
+   * gets a discoverable, keyboard-operable trigger sibling of the select
+   * button that opens a dialog listing the available tabs. Closing the menu
+   * via the dialog is handled internally.
+   */
+  onMoveToTab?: (noteId: string, tabId: string) => void;
   searchQuery?: string;
   sortBy?: SortBy;
   onSortChange?: (sortBy: SortBy) => void;
@@ -51,7 +69,8 @@ export function NoteList({
   onCreateNote,
   onDeleteNote,
   onToggleFavorite,
-  onMoveNote,
+  enableDrag = false,
+  onMoveToTab,
   searchQuery = "",
   sortBy,
   onSortChange,
@@ -150,7 +169,8 @@ export function NoteList({
               onNoteSelect={onNoteSelect}
               onDeleteNote={onDeleteNote}
               onToggleFavorite={onToggleFavorite}
-              onMoveNote={onMoveNote}
+              enableDrag={enableDrag}
+              onMoveToTab={onMoveToTab}
             />
           ))
         )}
@@ -170,15 +190,17 @@ export function NoteList({
 interface NoteRowProps {
   note: Note;
   /**
-   * Available tabs — used to resolve the note's tab name for the eyebrow.
-   * If the note's `tabId` isn't found, the eyebrow is omitted.
+   * Available tabs — used to resolve the note's tab name for the eyebrow AND
+   * to populate the "Mover a..." menu's options. If the note's `tabId` isn't
+   * found, the eyebrow is omitted (the menu's empty-state handles it).
    */
   tabs?: Tab[];
   activeNoteId: string | null;
   onNoteSelect: (noteId: string) => void;
   onDeleteNote?: (noteId: string) => void;
   onToggleFavorite?: (noteId: string) => void;
-  onMoveNote?: (noteId: string) => void;
+  enableDrag?: boolean;
+  onMoveToTab?: (noteId: string, tabId: string) => void;
 }
 
 /**
@@ -204,13 +226,17 @@ const FOLDER_GLYPH = (
  *
  * Layout: <li> is a flex row with these children, ALL siblings of each other —
  *   1. Drag handle (own gutter column on the left, flex sibling of the card)
- *   2. Select <button> (the card filling the remaining width, the main click target)
- *   3. Favorite star <button> (absolute top-right, sibling of the select button)
- *   4. Delete <button> (absolute bottom-right, sibling of the select button)
+ *      — only when enableDrag is true
+ *   2. "Mover a..." trigger (own gutter column on the left, flex sibling of
+ *      the card) — only when onMoveToTab is provided
+ *   3. Select <button> (the card filling the remaining width, the main click target)
+ *   4. Favorite star <button> (absolute top-right, sibling of the select button)
+ *   5. Delete <button> (absolute bottom-right, sibling of the select button)
+ *   6. MoveToTabMenu (a Modal — sibling of everything, only mounted when open)
  *
  * None of these buttons may be NESTED inside another — a <button> inside a
  * <button> is invalid HTML and breaks semantics. All interactive buttons
- * (handle, favorite, delete) live as siblings of the select <button>.
+ * (handle, mover, favorite, delete) live as siblings of the select <button>.
  */
 function NoteRow({
   note,
@@ -219,9 +245,11 @@ function NoteRow({
   onNoteSelect,
   onDeleteNote,
   onToggleFavorite,
-  onMoveNote,
+  enableDrag = false,
+  onMoveToTab,
 }: NoteRowProps) {
-  const draggable = useDraggable({ id: note.id, disabled: !onMoveNote });
+  const draggable = useDraggable({ id: note.id, disabled: !enableDrag });
+  const [isMoveMenuOpen, setIsMoveMenuOpen] = useState(false);
 
   // Resolve tab name once per render. If the tab isn't loaded yet, omit the eyebrow.
   const tabName = tabs.find((t) => t.id === note.tabId)?.name ?? null;
@@ -237,7 +265,7 @@ function NoteRow({
       className="group relative mb-2 flex items-stretch gap-1"
       style={style}
     >
-      {onMoveNote && (
+      {enableDrag && (
         // SIBLING of the select button. Sits in its own left gutter column —
         // not absolutely positioned over the card. stopPropagation isolates
         // pointer/keyboard events so the parent <button> doesn't fire onNoteSelect.
@@ -262,6 +290,27 @@ function NoteRow({
             <span className="block size-[3px] rounded-full bg-current" />
             <span className="block size-[3px] rounded-full bg-current" />
           </span>
+        </button>
+      )}
+
+      {onMoveToTab && (
+        // SIBLING of the select button (sits in the left gutter, after the drag
+        // handle when both are present). This is the explicit, discoverable,
+        // keyboard-operable alternative to the drag pickup flow — it closes the
+        // a11y criterion of issue #9 that the KeyboardSensor alone did not satisfy.
+        // stopPropagation isolates pointer events so onNoteSelect doesn't fire.
+        <button
+          type="button"
+          data-testid={`note-move-trigger-${note.id}`}
+          aria-label="Mover nota a otro espacio"
+          aria-haspopup="dialog"
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsMoveMenuOpen(true);
+          }}
+          className="flex w-5 flex-shrink-0 items-center justify-center self-center rounded text-text-secondary/60 opacity-0 transition-opacity hover:text-accent focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent group-hover:opacity-100"
+        >
+          <span aria-hidden="true" className="text-base leading-none">→</span>
         </button>
       )}
 
@@ -330,6 +379,21 @@ function NoteRow({
         >
           ✕
         </button>
+      )}
+
+      {onMoveToTab && (
+        // The menu is a sibling of every button inside the row. Mounted only
+        // when open to avoid a persistent dialog in the DOM. The Modal's native
+        // <dialog> + showModal() gives us the focus trap, backdrop, and Escape
+        // handling for free — see MoveToTabMenu.tsx for the keyboard nav layer.
+        <MoveToTabMenu
+          open={isMoveMenuOpen}
+          onClose={() => setIsMoveMenuOpen(false)}
+          noteTitle={note.title}
+          currentTabId={note.tabId}
+          tabs={tabs}
+          onSelect={(tabId) => onMoveToTab(note.id, tabId)}
+        />
       )}
     </li>
   );

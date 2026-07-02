@@ -266,7 +266,16 @@ export function MainLayout() {
               onCreateNote={handleCreateNote}
               onDeleteNote={handleDeleteNote}
               onToggleFavorite={toggleFavorite}
-              onMoveNote={(noteId) => moveNoteToTab(noteId, "")}
+              enableDrag={true}
+              onMoveToTab={(noteId, tabId) => {
+                // Same swallow-and-surface-error pattern as handleDragEnd:
+                // the store sets `error` and re-throws; we catch so a failed
+                // move from the menu doesn't generate an unhandled rejection
+                // in this synthetic event handler.
+                moveNoteToTab(noteId, tabId).catch(() => {
+                  /* surfaced via store.error → MainLayout banner */
+                });
+              }}
               searchQuery={searchQuery}
               sortBy={sortBy}
               onSortChange={handleSortChange}
