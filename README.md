@@ -207,7 +207,23 @@ Set production secrets in Dokploy environment panel (never in the repository).
 | GET/POST | `/api/notes` | JWT | Manage notes |
 | GET/POST | `/api/tags` | JWT | Manage tags |
 
-Full OpenAPI docs available at `http://localhost:8080/openapi/v1.json` in Development mode.
+## API Documentation
+
+The API exposes its full schema via OpenAPI. Documentation endpoints are **only available in `Development` mode** (see `Program.cs` → `if (app.Environment.IsDevelopment())`).
+
+| URL (replace `<puerto>` with the one your API is listening on) | What you get |
+|---|---|
+| `http://localhost:<puerto>/scalar/v1` | **Interactive UI** — Scalar renders every endpoint, lets you read schemas, required fields, and fire requests directly from the browser with the chosen HTTP client (default: C# / HttpClient). Open this when you want to "see what the API has and try it". |
+| `http://localhost:<puerto>/openapi/v1.json` | **Raw OpenAPI 3 spec** — the machine-readable document Scalar renders. Useful for code generators, Postman import, or `curl` smoke tests. |
+
+**Ports depending on how you started the API:**
+
+| Launch mode | Default port | Example URL |
+|---|---|---|
+| `docker-compose up -d` | `8080` | `http://localhost:8080/scalar/v1` |
+| `dotnet run --project src/Notes.Api --launch-profile http` | `5000` | `http://localhost:5000/scalar/v1` |
+
+> ℹ️ Production does not expose these endpoints. To regenerate API clients in CI/prod, build the project locally with `ASPNETCORE_ENVIRONMENT=Development` and pipe `/openapi/v1.json` into your generator.
 
 ## License
 
