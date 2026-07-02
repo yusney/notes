@@ -5,6 +5,7 @@ import { NoteEditor } from "../components/editor/NoteEditor";
 import { NoteViewer } from "../components/editor/NoteViewer";
 import { SearchBar } from "../components/notes/SearchBar";
 import { ShareWarningDialog } from "../components/share/ShareWarningDialog";
+import { CreateTabDialog } from "../components/CreateTabDialog";
 import { FloatingActionButton } from "../components/ui/FloatingActionButton";
 import { TagFilter } from "../components/notes/TagFilter";
 import { ActiveFiltersBar } from "../components/notes/ActiveFiltersBar";
@@ -78,6 +79,8 @@ export function MainLayout() {
     count: number;
   } | null>(null);
 
+  const [isCreateTabDialogOpen, setIsCreateTabDialogOpen] = useState(false);
+
   const [isEditing, setIsEditing] = useState(false);
 
   const visibleNotes = filteredNotes();
@@ -100,10 +103,12 @@ export function MainLayout() {
   }
 
   async function handleCreateTab() {
-    const name = prompt("Nombre de la nueva tab:");
-    if (name?.trim()) {
-      await createTab(name.trim());
-    }
+    setIsCreateTabDialogOpen(true);
+  }
+
+  async function handleCreateTabSubmit(name: string) {
+    setIsCreateTabDialogOpen(false);
+    await createTab(name);
   }
 
   async function handleCreateNote() {
@@ -278,6 +283,12 @@ export function MainLayout() {
         activeShareCount={deleteWarning?.count ?? 0}
         onConfirm={handleConfirmDelete}
         onCancel={() => setDeleteWarning(null)}
+      />
+
+      <CreateTabDialog
+        open={isCreateTabDialogOpen}
+        onClose={() => setIsCreateTabDialogOpen(false)}
+        onCreate={handleCreateTabSubmit}
       />
 
       <FloatingActionButton
