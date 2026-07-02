@@ -122,6 +122,9 @@ interface NoteStore {
   totalCount: number;
   totalPages: number;
 
+  // Undo move toast
+  lastMove: { noteId: string; sourceTabId: string; destTabName: string } | null;
+
   // Tab actions
   fetchTabs: () => Promise<void>;
   createTab: (name: string) => Promise<Tab>;
@@ -135,6 +138,7 @@ interface NoteStore {
   fetchNote: (id: string) => Promise<Note>;
   updateNote: (id: string, data: Partial<Pick<Note, "title" | "content" | "tabId">> & { tagNames?: string[] }) => Promise<void>;
   deleteNote: (id: string) => Promise<void>;
+  moveNoteToTab: (noteId: string, tabId: string) => Promise<void>;
   toggleFavorite: (noteId: string) => Promise<void>;
   getShareWarning: (noteId: string) => Promise<{ hasActiveShares: boolean; count: number }>;
   exportNotes: () => Promise<void>;
@@ -160,6 +164,9 @@ interface NoteStore {
   nextPage: () => Promise<void>;
   prevPage: () => Promise<void>;
   resetPage: () => void;
+
+  // Undo move
+  clearUndo: () => void;
 }
 
 export const useNoteStore = create<NoteStore>((set, get) => ({
@@ -179,6 +186,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
   pageSize: PAGE_SIZE_DEFAULT,
   totalCount: 0,
   totalPages: 1,
+  lastMove: null,
 
   fetchTabs: async () => {
     set({ isLoading: true, error: null });
@@ -307,6 +315,36 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
       activeNoteId: s.activeNoteId === id ? null : s.activeNoteId,
     }));
   },
+
+  moveNoteToTab: async (noteId, tabId) => {
+    // Capture source BEFORE the PUT so undo has the correct previous tab,
+    // even if the PUT later mutates server state. We hold the snapshot in a
+    // local closure and only commit it to `lastMove` after the PUT resolves
+    // successfully — committing earlier would surface a "Nota movida a X"
+    // toast for moves that ultimately fail (network/404/500).
+    const { notes, tabs, activeTabId } = get();
+    const note = notes.find((n) => n.id === noteId);
+    const sourceTabId = note?.tabId ?? "";
+    const destTab = tabs.find((t) => t.id === tabId);
+    const destTabName = destTab?.name ?? "";
+
+    try {
+      await apiClient.put(`/api/notes/${noteId}/tab`, { tabId });
+    } catch {
+      // Surface to the existing error banner (rendered in MainLayout) and
+      // re-throw so callers (e.g. UndoMoveToast) can react with context-
+      // specific feedback ("No se pudo deshacer el movimiento"). We do NOT
+      // commit `lastMove` here — that would be a misleading success toast.
+      set({ error: "No se pudo mover la nota" });
+      throw new Error("No se pudo mover la nota");
+    }
+
+    // PUT succeeded → safe to surface the undo toast + reconcile pagination.
+    set({ lastMove: { noteId, sourceTabId, destTabName } });
+    await get().fetchNotes(activeTabId ?? undefined);
+  },
+
+  clearUndo: () => set({ lastMove: null }),
 
   toggleFavorite: async (noteId) => {
     const updated = await apiClient.put<ApiFavoriteResponse>(`/api/notes/${noteId}/favorite`);
