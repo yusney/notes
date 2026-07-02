@@ -28,6 +28,9 @@ export function MainLayout() {
     isFavoriteOnly,
     isLoading,
     error,
+    page,
+    pageSize,
+    totalCount,
     fetchNotes,
     fetchNote,
     createTab,
@@ -43,6 +46,7 @@ export function MainLayout() {
     setSelectedTagIds,
     setSortBy,
     setFavoriteFilter,
+    setPage,
     filteredNotes,
   } = useNoteStore();
   const { tags, fetchTags } = useTagStore();
@@ -240,6 +244,12 @@ export function MainLayout() {
             onSortChange={handleSortChange}
             isFavoriteOnly={isFavoriteOnly}
             onFavoriteFilterToggle={handleFavoriteFilterToggle}
+            pagination={{
+              page,
+              pageSize,
+              totalCount,
+              onPageChange: (p) => { void setPage(p); },
+            }}
           />
         )}
       </div>
