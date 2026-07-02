@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 
 interface ModalProps {
   open: boolean;
@@ -12,12 +12,11 @@ interface ModalProps {
 /**
  * Generic modal built on the native <dialog> element.
  *
- * - `showModal()`/`close()` provide a real focus trap and focus restore.
- * - Escape is handled via the native `cancel` event (no document listener,
- *   no useEffectEvent) — accessible by default.
- * - The `open` prop is the single source of truth; the effect only syncs the
- *   external DOM node, which is the canonical "synchronizing with external
- *   systems" use case endorsed by the React docs.
+ * The dialog is mounted only while `open` is true, so it is never visible
+ * when closed — regardless of webview quirks around the native dialog
+ * default display. On mount, `showModal()` activates the native focus trap
+ * and backdrop; Escape is handled via the native `cancel` event (no document
+ * listener, no useEffectEvent).
  */
 export function Modal({
   open,
@@ -28,21 +27,13 @@ export function Modal({
 }: ModalProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
 
-  // Sync the native dialog open state with the `open` prop.
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    if (!dialog) return;
-    if (open && !dialog.open) {
-      dialog.showModal();
-    } else if (!open && dialog.open) {
-      dialog.close();
-    }
-  }, [open]);
+  // Only mount the dialog while open — guarantees it is never shown when
+  // closed, in any webview.
+  if (!open) return null;
 
-  // The native `cancel` event fires when the user presses Escape on a modal
-  // dialog. Prevent the default close so `open` stays the source of truth;
-  // the effect above closes the dialog once the parent flips `open` to false.
   function handleCancel(event: React.SyntheticEvent) {
+    // Keep `open` as the source of truth: prevent the native close and let
+    // the parent flip `open` to false, which unmounts the dialog.
     event.preventDefault();
     if (closeOnEscape) {
       onClose();
@@ -50,19 +41,22 @@ export function Modal({
   }
 
   return (
-    <>
-      <style>{`dialog::backdrop { background: rgba(0, 0, 0, 0.6); }`}</style>
-      <dialog
-        ref={dialogRef}
-        onCancel={handleCancel}
-        aria-labelledby="modal-title"
-        className="fixed inset-0 z-50 m-auto max-w-full border border-border bg-surface-elevated rounded-xl shadow-2xl p-6 w-80 flex flex-col gap-4"
-      >
-        <h2 id="modal-title" className="text-text-primary font-semibold text-base">
-          {title}
-        </h2>
-        {children}
-      </dialog>
-    </>
+    <dialog
+      ref={(el) => {
+        dialogRef.current = el;
+        // Activate as a modal on mount: native focus trap + backdrop.
+        if (el && !el.open) {
+          el.showModal();
+        }
+      }}
+      onCancel={handleCancel}
+      aria-labelledby="modal-title"
+      className="fixed inset-0 z-50 m-auto max-w-full border border-border bg-surface-elevated rounded-xl shadow-2xl p-6 w-80 flex flex-col gap-4"
+    >
+      <h2 id="modal-title" className="text-text-primary font-semibold text-base">
+        {title}
+      </h2>
+      {children}
+    </dialog>
   );
 }

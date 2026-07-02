@@ -28,10 +28,9 @@ describe("Modal", () => {
     expect(screen.getByText("My Title")).toBeInTheDocument();
   });
 
-  it("is hidden when closed", async () => {
+  it("is not rendered when closed", () => {
     renderModal({ open: false });
-    await act(async () => {});
-    expect(screen.queryByText("Modal content")).not.toBeVisible();
+    expect(screen.queryByText("Modal content")).not.toBeInTheDocument();
   });
 
   it("exposes a dialog role", async () => {
