@@ -5,93 +5,64 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
+  /** Close when the user presses Escape. Default: true. */
+  closeOnEscape?: boolean;
 }
 
 /**
- * Generic modal component with:
- * - Focus trap (focus stays within dialog)
- * - Escape key closes
- * - Overlay click closes
- * - Returns focus to trigger on close
- * - role="dialog" and aria-modal="true"
+ * Generic modal built on the native <dialog> element.
+ *
+ * - `showModal()`/`close()` provide a real focus trap and focus restore.
+ * - Escape is handled via the native `cancel` event (no document listener,
+ *   no useEffectEvent) — accessible by default.
+ * - The `open` prop is the single source of truth; the effect only syncs the
+ *   external DOM node, which is the canonical "synchronizing with external
+ *   systems" use case endorsed by the React docs.
  */
-export function Modal({ open, onClose, title, children }: ModalProps) {
-  const dialogRef = useRef<HTMLDivElement>(null);
-  const previousActiveElement = useRef<HTMLElement | null>(null);
+export function Modal({
+  open,
+  onClose,
+  title,
+  children,
+  closeOnEscape = true,
+}: ModalProps) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
 
-  // Save the previously focused element when opening
+  // Sync the native dialog open state with the `open` prop.
   useEffect(() => {
-    if (open) {
-      previousActiveElement.current = document.activeElement as HTMLElement;
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    if (open && !dialog.open) {
+      dialog.showModal();
+    } else if (!open && dialog.open) {
+      dialog.close();
     }
   }, [open]);
 
-  // Focus trap and Escape key handling
-  useEffect(() => {
-    if (!open) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        onClose();
-        return;
-      }
-
-      if (e.key === "Tab" && dialogRef.current) {
-        const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
-          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-        );
-        const first = focusable[0];
-        const last = focusable[focusable.length - 1];
-
-        if (e.shiftKey) {
-          if (document.activeElement === first) {
-            e.preventDefault();
-            last?.focus();
-          }
-        } else {
-          if (document.activeElement === last) {
-            e.preventDefault();
-            first?.focus();
-          }
-        }
-      }
-    };
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [open, onClose]);
-
-  // Return focus to trigger when closing
-  useEffect(() => {
-    if (!open && previousActiveElement.current) {
-      previousActiveElement.current.focus();
+  // The native `cancel` event fires when the user presses Escape on a modal
+  // dialog. Prevent the default close so `open` stays the source of truth;
+  // the effect above closes the dialog once the parent flips `open` to false.
+  function handleCancel(event: React.SyntheticEvent) {
+    event.preventDefault();
+    if (closeOnEscape) {
+      onClose();
     }
-  }, [open]);
-
-  if (!open) return null;
+  }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
-      onClick={(e) => {
-        // Close when clicking the overlay (not the dialog container)
-        if (e.target === e.currentTarget) {
-          onClose();
-        }
-      }}
-    >
-      <div
+    <>
+      <style>{`dialog::backdrop { background: rgba(0, 0, 0, 0.6); }`}</style>
+      <dialog
         ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
+        onCancel={handleCancel}
         aria-labelledby="modal-title"
-        className="bg-surface-elevated border border-border rounded-xl shadow-2xl p-6 w-80 flex flex-col gap-4"
+        className="fixed inset-0 z-50 m-auto max-w-full border border-border bg-surface-elevated rounded-xl shadow-2xl p-6 w-80 flex flex-col gap-4"
       >
         <h2 id="modal-title" className="text-text-primary font-semibold text-base">
           {title}
         </h2>
         {children}
-      </div>
-    </div>
+      </dialog>
+    </>
   );
 }
