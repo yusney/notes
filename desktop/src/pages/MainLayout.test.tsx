@@ -19,8 +19,18 @@ vi.mock("../stores/useNoteStore", () => {
     setActiveTab: vi.fn(),
     setActiveNote: vi.fn(),
     setSearchQuery: vi.fn(),
+    setSelectedTagIds: vi.fn(),
+    setSortBy: vi.fn(),
+    setFavoriteFilter: vi.fn(),
+    setPage: vi.fn(),
     filteredNotes: vi.fn().mockReturnValue([]),
     searchQuery: "",
+    selectedTagIds: [],
+    sortBy: "creation",
+    isFavoriteOnly: false,
+    page: 1,
+    pageSize: 10,
+    totalCount: 0,
   };
   const hook = vi.fn(() => mockState);
   (hook as unknown as { getState: () => typeof mockState; setState: (partial: Partial<typeof mockState>) => void }).getState = () => mockState;
