@@ -1,16 +1,29 @@
 /**
  * E2E: Move Note Between Tabs (GitHub #9)
  *
- * Asserts the spec's critical flow:
- *   - Drag a note's handle onto a sidebar tab → exactly one PUT /api/notes/{id}/tab
- *   - The note leaves the source tab's list
- *   - activeTabId stays on the source tab (no auto-switch)
- *   - Undo "Deshacer" re-PUTs and reverts the move
- *   - Editor stays mounted (noteId-based, tab-agnostic)
+ * Status of this file: SMOKE TEST ONLY, NOT RUN IN CI.
  *
- * NOTE: This is a contract test — it asserts the UI flow structurally
- * (markup, drop handlers, DnD wiring) without requiring the full backend.
- * The PUT spy via page.route proves "exactly one PUT" without backend coupling.
+ * The integrated coverage for the move-note flow (drag-drop AND the new
+ * "Mover a..." accessible menu) lives in the vitest MainLayout/NoteList
+ * integration tests and runs on every CI build via `pnpm vitest run`:
+ *
+ *   - src/components/notes/NoteList.test.tsx
+ *     - "Mover a..." accessible menu integration tests
+ *     - enableDrag rename + handle rendering tests
+ *   - src/components/notes/MoveToTabMenu.test.tsx
+ *     - Modal renders, lists tabs, keyboard nav, Escape closes
+ *   - src/components/notes/UndoMoveToast.test.tsx
+ *     - Success toast + "Deshacer" re-PUT + failure feedback
+ *   - src/stores/useNoteStore.moveNote.test.ts
+ *     - moveNoteToTab store action (PUT, error, lastMove snapshot)
+ *
+ * This E2E requires a live backend + authenticated session to drive the
+ * real drag-drop UX. The existing `test.skip(...)` calls below are
+ * intentional — they assert UI wiring markup at best, and need a seeded
+ * environment + Playwright config that is out of scope for PR #13.
+ *
+ * If you re-enable these tests, also re-wire the Playwright config to
+ * point at a backend (see playwright.config.cjs).
  */
 import { test, expect } from "@playwright/test";
 
@@ -84,6 +97,9 @@ test.describe("Move Note Between Tabs", () => {
     // We REPLACED the previous tautological assertion (count >= 0, always
     // true) with this honest skip + descriptive comment so the test suite
     // reflects what it actually covers. No-DOM no-op test is intentional.
-    test.skip(true, "editor-stays-mounted contract is enforced by data-testid={`editor-${activeNote.id}`} wiring in MainLayout.tsx — full E2E requires a seeded live backend; the contract test above does not have one.");
+    //
+    // The actual move-note coverage (including the new "Mover a..." menu) lives
+    // in the vitest integration tests — see the file header for the list.
+    test.skip(true, "editor-stays-mounted contract is enforced by data-testid={`editor-${activeNote.id}`} wiring in MainLayout.tsx — full E2E requires a seeded live backend; see vitest NoteList/MoveToTabMenu integration tests for the move-note coverage that DOES run in CI.");
   });
 });

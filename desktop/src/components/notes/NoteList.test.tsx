@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, act, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { NoteList } from "./NoteList";
 import type { Note, Tab } from "../../types";
 
@@ -186,14 +187,14 @@ describe("NoteList", () => {
 
   // ── Move-note DnD wiring ─────────────────────────────────────────────────
 
-  it("renders a drag handle for each note when onMoveNote is provided", () => {
+  it("renders a drag handle for each note when enableDrag is true", () => {
     render(
       <NoteList
         notes={mockNotes}
         activeNoteId={null}
         onNoteSelect={vi.fn()}
         onCreateNote={vi.fn()}
-        onMoveNote={vi.fn()}
+        enableDrag={true}
       />
     );
 
@@ -210,7 +211,7 @@ describe("NoteList", () => {
         activeNoteId={null}
         onNoteSelect={vi.fn()}
         onCreateNote={vi.fn()}
-        onMoveNote={vi.fn()}
+        enableDrag={true}
       />
     );
 
@@ -230,7 +231,7 @@ describe("NoteList", () => {
         activeNoteId={null}
         onNoteSelect={onNoteSelect}
         onCreateNote={vi.fn()}
-        onMoveNote={vi.fn()}
+        enableDrag={true}
       />
     );
 
@@ -239,7 +240,7 @@ describe("NoteList", () => {
     expect(onNoteSelect).not.toHaveBeenCalled();
   });
 
-  it("does not render drag handles when onMoveNote is not provided", () => {
+  it("does not render drag handles when enableDrag is false (or omitted)", () => {
     render(
       <NoteList
         notes={mockNotes}
@@ -346,7 +347,7 @@ describe("NoteList — drag handle gutter layout", () => {
         activeNoteId={null}
         onNoteSelect={vi.fn()}
         onCreateNote={vi.fn()}
-        onMoveNote={vi.fn()}
+        enableDrag={true}
       />
     );
 
@@ -362,7 +363,7 @@ describe("NoteList — drag handle gutter layout", () => {
         activeNoteId={null}
         onNoteSelect={vi.fn()}
         onCreateNote={vi.fn()}
-        onMoveNote={vi.fn()}
+        enableDrag={true}
       />
     );
 
@@ -454,5 +455,270 @@ describe("NoteList — favorite star button", () => {
 
     const favBtn = screen.getByRole("button", { name: /favorito/i });
     expect(favBtn).toHaveAttribute("aria-pressed", "true");
+  });
+});
+
+// ── "Mover a..." accessible menu (issue #9 explicit a11y criterion) ───────
+//
+// Closes the gap that the @dnd-kit KeyboardSensor alone did not satisfy:
+// "a discoverable, keyboard-operable alternative to drag-and-drop to move a
+// note between tabs." See PR #13 review.
+//
+// These tests run in CI via `pnpm vitest run` (jsdom, no backend) — they
+// REPLACE the false confidence of the skipping E2E for this flow.
+
+describe("NoteList — 'Mover a...' accessible menu", () => {
+  const tabsForMove: Tab[] = [
+    { id: "t1", name: "Trabajo", createdAt: "2024-01-01" },
+    { id: "t2", name: "Personal", createdAt: "2024-01-01" },
+    { id: "t3", name: "Proyectos", createdAt: "2024-01-01" },
+  ];
+
+  it("renders a 'Mover nota a otro espacio' trigger per note when onMoveToTab is provided", () => {
+    render(
+      <NoteList
+        notes={mockNotes}
+        tabs={tabsForMove}
+        activeNoteId={null}
+        onNoteSelect={vi.fn()}
+        onCreateNote={vi.fn()}
+        onMoveToTab={vi.fn()}
+      />
+    );
+
+    const triggers = screen.getAllByRole("button", { name: /mover nota a otro espacio/i });
+    expect(triggers).toHaveLength(2);
+  });
+
+  it("'Mover a...' trigger is a SIBLING of the select button (no nested <button>)", () => {
+    render(
+      <NoteList
+        notes={mockNotes}
+        tabs={tabsForMove}
+        activeNoteId={null}
+        onNoteSelect={vi.fn()}
+        onCreateNote={vi.fn()}
+        onMoveToTab={vi.fn()}
+      />
+    );
+
+    const selectBtn = screen.getByRole("button", { name: /React Hooks Guide/i });
+    const trigger = screen.getAllByRole("button", { name: /mover nota a otro espacio/i })[0];
+
+    // No descendant buttons inside the select button — guards against <button> inside <button>.
+    expect(selectBtn.querySelector("button")).toBeNull();
+    expect(selectBtn.contains(trigger)).toBe(false);
+    // Same parent = sibling relationship (mirrors the drag handle / favorite contract).
+    expect(trigger.parentElement).toBe(selectBtn.parentElement);
+  });
+
+  it("trigger declares aria-haspopup='dialog' to advertise it opens a dialog", () => {
+    render(
+      <NoteList
+        notes={mockNotes}
+        tabs={tabsForMove}
+        activeNoteId={null}
+        onNoteSelect={vi.fn()}
+        onCreateNote={vi.fn()}
+        onMoveToTab={vi.fn()}
+      />
+    );
+
+    const trigger = screen.getAllByRole("button", { name: /mover nota a otro espacio/i })[0];
+    expect(trigger).toHaveAttribute("aria-haspopup", "dialog");
+  });
+
+  it("does not render the 'Mover a...' trigger when onMoveToTab is not provided", () => {
+    render(
+      <NoteList
+        notes={mockNotes}
+        tabs={tabsForMove}
+        activeNoteId={null}
+        onNoteSelect={vi.fn()}
+        onCreateNote={vi.fn()}
+      />
+    );
+
+    expect(
+      screen.queryByRole("button", { name: /mover nota a otro espacio/i })
+    ).not.toBeInTheDocument();
+  });
+
+  it("clicking the trigger does NOT trigger onNoteSelect (event isolation)", () => {
+    const onNoteSelect = vi.fn();
+    render(
+      <NoteList
+        notes={[mockNotes[0]]}
+        tabs={tabsForMove}
+        activeNoteId={null}
+        onNoteSelect={onNoteSelect}
+        onCreateNote={vi.fn()}
+        onMoveToTab={vi.fn()}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /mover nota a otro espacio/i }));
+
+    expect(onNoteSelect).not.toHaveBeenCalled();
+  });
+
+  it("opening the menu shows all available tabs EXCEPT the note's current tab", async () => {
+    render(
+      <NoteList
+        notes={mockNotes} // both have tabId "t1" (Trabajo)
+        tabs={tabsForMove}
+        activeNoteId={null}
+        onNoteSelect={vi.fn()}
+        onCreateNote={vi.fn()}
+        onMoveToTab={vi.fn()}
+      />
+    );
+
+    fireEvent.click(screen.getAllByRole("button", { name: /mover nota a otro espacio/i })[0]);
+    await act(async () => {});
+
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: /personal/i })).toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: /proyectos/i })).toBeInTheDocument();
+    // Current tab "Trabajo" must NOT appear as an option.
+    expect(within(dialog).queryByRole("button", { name: /^trabajo$/i })).not.toBeInTheDocument();
+  });
+
+  it("selecting a tab calls onMoveToTab(noteId, tabId) with the right args", async () => {
+    const user = userEvent.setup();
+    const onMoveToTab = vi.fn();
+    render(
+      <NoteList
+        notes={mockNotes}
+        tabs={tabsForMove}
+        activeNoteId={null}
+        onNoteSelect={vi.fn()}
+        onCreateNote={vi.fn()}
+        onMoveToTab={onMoveToTab}
+      />
+    );
+
+    // Open the menu for the FIRST note (n1, tabId=t1)
+    await user.click(screen.getAllByRole("button", { name: /mover nota a otro espacio/i })[0]);
+    // Click "Personal" (t2) in the dialog
+    const dialog = screen.getByRole("dialog");
+    await user.click(within(dialog).getByRole("button", { name: /personal/i }));
+
+    expect(onMoveToTab).toHaveBeenCalledWith("n1", "t2");
+  });
+
+  it("Escape closes the menu without calling onMoveToTab", async () => {
+    const onMoveToTab = vi.fn();
+    render(
+      <NoteList
+        notes={mockNotes}
+        tabs={tabsForMove}
+        activeNoteId={null}
+        onNoteSelect={vi.fn()}
+        onCreateNote={vi.fn()}
+        onMoveToTab={onMoveToTab}
+      />
+    );
+
+    fireEvent.click(screen.getAllByRole("button", { name: /mover nota a otro espacio/i })[0]);
+    await act(async () => {});
+
+    const dialog = screen.getByRole("dialog");
+    await act(async () => {
+      dialog.dispatchEvent(
+        new Event("cancel", { bubbles: true, cancelable: true })
+      );
+    });
+
+    expect(onMoveToTab).not.toHaveBeenCalled();
+  });
+
+  // ── Keyboard-only flow (the whole point of issue #9) ───────────────────
+
+  it("keyboard flow: focus trigger → Enter opens → ArrowDown → Enter selects → onMoveToTab called", async () => {
+    const user = userEvent.setup();
+    const onMoveToTab = vi.fn();
+    render(
+      <NoteList
+        notes={mockNotes}
+        tabs={tabsForMove}
+        activeNoteId={null}
+        onNoteSelect={vi.fn()}
+        onCreateNote={vi.fn()}
+        onMoveToTab={onMoveToTab}
+      />
+    );
+
+    const trigger = screen.getAllByRole("button", { name: /mover nota a otro espacio/i })[0];
+    trigger.focus();
+    expect(trigger).toHaveFocus();
+
+    // Enter opens the menu
+    await user.keyboard("{Enter}");
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toBeInTheDocument();
+
+    // The dialog should have moved focus to the first option (Personal, t2).
+    const firstOption = within(dialog).getByRole("button", { name: /personal/i });
+    expect(firstOption).toHaveFocus();
+
+    // ArrowDown → next option (Proyectos, t3)
+    await user.keyboard("{ArrowDown}");
+    const secondOption = within(dialog).getByRole("button", { name: /proyectos/i });
+    expect(secondOption).toHaveFocus();
+
+    // Enter selects it
+    await user.keyboard("{Enter}");
+    expect(onMoveToTab).toHaveBeenCalledWith("n1", "t3");
+  });
+});
+
+// ── enableDrag rename (cleanup fix #3) ────────────────────────────────────
+//
+// `onMoveNote` (which was a truthy flag never invoked) is replaced by an
+// honest `enableDrag: boolean`. The drag handle's actual move logic stays
+// in MainLayout.handleDragEnd (DndContext onDragEnd) — unchanged.
+
+describe("NoteList — enableDrag rename", () => {
+  it("renders a drag handle when enableDrag is true", () => {
+    render(
+      <NoteList
+        notes={mockNotes}
+        activeNoteId={null}
+        onNoteSelect={vi.fn()}
+        onCreateNote={vi.fn()}
+        enableDrag={true}
+      />
+    );
+
+    expect(screen.getAllByTestId(/^note-handle-/)).toHaveLength(2);
+  });
+
+  it("does NOT render a drag handle when enableDrag is false", () => {
+    render(
+      <NoteList
+        notes={mockNotes}
+        activeNoteId={null}
+        onNoteSelect={vi.fn()}
+        onCreateNote={vi.fn()}
+        enableDrag={false}
+      />
+    );
+
+    expect(screen.queryByTestId(/^note-handle-/)).not.toBeInTheDocument();
+  });
+
+  it("does NOT render a drag handle when enableDrag is omitted (defaults to falsy)", () => {
+    render(
+      <NoteList
+        notes={mockNotes}
+        activeNoteId={null}
+        onNoteSelect={vi.fn()}
+        onCreateNote={vi.fn()}
+      />
+    );
+
+    expect(screen.queryByTestId(/^note-handle-/)).not.toBeInTheDocument();
   });
 });
