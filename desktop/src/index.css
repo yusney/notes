@@ -374,3 +374,22 @@ html {
 dialog::backdrop {
   background: rgba(0, 0, 0, 0.6);
 }
+
+/* ── Touch-only devices: hide the dnd-kit drag pickup handle (REQ-LAY-03) ──
+ *
+ * On `(hover: none)` the user has no hover affordance AND a touchstart
+ * would otherwise be swallowed by the pickup handle, blocking row
+ * selection. We hide the .drag-handle element entirely on touch screens
+ * and disable pointer events as a defense in depth.
+ *
+ * This is the CSS-gate choice documented in PR2's T2.14 commit body —
+ * Tailwind v4 has no built-in `(hover: none)` arbitrary variant shortcut
+ * that survives the post-CSS optimizer cleanly, so we use a plain media
+ * query that targets the explicit `.drag-handle` class.
+ */
+@media (hover: none) {
+  .drag-handle {
+    display: none !important;
+    pointer-events: none !important;
+  }
+}

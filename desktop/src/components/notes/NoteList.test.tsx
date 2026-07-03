@@ -722,3 +722,80 @@ describe("NoteList — enableDrag rename", () => {
     expect(screen.queryByTestId(/^note-handle-/)).not.toBeInTheDocument();
   });
 });
+
+// ── Drag handle hidden under (hover: none) — REQ-LAY-03 ──────────────────────
+//
+// On touch-only devices the dnd-kit pickup affordance must NOT be visible
+// AND must NOT capture pointer events. The handle uses CSS gating via a
+// `.drag-handle` class + a media query in `index.css`. We assert both:
+//   1. The rendered <button> carries the `.drag-handle` class so the CSS
+//      rule can target it.
+//   2. The CSS rule itself exists in `index.css` (jsdom doesn't compute
+//      media queries; the contract is the source file).
+
+describe("NoteList — drag handle touch affordance (REQ-LAY-03)", () => {
+  // Read index.css from disk for the second assertion.
+  // The NoteList.test.tsx already runs in node-types context (vitest
+  // includes `types: ["node"]` in tsconfig).
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const fs = require("fs") as typeof import("fs");
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const path = require("path") as typeof import("path");
+
+  it("drag handle has the .drag-handle class so the CSS gate can target it", () => {
+    render(
+      <NoteList
+        notes={mockNotes}
+        activeNoteId={null}
+        onNoteSelect={vi.fn()}
+        onCreateNote={vi.fn()}
+        enableDrag={true}
+      />
+    );
+
+    const handle = screen.getByTestId("note-handle-n1");
+    expect(handle.className).toMatch(/\bdrag-handle\b/);
+  });
+
+  it("index.css declares a (hover: none) media query that hides .drag-handle", () => {
+    const cssPath = path.resolve(__dirname, "../../index.css");
+    const css = fs.readFileSync(cssPath, "utf-8");
+
+    // The CSS rule must (a) target `.drag-handle`, (b) be inside a
+    // `@media (hover: none)` block, and (c) hide it (display: none /
+    // visibility: hidden) AND prevent it from swallowing touches
+    // (pointer-events: none).
+    const mediaBlock = css.match(
+      /@media\s*\(\s*hover\s*:\s*none\s*\)\s*\{[\s\S]*?\}\s*\}/i
+    );
+    expect(mediaBlock, "missing @media (hover: none) block in index.css").not.toBeNull();
+
+    const block = mediaBlock![0];
+    expect(block).toMatch(/\.drag-handle\b/);
+    expect(block).toMatch(/display\s*:\s*none/i);
+    expect(block).toMatch(/pointer-events\s*:\s*none/i);
+  });
+
+  it("non-touch (mouse) devices still see the drag handle (no false positive)", () => {
+    // This is the inverse of the touch-gate test. We don't mock matchMedia
+    // here — jsdom's default matchMedia mock from test-setup.ts already
+    // returns matches:false for any query, which is the (hover: hover)
+    // desktop case. The handle must still render and carry .drag-handle.
+    render(
+      <NoteList
+        notes={mockNotes}
+        activeNoteId={null}
+        onNoteSelect={vi.fn()}
+        onCreateNote={vi.fn()}
+        enableDrag={true}
+      />
+    );
+
+    const handle = screen.getByTestId("note-handle-n1");
+    expect(handle).toBeInTheDocument();
+    expect(handle.className).toMatch(/\bdrag-handle\b/);
+    // The handle must keep its base hover-affordance classes — the gate is
+    // additive, not a replacement.
+    expect(handle.className).toMatch(/\bgroup-hover:opacity-100\b/);
+  });
+});
