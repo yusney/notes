@@ -47,7 +47,10 @@ mod tests {
     static COUNTER: AtomicU64 = AtomicU64::new(0);
 
     /// Build a brand-new Stronghold instance backed by a unique temp file
-    /// so tests don't share state.
+    /// so tests don't share state. The password must be exactly 32 bytes
+    /// because the underlying `KeyProvider::try_from` uses `NCKey::load`,
+    /// which only accepts 32-byte keys (matches the upstream
+    /// `iota_stronghold::security::keyprovider` unit test).
     fn fresh_stronghold() -> Stronghold {
         let n = COUNTER.fetch_add(1, Ordering::SeqCst);
         let tmp = env::temp_dir().join(format!(
@@ -61,8 +64,10 @@ mod tests {
         ));
         // `Stronghold::new` errors if a snapshot already exists at the path.
         let _ = std::fs::remove_file(&tmp);
-        Stronghold::new(tmp, b"unit-test-password".to_vec())
-            .expect("failed to construct test Stronghold")
+        // 32 zero bytes — same shape as the iota_stronghold keyprovider test
+        // (`std::iter::repeat(6).take(32)`).
+        let password = vec![0xA5_u8; 32];
+        Stronghold::new(tmp, password).expect("failed to construct test Stronghold")
     }
 
     #[test]
