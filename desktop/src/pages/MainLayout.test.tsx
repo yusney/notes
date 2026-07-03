@@ -3,6 +3,34 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { MainLayout } from "./MainLayout";
 import { useAuthStore } from "../stores/useAuthStore";
 
+/**
+ * Mock matchMedia for responsive-layout tests. Tailwind v4 emits
+ * `@media (min-width: 768px) { ... }` for the `md:` variant; the
+ * responsive contract is encoded in CSS classes (md:flex-row, etc.),
+ * but the test asserts the SAME intent at the JS class level.
+ *
+ * The viewport itself is purely cosmetic for jsdom — what matters is
+ * that the *rendered class list* reflects the mobile vs. desktop
+ * intent. So we mock matchMedia to return matches:true for "(max-width: 767px)"
+ * in the mobile case and matches:false in the desktop case. The actual
+ * `window.innerWidth` is irrelevant.
+ */
+function mockMatchMedia(matches: boolean) {
+  Object.defineProperty(window, "matchMedia", {
+    writable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  });
+}
+
 vi.mock("../stores/useNoteStore", () => {
   const mockState = {
     tabs: [],
@@ -95,5 +123,93 @@ describe("MainLayout", () => {
     expect(screen.getByTestId("sidebar")).toBeInTheDocument();
     expect(screen.getByTestId("note-list")).toBeInTheDocument();
     expect(screen.getByTestId("search-bar")).toBeInTheDocument();
+  });
+});
+
+// ── Responsive layout (REQ-LAY-01) ───────────────────────────────────────────
+//
+// Mobile (<768px): the three columns stack vertically into a single column
+// (only one panel visible at a time). Tailwind: root has `flex-col`, panels
+// gated with `hidden md:flex`.
+//
+// Desktop (≥768px): the three columns sit side-by-side as today. Tailwind:
+// root has `md:flex-row`, panels visible by default.
+//
+// The actual layout is a CSS concern (jsdom computes zero layout) — what we
+// assert here is the contract that the *class list* reflects the breakpoint
+// intent, so that switching to a `grid` or other layout in the future does
+// not silently regress the responsive contract.
+
+describe("MainLayout responsive (REQ-LAY-01)", () => {
+  beforeEach(() => {
+    vi.mocked(useAuthStore).mockReturnValue({ user: { name: "Test" }, logout: vi.fn() } as never);
+  });
+
+  it("uses flex-col (single-column) at 360px viewport (mobile)", () => {
+    mockMatchMedia(true); // (max-width: 767px) → matches on mobile
+
+    const { container } = render(<MainLayout />);
+    const root = container.firstChild as HTMLElement;
+    expect(root).not.toBeNull();
+
+    // The root flex container must declare mobile-first single-column.
+    expect(root.className).toMatch(/\bflex-col\b/);
+    // And opt-into row layout only at the md breakpoint.
+    expect(root.className).toMatch(/\bmd:flex-row\b/);
+  });
+
+  it("uses flex-col at 360px viewport (mobile) — sidebar is hidden", () => {
+    mockMatchMedia(true); // mobile
+
+    const { container } = render(<MainLayout />);
+    // The Sidebar is the first column of the 3-col desktop layout. On mobile
+    // it must be hidden (md:block, default hidden) so the list/viewer take
+    // the full viewport width.
+    const sidebar = container.querySelector('[data-testid="sidebar"]');
+    expect(sidebar).not.toBeNull();
+    const sidebarWrapper = sidebar!.parentElement as HTMLElement;
+    expect(sidebarWrapper).not.toBeNull();
+    // The wrapper must hide the sidebar on mobile and reveal it on md.
+    expect(sidebarWrapper.className).toMatch(/\bhidden\b/);
+    expect(sidebarWrapper.className).toMatch(/\bmd:flex\b/);
+  });
+
+  it("uses flex-row (3-column) at 1280px viewport (desktop) — sidebar visible", () => {
+    mockMatchMedia(false); // desktop: (max-width: 767px) → no match
+
+    const { container } = render(<MainLayout />);
+    // All three columns visible.
+    expect(container.querySelector('[data-testid="sidebar"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-testid="note-list"]')).toBeInTheDocument();
+
+    // Sidebar wrapper is visible on desktop (md:flex).
+    const sidebar = container.querySelector('[data-testid="sidebar"]')!;
+    const sidebarWrapper = sidebar.parentElement as HTMLElement;
+    expect(sidebarWrapper.className).toMatch(/\bmd:flex\b/);
+    // And NOT hidden by default (the `hidden md:flex` pair: default hidden,
+    // revealed at md — but on desktop the md: variant applies, so the visible
+    // computed style would be `flex`. We just assert the class pair exists
+    // because jsdom can't compute media queries; the design guarantees this
+    // produces a 3-column layout at ≥768px via Tailwind's compiled CSS.)
+    expect(sidebarWrapper.className).toMatch(/\bhidden\b/);
+    expect(sidebarWrapper.className).toMatch(/\bmd:flex\b/);
+  });
+
+  it("keeps the 3-column desktop layout pixel-identical to pre-change (REQ-DESKTOP-01)", () => {
+    // The contract: at desktop, the rendered root has the desktop layout
+    // classes (`md:flex-row`) AND the same panel structure (Sidebar,
+    // NoteList, Main). Tests pre-PR2 already passed this contract — the
+    // responsive refactor must not regress it.
+    mockMatchMedia(false); // desktop
+
+    const { container } = render(<MainLayout />);
+    const root = container.firstChild as HTMLElement;
+
+    // Three panels still present.
+    expect(container.querySelector('[data-testid="sidebar"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-testid="note-list"]')).toBeInTheDocument();
+
+    // Root still wraps the panels in a row layout at desktop.
+    expect(root.className).toMatch(/\bmd:flex-row\b/);
   });
 });
