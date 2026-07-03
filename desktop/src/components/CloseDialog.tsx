@@ -15,6 +15,13 @@ export function CloseDialog() {
 
   // eslint-disable-next-line react-doctor/effect-needs-cleanup, react-doctor/exhaustive-deps -- Tauri listen() is async; cleanup via unlistenRef; empty deps intentional (runs once)
   useEffect(() => {
+    // No-op when not running inside a Tauri WebView (plain browser, tests).
+    // Without this guard, getCurrentWindow() throws on __TAURI_INTERNALS__
+    // and React swallows the render, showing a black screen.
+    if (typeof (window as Window & { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__ === "undefined") {
+      return;
+    }
+
     const appWindow = getCurrentWindow();
     let active = true;
 
