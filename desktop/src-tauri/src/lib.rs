@@ -7,21 +7,54 @@ use tauri_plugin_stronghold::stronghold::Stronghold;
 
 mod vault;
 
+// 32-byte key required by iota_stronghold's KeyProvider (NCKey::load).
+// Embedded in the binary — acceptable for v1.0 single-user desktop/mobile.
+// Machine-specific keying is a v1.1 hardening task.
+const VAULT_PASSWORD: [u8; 32] = [0xA5; 32];
+
+/// Lazily creates and manages the `Stronghold` vault on first access.
+///
+/// We deliberately do NOT register `tauri_plugin_stronghold` as a Tauri
+/// plugin (its `register()` manages `StrongholdCollection` + password-hash
+/// fn, not a single `Stronghold` instance). Instead, we instantiate
+/// `Stronghold` directly and manage it via `app.manage()` on first use.
+/// This avoids a setup-vs-frontend race: the webview can start loading
+/// before `setup()` finishes, and `app.state::<Stronghold>()` would panic
+/// if the state isn't ready yet.
+fn get_stronghold(app: &tauri::AppHandle) -> Result<&Stronghold, String> {
+    if let Some(state) = app.try_state::<Stronghold>() {
+        return Ok(state.inner());
+    }
+    let snapshot_path = app
+        .path()
+        .app_local_data_dir()
+        .map_err(|e| format!("resolve app_local_data_dir: {e}"))?
+        .join("stronghold.hold");
+    if let Some(parent) = snapshot_path.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| format!("create vault dir: {e}"))?;
+    }
+    let sh = Stronghold::new(&snapshot_path, VAULT_PASSWORD.to_vec())
+        .map_err(|e| format!("init stronghold: {e}"))?;
+    app.manage(sh);
+    Ok(app
+        .try_state::<Stronghold>()
+        .ok_or_else(|| "failed to manage Stronghold".to_string())?
+        .inner())
+}
+
 /// Saves the refresh token in the encrypted Stronghold vault.
-/// Wraps `vault::vault_save` with the standard key and uses the `Stronghold`
-/// instance managed by `tauri-plugin-stronghold` in app state.
 #[tauri::command]
 fn save_token(app: tauri::AppHandle, token: String) -> Result<(), String> {
-    let sh = app.state::<Stronghold>();
-    vault::vault_save(sh.inner(), vault::VAULT_KEY_REFRESH_TOKEN, &token)
+    let sh = get_stronghold(&app)?;
+    vault::vault_save(sh, vault::VAULT_KEY_REFRESH_TOKEN, &token)
 }
 
 /// Loads the refresh token from the encrypted Stronghold vault.
 /// Returns `None` if no token has been persisted yet.
 #[tauri::command]
 fn load_token(app: tauri::AppHandle) -> Result<Option<String>, String> {
-    let sh = app.state::<Stronghold>();
-    vault::vault_load(sh.inner(), vault::VAULT_KEY_REFRESH_TOKEN)
+    let sh = get_stronghold(&app)?;
+    vault::vault_load(sh, vault::VAULT_KEY_REFRESH_TOKEN)
         .map(|opt| opt.and_then(|b| String::from_utf8(b).ok()))
 }
 
@@ -29,8 +62,8 @@ fn load_token(app: tauri::AppHandle) -> Result<Option<String>, String> {
 /// Idempotent — never errors on a missing entry.
 #[tauri::command]
 fn delete_token(app: tauri::AppHandle) -> Result<(), String> {
-    let sh = app.state::<Stronghold>();
-    vault::vault_delete(sh.inner(), vault::VAULT_KEY_REFRESH_TOKEN)
+    let sh = get_stronghold(&app)?;
+    vault::vault_delete(sh, vault::VAULT_KEY_REFRESH_TOKEN)
 }
 
 /// Called by the frontend when the user chooses "Minimize to tray".
@@ -81,19 +114,8 @@ pub fn run() {
             exit_app
         ])
         .setup(move |app| {
-            // Register the Stronghold encrypted vault. The plugin writes its
-            // argon2 salt to a sidecar file in app_local_data_dir; the
-            // resulting Stronghold instance lives in app state and is later
-            // retrieved by the `save_token` / `load_token` / `delete_token`
-            // commands via `app.state::<Stronghold>()`.
-            let salt_path = app
-                .path()
-                .app_local_data_dir()
-                .map_err(|e| format!("resolve app_local_data_dir: {e}"))?
-                .join("salt.txt");
-            app.handle().plugin(
-                tauri_plugin_stronghold::Builder::with_argon2(&salt_path).build(),
-            )?;
+            // Stronghold vault is lazily initialised by `get_stronghold()` on
+            // first command invocation — no eager registration needed here.
 
             // Register deep-link schemes so `notes://...` opens this executable.
             // macOS handles this via Info.plist (no manual registration needed).
