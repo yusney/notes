@@ -44,7 +44,9 @@
     "copyright": "© 2026 Yusney Martínez Duque",
     "android": {
       "minSdkVersion": 30,
-      "versionCode": 1
+      "versionCode": 1,
+      "autoIncrementVersionCode": false,
+      "debugApplicationIdSuffix": ".debug"
     }
   },
   "plugins": {
