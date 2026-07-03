@@ -137,10 +137,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const user = await fetchProfile(data.accessToken);
       if (!user) throw new Error("No se pudo obtener el perfil del usuario");
 
-      if (rememberMe && data.refreshToken) {
-        await persistToken(data.refreshToken);
-      } else {
-        await clearToken();
+      // Token persistence is a desktop/mobile-only feature (Tauri stronghold
+      // vault). On plain browser dev the invoke() throws — we swallow it so
+      // login still succeeds in memory; the session won't survive a reload
+      // in browser, which is acceptable for dev.
+      try {
+        if (rememberMe && data.refreshToken) {
+          await persistToken(data.refreshToken);
+        } else {
+          await clearToken();
+        }
+      } catch {
+        // ignore — session lives in memory only
       }
 
       set({
@@ -168,10 +176,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const user = await fetchProfile(data.accessToken);
       if (!user) throw new Error("No se pudo obtener el perfil del usuario");
 
-      if (rememberMe && data.refreshToken) {
-        await persistToken(data.refreshToken);
-      } else {
-        await clearToken();
+      try {
+        if (rememberMe && data.refreshToken) {
+          await persistToken(data.refreshToken);
+        } else {
+          await clearToken();
+        }
+      } catch {
+        // ignore — same browser-dev caveat as in login()
       }
 
       set({
@@ -196,7 +208,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const user = await fetchProfile(accessToken);
       if (!user) throw new Error("No se pudo obtener el perfil del usuario");
 
-      await persistToken(refreshToken);
+      try {
+        await persistToken(refreshToken);
+      } catch {
+        // ignore — same browser-dev caveat as in login()
+      }
 
       set({
         user,

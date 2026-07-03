@@ -241,4 +241,32 @@ describe("useAuthStore", () => {
       vi.doUnmock("@tauri-apps/api/core");
     });
   });
+
+  describe("login without Tauri runtime", () => {
+    it("succeeds even when persistToken/clearToken throw (browser/jsdom dev mode)", async () => {
+      const mockTokens = { accessToken: "access-789", refreshToken: "refresh-789" };
+      const mockProfile = { id: "2", email: "browser@test.com", displayName: "Browser User" };
+
+      global.fetch = vi.fn()
+        .mockResolvedValueOnce({ ok: true, status: 200, json: async () => mockTokens })
+        .mockResolvedValueOnce({ ok: true, status: 200, json: async () => mockProfile });
+
+      vi.doMock("@tauri-apps/api/core", () => ({
+        invoke: vi.fn().mockRejectedValue(new Error("__TAURI_INTERNALS__ is not defined")),
+      }));
+      const { useAuthStore: storeWithoutTauri } = await import("./useAuthStore");
+
+      const { result } = renderHook(() => storeWithoutTauri());
+
+      await act(async () => {
+        await result.current.login("browser@test.com", "BrowserPass123!", true);
+      });
+
+      // Login must complete in memory even though stronghold persistence throws.
+      expect(result.current.isAuthenticated).toBe(true);
+      expect(result.current.accessToken).toBe("access-789");
+      expect(result.current.user?.email).toBe("browser@test.com");
+      vi.doUnmock("@tauri-apps/api/core");
+    });
+  });
 });
