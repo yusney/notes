@@ -3,38 +3,34 @@ use std::sync::{
     Arc,
 };
 use tauri::{Emitter, Manager, RunEvent, WindowEvent};
+use tauri_plugin_stronghold::stronghold::Stronghold;
 
 mod vault;
 
-const SERVICE: &str = "dev.donduque.notes";
-const ACCOUNT: &str = "refresh_token";
-
-fn keyring() -> KeyringStore {
-    KeyringStore::new(SERVICE)
+/// Saves the refresh token in the encrypted Stronghold vault.
+/// Wraps `vault::vault_save` with the standard key and uses the `Stronghold`
+/// instance managed by `tauri-plugin-stronghold` in app state.
+#[tauri::command]
+fn save_token(app: tauri::AppHandle, token: String) -> Result<(), String> {
+    let sh = app.state::<Stronghold>();
+    vault::vault_save(sh.inner(), vault::VAULT_KEY_REFRESH_TOKEN, &token)
 }
 
-/// Saves the refresh token in the OS keychain.
-/// macOS → Keychain, Windows → Credential Manager, Linux → Secret Service
+/// Loads the refresh token from the encrypted Stronghold vault.
+/// Returns `None` if no token has been persisted yet.
 #[tauri::command]
-fn save_token(token: String) -> Result<(), String> {
-    keyring().set_password(ACCOUNT, &token).map_err(|e| e.to_string())
+fn load_token(app: tauri::AppHandle) -> Result<Option<String>, String> {
+    let sh = app.state::<Stronghold>();
+    vault::vault_load(sh.inner(), vault::VAULT_KEY_REFRESH_TOKEN)
+        .map(|opt| opt.and_then(|b| String::from_utf8(b).ok()))
 }
 
-/// Loads the refresh token from the OS keychain.
-/// Returns None if no token is stored yet.
+/// Deletes the refresh token from the encrypted Stronghold vault.
+/// Idempotent — never errors on a missing entry.
 #[tauri::command]
-fn load_token() -> Result<Option<String>, String> {
-    keyring().get_password(ACCOUNT).map_err(|e| e.to_string())
-}
-
-/// Deletes the refresh token from the OS keychain (called on logout).
-#[tauri::command]
-fn delete_token() -> Result<(), String> {
-    match keyring().delete(ACCOUNT) {
-        Ok(_) => Ok(()),
-        Err(e) if e.to_string().contains("No credential") => Ok(()),
-        Err(e) => Err(e.to_string()),
-    }
+fn delete_token(app: tauri::AppHandle) -> Result<(), String> {
+    let sh = app.state::<Stronghold>();
+    vault::vault_delete(sh.inner(), vault::VAULT_KEY_REFRESH_TOKEN)
 }
 
 /// Called by the frontend when the user chooses "Minimize to tray".
@@ -85,6 +81,20 @@ pub fn run() {
             exit_app
         ])
         .setup(move |app| {
+            // Register the Stronghold encrypted vault. The plugin writes its
+            // argon2 salt to a sidecar file in app_local_data_dir; the
+            // resulting Stronghold instance lives in app state and is later
+            // retrieved by the `save_token` / `load_token` / `delete_token`
+            // commands via `app.state::<Stronghold>()`.
+            let salt_path = app
+                .path()
+                .app_local_data_dir()
+                .map_err(|e| format!("resolve app_local_data_dir: {e}"))?
+                .join("salt.txt");
+            app.handle().plugin(
+                tauri_plugin_stronghold::Builder::with_argon2(&salt_path).build(),
+            )?;
+
             // Register deep-link schemes so `notes://...` opens this executable.
             // macOS handles this via Info.plist (no manual registration needed).
             #[cfg(any(target_os = "linux", target_os = "windows"))]
