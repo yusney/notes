@@ -41,7 +41,11 @@
     ],
     "publisher": "Yusney Martínez Duque",
     "homepage": "https://donduque.dev/",
-    "copyright": "© 2026 Yusney Martínez Duque"
+    "copyright": "© 2026 Yusney Martínez Duque",
+    "android": {
+      "minSdkVersion": 30,
+      "versionCode": 1
+    }
   },
   "plugins": {
     "deep-link": {
