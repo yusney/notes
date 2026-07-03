@@ -10,7 +10,7 @@ import { Table } from "@tiptap/extension-table";
 import { TableRow } from "@tiptap/extension-table-row";
 import { TableCell } from "@tiptap/extension-table-cell";
 import { TableHeader } from "@tiptap/extension-table-header";
-import { all, createLowlight } from "lowlight";
+import { createLazyLowlight, discoverAndRegisterGrammars } from "./grammarLoader";
 import type { Note } from "../../types";
 import type { NodeViewProps } from "@tiptap/react";
 import { ShareDialog } from "../share/ShareDialog";
@@ -21,7 +21,11 @@ import { ShareDialog } from "../share/ShareDialog";
  */
 export const MOBILE_MAX_PX = 767;
 
-const lowlight = createLowlight(all);
+// REQ-GRMR-01: lazy grammar loading. The lowlight instance starts with
+// ZERO grammars registered; grammars are pulled into the active
+// instance the first time a code block of that language is encountered
+// (see discoverAndRegisterGrammars in grammarLoader.ts).
+const lowlight = createLazyLowlight();
 
 function CodeBlockCopyButton({ node }: Pick<NodeViewProps, "node">) {
   const [copied, setCopied] = useState(false);
@@ -127,6 +131,21 @@ export function NoteViewer({ note, onEdit, readOnly = true }: NoteViewerProps) {
     editable: !effectiveReadOnly,
     immediatelyRender: false,
   });
+
+  // Lazy grammar discovery — fires on every editor update so freshly
+  // inserted code blocks register their grammar before TipTap's
+  // renderer asks `lowlight.highlight(language, value)`. Also runs
+  // once on initial mount (via the same effect on `viewer`).
+  useEffect(() => {
+    if (!viewer) return;
+    discoverAndRegisterGrammars(viewer, lowlight);
+    if (typeof viewer.on !== "function") return;
+    const onUpdate = () => discoverAndRegisterGrammars(viewer, lowlight);
+    viewer.on("update", onUpdate);
+    return () => {
+      viewer.off("update", onUpdate);
+    };
+  }, [viewer]);
 
   useEffect(() => {
     viewer?.commands.setContent(note.content, { emitUpdate: false });

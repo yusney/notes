@@ -11,7 +11,7 @@ import { TableRow } from "@tiptap/extension-table-row";
 import { TableCell } from "@tiptap/extension-table-cell";
 import { TableHeader } from "@tiptap/extension-table-header";
 import { Markdown } from "tiptap-markdown";
-import { all, createLowlight } from "lowlight";
+import { createLazyLowlight, discoverAndRegisterGrammars } from "./grammarLoader";
 import { useAutoSave, type SaveStatus } from "../../hooks/useAutoSave";
 import type { Note, Tag } from "../../types";
 import { TagInput } from "../notes/TagInput";
@@ -20,7 +20,11 @@ import { formatCodeBlock } from "./CodeFormatter";
 import type { SupportedFormatLang } from "./CodeFormatter";
 import { countEditorStats } from "./countEditorStats";
 
-const lowlight = createLowlight(all);
+// REQ-GRMR-01: lazy grammar loading — the editor (desktop) follows the
+// same contract as the viewer. The lowlight instance starts empty and
+// registers grammars on demand when the editor hits a code block of
+// that language (discoverAndRegisterGrammars).
+const lowlight = createLazyLowlight();
 
 const CodeBlockTabExtension = Extension.create({
   name: "codeBlockTab",
@@ -301,6 +305,20 @@ export function NoteEditor({ note, availableTags = EMPTY_TAGS, onSave, onSaveAnd
     dispatch({ type: "sync-note", note });
     editor?.commands.setContent(note.content, { emitUpdate: false });
   }, [editor, note]);
+
+  // REQ-GRMR-01: lazy grammar discovery on every editor mount / update
+  // — same hook as NoteViewer. Cheap no-op for editors that never hit a
+  // fenced code block.
+  useEffect(() => {
+    if (!editor) return;
+    discoverAndRegisterGrammars(editor, lowlight);
+    if (typeof editor.on !== "function") return;
+    const onUpdate = () => discoverAndRegisterGrammars(editor, lowlight);
+    editor.on("update", onUpdate);
+    return () => {
+      editor.off("update", onUpdate);
+    };
+  }, [editor]);
 
   /** Always read from the live editor when available — avoids stale React state on fast saves. */
   function getCurrentContent() {

@@ -162,7 +162,13 @@ describe("REQ-GRMR-01 — lazy grammar loading", () => {
       ensureGrammarRegistered: (lowlight: unknown, lang: string) => Promise<void>;
       createLazyLowlight: () => unknown;
     };
-    const lowlight = grammarLoader.createLazyLowlight() as unknown as MockedLowlight;
+
+    // Build the mock lowlight directly — NOT through grammarLoader.createLazyLowlight()
+    // so that we can pass a real MockedLowlight (with vi.fn register that
+    // tracks calls) into ensureGrammarRegistered. This isolates the test
+    // to the grammar registration contract and avoids coupling to how
+    // createLazyLowlight is implemented internally.
+    const lowlight = createMockLowlight() as unknown as MockedLowlight;
     await grammarLoader.ensureGrammarRegistered(lowlight, "rust");
     expect(lowlight.register).toHaveBeenCalledTimes(1);
     expect(lowlight.register).toHaveBeenCalledWith(
@@ -177,7 +183,7 @@ describe("REQ-GRMR-01 — lazy grammar loading", () => {
       ensureGrammarRegistered: (lowlight: unknown, lang: string) => Promise<void>;
       createLazyLowlight: () => unknown;
     };
-    const lowlight = grammarLoader.createLazyLowlight() as unknown as MockedLowlight;
+    const lowlight = createMockLowlight() as unknown as MockedLowlight;
     await grammarLoader.ensureGrammarRegistered(lowlight, "rust");
     await grammarLoader.ensureGrammarRegistered(lowlight, "rust");
     expect(lowlight.register).toHaveBeenCalledTimes(1);
