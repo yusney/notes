@@ -1,0 +1,99 @@
+name: Tauri Android Build
+
+# Gating: only runs on `v*.*.*` tags OR manual dispatch. Never on push
+# to a feature branch and never on a PR — the Android toolchain
+# install is heavy (~6-8 min on Ubuntu) and we don't want to burn
+# CI minutes on every commit. Per the orchestrator's T3.27 spec, this
+# is the right shape for the v1.0 build gate.
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+
+# Cancel any in-flight Android build for the same ref when a new
+# commit lands on the same tag — saves minutes on retag pipelines.
+concurrency:
+  group: tauri-android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tauri-android:
+    name: Tauri Android (debug APK)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      # Same API base URL the desktop build uses (see release.yml).
+      VITE_API_BASE_URL: "https://notes-api.donduque.dev"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+          cache-dependency-path: desktop/pnpm-lock.yaml
+
+      - name: Install JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: |
+            platforms;android-34
+            build-tools;34.0.0
+            platform-tools
+            ndk;26.1.10909125
+          cmdline-tools: latest
+
+      - name: Install Rust (stable + Android targets)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
+
+      - name: Cache Rust build artifacts
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "desktop/src-tauri -> target"
+
+      - name: Install frontend dependencies
+        working-directory: desktop
+        run: pnpm install --frozen-lockfile
+
+      - name: Initialize Android target
+        working-directory: desktop
+        # The android init step materializes src-tauri/gen/android/.
+        # --ci flag avoids the interactive prompts. Runs only if the
+        # gen/ folder isn't already present (idempotent across CI
+        # reruns on the same image).
+        run: |
+          if [ ! -d src-tauri/gen/android ]; then
+            pnpm tauri android init --ci
+          else
+            echo "Android target already initialized — skipping tauri android init."
+          fi
+
+      - name: Build debug APK
+        working-directory: desktop
+        run: pnpm tauri android build --debug
+
+      - name: Upload APK as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: notes-android-debug-apk
+          path: desktop/src-tauri/gen/android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 14
