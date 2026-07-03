@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { EditorContent, useEditor, ReactNodeViewRenderer, NodeViewWrapper, NodeViewContent } from "@tiptap/react";
 import { StarterKit } from "@tiptap/starter-kit";
 import { CodeBlockLowlight } from "@tiptap/extension-code-block-lowlight";
@@ -13,6 +14,12 @@ import { all, createLowlight } from "lowlight";
 import type { Note } from "../../types";
 import type { NodeViewProps } from "@tiptap/react";
 import { ShareDialog } from "../share/ShareDialog";
+
+/**
+ * Mobile breakpoint (matches Tailwind `md:`). Exported so unit tests can
+ * reuse the same constant if they need to compute viewports.
+ */
+export const MOBILE_MAX_PX = 767;
 
 const lowlight = createLowlight(all);
 
@@ -67,14 +74,57 @@ const viewerExtensions = [
 interface NoteViewerProps {
   note: Note;
   onEdit: () => void;
+  /**
+   * Force the TipTap editor into read-only mode. Defaults to `true` to
+   * preserve the original viewer behavior — the viewer is read-only by
+   * design (mobile v1.0 is read-only per REQ-VIEW-01 / spec scope).
+   *
+   * On a touch viewport (max-width: 767px) we ALWAYS force read-only
+   * regardless of this prop, because the v1.0 mobile UX is read-only.
+   * Desktop callers can opt-in to editable if needed (currently no
+   * caller does — the desktop editor uses the separate NoteEditor).
+   */
+  readOnly?: boolean;
 }
 
-export function NoteViewer({ note, onEdit }: NoteViewerProps) {
+/**
+ * `useIsMobile` — minimal matchMedia hook returning `true` when the
+ * viewport is at or below the mobile breakpoint. Re-renders on change.
+ */
+function useIsMobile(): boolean {
+  const [isMobile, setIsMobile] = useState<boolean>(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return false;
+    return window.matchMedia(`(max-width: ${MOBILE_MAX_PX}px)`).matches;
+  });
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return;
+    const mql = window.matchMedia(`(max-width: ${MOBILE_MAX_PX}px)`);
+    const onChange = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    if (mql.addEventListener) mql.addEventListener("change", onChange);
+    else mql.addListener(onChange);
+    return () => {
+      if (mql.removeEventListener) mql.removeEventListener("change", onChange);
+      else mql.removeListener(onChange);
+    };
+  }, []);
+  return isMobile;
+}
+
+export function NoteViewer({ note, onEdit, readOnly = true }: NoteViewerProps) {
   const [shareOpen, setShareOpen] = useState(false);
+  const navigate = useNavigate();
+  const isMobile = useIsMobile();
+
+  // Force read-only on mobile regardless of the prop — v1.0 mobile UX
+  // is read-only per REQ-VIEW-01 and spec scope ("mobile editor deferred
+  // to v1.1"). This is the strongest invariant for S7 (no editor
+  // surface on the back-nav target).
+  const effectiveReadOnly = readOnly || isMobile;
+
   const viewer = useEditor({
     extensions: viewerExtensions,
     content: note.content,
-    editable: false,
+    editable: !effectiveReadOnly,
     immediatelyRender: false,
   });
 
@@ -85,7 +135,24 @@ export function NoteViewer({ note, onEdit }: NoteViewerProps) {
   return (
     <div className="flex h-full flex-col overflow-hidden bg-surface">
       <div className="flex shrink-0 items-center justify-between border-b border-border bg-surface-elevated px-6 py-4">
-        <h1 className="min-w-0 truncate text-xl font-semibold text-text-primary">{note.title}</h1>
+        <div className="flex min-w-0 items-center gap-2">
+          {/* Mobile-only back chevron — visible only at max-width:767px.
+              Uses react-router `navigate(-1)` so the prior list route
+              keeps its scrollTop (S7 — applied by NoteList via
+              location.state.scrollY in a useLayoutEffect). */}
+          {isMobile && (
+            <button
+              type="button"
+              data-testid="mobile-back-button"
+              aria-label="Volver a la lista"
+              onClick={() => navigate(-1)}
+              className="shrink-0 rounded p-1 text-text-secondary transition-colors hover:bg-surface hover:text-text-primary"
+            >
+              <span aria-hidden="true" className="text-lg leading-none">←</span>
+            </button>
+          )}
+          <h1 className="min-w-0 truncate text-xl font-semibold text-text-primary">{note.title}</h1>
+        </div>
         <div className="ml-4 flex shrink-0 gap-2">
           <button
             type="button"
