@@ -19,12 +19,20 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = ["tray-icon"] }
+# Default — no desktop-only features. The tray-icon feature is added back
+# per-target below so it is compiled out on Android.
+tauri = { version = "2", features = [] }
+tauri-plugin-stronghold = "2"
 tauri-plugin-opener = "2"
 tauri-plugin-deep-link = "2"
-tauri-plugin-keyring-store = "0.1"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+
+# Desktop-only: re-declare tauri with the tray-icon feature.
+# Cargo features are additive — once declared, they cannot be retroactively
+# removed from a single target, so the cleanest gate is a per-target re-decl.
+[target.'cfg(not(target_os = "android"))'.dependencies]
+tauri = { version = "2", features = ["tray-icon"] }
 
 [target."cfg(any(target_os = \"macos\", windows, target_os = \"linux\"))".dependencies]
 tauri-plugin-single-instance = { version = "2", features = ["deep-link"] }
