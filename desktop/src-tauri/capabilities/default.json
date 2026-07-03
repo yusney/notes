@@ -8,6 +8,7 @@
     "core:event:default",
     "deep-link:default",
     "opener:default",
+    "stronghold:default",
     "core:window:allow-set-focus"
   ]
 }
