@@ -269,6 +269,9 @@ function NoteRow({
         // SIBLING of the select button. Sits in its own left gutter column —
         // not absolutely positioned over the card. stopPropagation isolates
         // pointer/keyboard events so the parent <button> doesn't fire onNoteSelect.
+        // The `.drag-handle` class is the CSS hook for the (hover: none) gate
+        // in `src/index.css` — on touch-only devices the handle is hidden AND
+        // non-interactive, satisfying REQ-LAY-03.
         <button
           ref={draggable.setActivatorNodeRef}
           type="button"
@@ -279,7 +282,7 @@ function NoteRow({
           // @dnd-kit drag listeners attached here so only the handle starts the drag.
           {...draggable.listeners}
           {...draggable.attributes}
-          className="flex w-5 flex-shrink-0 cursor-grab items-center justify-center self-center rounded text-text-secondary/60 opacity-0 transition-opacity hover:text-accent focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent group-hover:opacity-100"
+          className="drag-handle flex w-5 flex-shrink-0 cursor-grab items-center justify-center self-center rounded text-text-secondary/60 opacity-0 transition-opacity hover:text-accent focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent group-hover:opacity-100"
         >
           {/* 2x3 dot grid — refined grab affordance, replaces the old "⋮⋮" glyph */}
           <span aria-hidden="true" className="grid grid-cols-2 gap-[3px]">
