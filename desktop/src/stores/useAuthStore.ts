@@ -82,7 +82,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   // Called once on app start. Tries to restore the session silently.
   initialize: async () => {
-    const refreshToken = await restoreToken();
+    let refreshToken: string | null;
+    try {
+      refreshToken = await restoreToken();
+    } catch {
+      // invoke("load_token") throws when __TAURI_INTERNALS__ is undefined
+      // (plain browser dev, vitest jsdom). Treat as no stored session.
+      refreshToken = null;
+    }
 
     if (!refreshToken) {
       set({ isInitialized: true });
@@ -206,7 +213,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: async () => {
-    const refreshToken = await restoreToken();
+    let refreshToken: string | null;
+    try {
+      refreshToken = await restoreToken();
+    } catch {
+      refreshToken = null;
+    }
     if (refreshToken) {
       // Fire-and-forget — revoke on backend but don't block logout.
       // Spec REQ-AUTH-02 (amended): AuthController.cs uses [Authorize] on
@@ -238,7 +250,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   // Called by the API client interceptor on 401.
   // Uses raw fetch to avoid triggering another interceptor cycle.
   refreshAccessToken: async () => {
-    const refreshToken = await restoreToken();
+    let refreshToken: string | null;
+    try {
+      refreshToken = await restoreToken();
+    } catch {
+      await get().logout();
+      return;
+    }
     if (!refreshToken) {
       await get().logout();
       return;

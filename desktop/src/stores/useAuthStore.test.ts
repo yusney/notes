@@ -218,4 +218,27 @@ describe("useAuthStore", () => {
       expect(result.current.isLoading).toBe(false);
     });
   });
+
+  describe("initialize without Tauri runtime", () => {
+    it("recovers when restoreToken throws (browser/jsdom dev mode)", async () => {
+      // Simulate plain browser dev: invoke() is unavailable and throws.
+      vi.doMock("@tauri-apps/api/core", () => ({
+        invoke: vi.fn().mockRejectedValue(new Error("__TAURI_INTERNALS__ is not defined")),
+      }));
+      const { useAuthStore: storeWithoutTauri } = await import("./useAuthStore");
+
+      const { result } = renderHook(() => storeWithoutTauri());
+
+      await act(async () => {
+        await result.current.initialize();
+      });
+
+      // App must initialize (sets isInitialized=true) instead of staying
+      // stuck on the LoadingScreen forever.
+      expect(result.current.isInitialized).toBe(true);
+      expect(result.current.isAuthenticated).toBe(false);
+      expect(result.current.user).toBeNull();
+      vi.doUnmock("@tauri-apps/api/core");
+    });
+  });
 });
