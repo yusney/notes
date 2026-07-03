@@ -30,6 +30,7 @@ notes/
 | Rust | stable (for desktop build) |
 | Docker & Docker Compose | 24+ |
 | PostgreSQL | 16 (via Docker) |
+| JDK 17+ + Android SDK API 34 + Android NDK r25c+ | (Android target only — see `desktop/README.md#build-for-android`) |
 
 ## Quick Start (Local Development)
 
@@ -71,6 +72,14 @@ dotnet test notes.slnx
 cd desktop
 pnpm install
 pnpm tauri dev
+```
+
+To run the same project against an Android emulator or device (Android 11+, minSdk 30; JDK 17 + Android SDK API 34 + NDK r25c+ required — see `desktop/README.md#build-for-android`):
+
+```bash
+cd desktop
+pnpm tauri android dev     # live-reload on first connected device / emulator
+pnpm tauri android build --debug   # debug APK at src-tauri/gen/android/app/build/outputs/apk/debug/app-debug.apk
 ```
 
 ### 5. Run frontend tests
