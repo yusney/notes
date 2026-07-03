@@ -208,10 +208,20 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   logout: async () => {
     const refreshToken = await restoreToken();
     if (refreshToken) {
-      // Fire-and-forget — revoke on backend but don't block logout
+      // Fire-and-forget — revoke on backend but don't block logout.
+      // Spec REQ-AUTH-02 (amended): AuthController.cs uses [Authorize] on
+      // POST /api/auth/logout, so the access token must travel in the
+      // Authorization header (not just the body).
+      const { accessToken } = get();
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      if (accessToken) {
+        headers["Authorization"] = `Bearer ${accessToken}`;
+      }
       fetch(`${API_BASE_URL}/api/auth/logout`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ token: refreshToken }),
       }).catch(() => {});
     }

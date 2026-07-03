@@ -85,6 +85,99 @@ describe("useAuthStore", () => {
       expect(result.current.accessToken).toBeNull();
       expect(result.current.isAuthenticated).toBe(false);
     });
+
+    it("logout_sends_authorization_bearer_header_on_post_logout", async () => {
+      // Spec REQ-AUTH-02 (amended): logout must hit POST /api/auth/logout
+      // with an Authorization: Bearer <accessToken> header so the backend's
+      // [Authorize] filter accepts the request.
+      const fetchMock = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({}),
+      });
+      global.fetch = fetchMock;
+      // Mock the tauri load_token to return a stored refresh token so the
+      // existing logout branch fires the backend call.
+      const { invoke } = await import("@tauri-apps/api/core");
+      vi.mocked(invoke).mockImplementation((cmd: string) => {
+        if (cmd === "load_token") return Promise.resolve("stored-refresh-token");
+        if (cmd === "delete_token") return Promise.resolve();
+        return Promise.resolve();
+      });
+
+      const { result } = renderHook(() => useAuthStore());
+      act(() => {
+        useAuthStore.setState({
+          user: { id: "1", email: "a@b.com", name: "Test" },
+          accessToken: "access-token-xyz",
+          isAuthenticated: true,
+        });
+      });
+
+      await act(async () => {
+        await result.current.logout();
+      });
+
+      // Find the logout call — the test may also pick up other fetches
+      // via test-setup mocks, so filter for the logout URL.
+      const logoutCall = fetchMock.mock.calls.find(
+        ([url, init]: [unknown, { method?: string }?]) =>
+          typeof url === "string" &&
+          url.endsWith("/api/auth/logout") &&
+          init?.method === "POST"
+      );
+      expect(logoutCall).toBeDefined();
+
+      const [, init] = logoutCall as [string, RequestInit];
+      const headers = (init.headers ?? {}) as Record<string, string>;
+      expect(headers["Authorization"]).toBe("Bearer access-token-xyz");
+      expect(headers["Content-Type"]).toBe("application/json");
+    });
+
+    it("logout_uses_post_auth_logout_endpoint_not_delete_session", async () => {
+      // Guard against the spec-drift back to the original
+      // DELETE /api/auth/session endpoint. The amended spec (per design
+      // #2202 correction 6) locks the endpoint to POST /api/auth/logout.
+      const fetchMock = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({}),
+      });
+      global.fetch = fetchMock;
+      const { invoke } = await import("@tauri-apps/api/core");
+      vi.mocked(invoke).mockImplementation((cmd: string) => {
+        if (cmd === "load_token") return Promise.resolve("stored-refresh-token");
+        if (cmd === "delete_token") return Promise.resolve();
+        return Promise.resolve();
+      });
+
+      const { result } = renderHook(() => useAuthStore());
+      act(() => {
+        useAuthStore.setState({
+          user: { id: "1", email: "a@b.com", name: "Test" },
+          accessToken: "tok",
+          isAuthenticated: true,
+        });
+      });
+
+      await act(async () => {
+        await result.current.logout();
+      });
+
+      const logoutCall = fetchMock.mock.calls.find(
+        ([url]: [unknown]) =>
+          typeof url === "string" && url.includes("/api/auth/logout")
+      );
+      expect(logoutCall).toBeDefined();
+      const [, init] = logoutCall as [string, RequestInit];
+      expect(init.method).toBe("POST");
+      // No call should target the old endpoint shape
+      const oldEndpointCall = fetchMock.mock.calls.find(
+        ([url]: [unknown]) =>
+          typeof url === "string" && url.includes("/api/auth/session")
+      );
+      expect(oldEndpointCall).toBeUndefined();
+    });
   });
 
   describe("register", () => {
