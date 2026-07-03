@@ -165,13 +165,23 @@ pub fn run() {
                 event: WindowEvent::CloseRequested { api, .. },
                 ..
             } => {
-                // Always prevent OS close — frontend handles it via CloseDialog.
-                // "Minimize" → window.hide(), "Close" → invoke("exit_app").
-                if label == "main" && !should_exit_for_run.load(Ordering::SeqCst) {
-                    api.prevent_close();
-                    if let Some(window) = app_handle.get_webview_window("main") {
-                        window.emit("close-requested-dialog", ()).unwrap_or(());
+                // Desktop-only: keep the window alive in the system tray and
+                // emit the React-side CloseDialog event. Android uses its own
+                // back-stack lifecycle and never receives this event, so
+                // guarding it out keeps the mobile binary small and avoids
+                // referencing the desktop-only "main" window contract.
+                #[cfg(desktop)]
+                {
+                    if label == "main" && !should_exit_for_run.load(Ordering::SeqCst) {
+                        api.prevent_close();
+                        if app_handle.get_webview_window("main").is_some() {
+                            app_handle.emit("close-requested-dialog", ()).unwrap_or(());
+                        }
                     }
+                }
+                #[cfg(not(desktop))]
+                {
+                    let _ = label; // silence unused-warning on mobile
                 }
             }
             _ => {}
