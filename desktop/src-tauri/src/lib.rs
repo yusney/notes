@@ -3,7 +3,8 @@ use std::sync::{
     Arc,
 };
 use tauri::{Emitter, Manager, RunEvent, WindowEvent};
-use tauri_plugin_keyring_store::KeyringStore;
+
+mod vault;
 
 const SERVICE: &str = "dev.donduque.notes";
 const ACCOUNT: &str = "refresh_token";
