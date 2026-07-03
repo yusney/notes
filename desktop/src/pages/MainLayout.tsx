@@ -217,20 +217,35 @@ export function MainLayout() {
 
   return (
     <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-      <div className="relative flex h-screen overflow-hidden bg-surface text-text-primary">
-        <Sidebar
-          tabs={tabs}
-          activeTabId={activeTabId}
-          onTabSelect={(id) => {
-            setActiveTab(id);
-            fetchNotes(id);
-          }}
-          onCreateTab={handleCreateTab}
-          userName={user?.name}
-          onLogout={logout}
-        />
+      {/*
+        Responsive root (REQ-LAY-01):
+        - Mobile (<768px): flex-col → the three panels stack vertically.
+          The Sidebar panel is `hidden md:flex` (mobile-only access via
+          hamburger menu in the mobile settings sheet — PR2 T2.20). The
+          list panel and the main viewer pane sit one below the other and
+          only ONE is visible at a time because the main element renders
+          the active note OR the empty state, and on mobile a selected note
+          occupies the full viewport via the NoteViewer read-only mode +
+          back button.
+        - Desktop (≥768px): md:flex-row → identical 3-column layout to
+          pre-PR2 (REQ-DESKTOP-01 / S9 visual-regression baseline).
+      */}
+      <div className="relative flex h-screen flex-col md:flex-row overflow-hidden bg-surface text-text-primary">
+        <div className="hidden md:flex md:w-60 md:shrink-0 md:flex-col md:border-r md:border-border md:bg-surface-elevated md:text-text-primary">
+          <Sidebar
+            tabs={tabs}
+            activeTabId={activeTabId}
+            onTabSelect={(id) => {
+              setActiveTab(id);
+              fetchNotes(id);
+            }}
+            onCreateTab={handleCreateTab}
+            userName={user?.name}
+            onLogout={logout}
+          />
+        </div>
 
-        <div className="flex w-80 min-w-[200px] shrink-0 flex-col border-r border-border bg-surface overflow-hidden h-full">
+        <div className="flex w-full min-w-0 shrink-0 flex-col border-b md:border-b-0 md:border-r border-border bg-surface overflow-hidden md:h-full md:w-80 md:min-w-[200px]">
           <div className="border-b border-border p-4 pb-3">
             <SearchBar onSearch={handleSearchNotes} />
           </div>
