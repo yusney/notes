@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { Note, Tab } from "../../types";
 import type { SortBy } from "../../stores/useNoteStore";
 import { useDraggable } from "@dnd-kit/core";
 import { Select } from "../ui/Select";
 import { Pagination } from "./Pagination";
 import { MoveToTabMenu } from "./MoveToTabMenu";
+import { NoteActionSheet } from "./NoteActionSheet";
+import { DeleteConfirmDialog } from "./DeleteConfirmDialog";
 
 const SORT_OPTIONS: { value: SortBy; label: string }[] = [
   { value: "creation", label: "Fecha de creación" },
@@ -18,6 +20,11 @@ const SORT_OPTIONS: { value: SortBy; label: string }[] = [
  * children (e.g. NoteRow), so we hoist a single constant instead.
  */
 const EMPTY_TABS: Tab[] = [];
+
+/** Long-press duration before `onLongPress` fires (per Material 3). */
+const LONG_PRESS_MS = 500;
+/** Touch drift threshold (px) beyond which we cancel a pending long-press. */
+const LONG_PRESS_MOVE_TOLERANCE_PX = 10;
 
 interface NoteListProps {
   notes: Note[];
@@ -48,6 +55,15 @@ interface NoteListProps {
    * via the dialog is handled internally.
    */
   onMoveToTab?: (noteId: string, tabId: string) => void;
+  /**
+   * Long-press recogniser callback. On mobile, a 500ms hold on a note row
+   * (cancelled by >10px of finger drift, by release before 500ms, or by
+   * sibling-button activation) fires this with the note id so the caller
+   * can open an action sheet. The click after a fired long-press is
+   * suppressed so the sheet doesn't double as a tap-to-open and a tap-to-
+   * navigate. No-op on desktop (no touch events fire).
+   */
+  onLongPress?: (noteId: string) => void;
   searchQuery?: string;
   sortBy?: SortBy;
   onSortChange?: (sortBy: SortBy) => void;
@@ -79,6 +95,7 @@ export function NoteList({
   onToggleFavorite,
   enableDrag = false,
   onMoveToTab,
+  onLongPress,
   searchQuery = "",
   sortBy,
   onSortChange,
@@ -88,6 +105,46 @@ export function NoteList({
   paginationMobileLayout = false,
 }: NoteListProps) {
   const totalTags = notes.reduce((count, note) => count + (note.tags?.length ?? 0), 0);
+
+  // Action-sheet state for mobile long-press (REQ-LIST-03). `sheetNoteId`
+  // identifies the long-pressed note; the sheet is rendered as a sibling of
+  // the list body (mirrors the MoveToTabMenu mount pattern).
+  const [sheetNoteId, setSheetNoteId] = useState<string | null>(null);
+  // Delete-dialog state for the share-warning gate (REQ-LIST-04/05). Lives
+  // at the NoteList level so the dialog can own its own pending state.
+  const [deleteDialogNoteId, setDeleteDialogNoteId] = useState<string | null>(null);
+  const sheetNote = sheetNoteId
+    ? notes.find((n) => n.id === sheetNoteId) ?? null
+    : null;
+  const deleteDialogNote = deleteDialogNoteId
+    ? notes.find((n) => n.id === deleteDialogNoteId) ?? null
+    : null;
+
+  function handleLongPress(noteId: string) {
+    setSheetNoteId(noteId);
+  }
+
+  function handleSheetAction(kind: string) {
+    if (kind === "delete" && sheetNoteId) {
+      // T8: route the delete flow through the share-warning dialog
+      // (REQ-LIST-04 / REQ-LIST-05) instead of calling onDeleteNote
+      // directly. The dialog loads its own share warning + calls
+      // useNoteStore.deleteNote on confirm.
+      setDeleteDialogNoteId(sheetNoteId);
+    }
+  }
+
+  function handleSheetClose() {
+    setSheetNoteId(null);
+  }
+
+  function handleDeleteDialogClose() {
+    setDeleteDialogNoteId(null);
+  }
+
+  const SHEET_ACTIONS = [
+    { kind: "delete", label: "Eliminar", icon: "🗑" },
+  ];
 
   return (
     <div
@@ -183,6 +240,7 @@ export function NoteList({
               onToggleFavorite={onToggleFavorite}
               enableDrag={enableDrag}
               onMoveToTab={onMoveToTab}
+              onLongPress={onLongPress ?? handleLongPress}
             />
           ))
         )}
@@ -194,6 +252,25 @@ export function NoteList({
           totalCount={pagination.totalCount}
           onPageChange={pagination.onPageChange}
           mobileLayout={paginationMobileLayout}
+        />
+      )}
+
+      {sheetNote && (
+        <NoteActionSheet
+          open={sheetNoteId !== null}
+          onClose={handleSheetClose}
+          noteTitle={sheetNote.title}
+          actions={SHEET_ACTIONS}
+          onAction={handleSheetAction}
+        />
+      )}
+
+      {deleteDialogNote && (
+        <DeleteConfirmDialog
+          open={deleteDialogNoteId !== null}
+          onClose={handleDeleteDialogClose}
+          noteId={deleteDialogNote.id}
+          noteTitle={deleteDialogNote.title}
         />
       )}
     </div>
@@ -214,6 +291,7 @@ interface NoteRowProps {
   onToggleFavorite?: (noteId: string) => void;
   enableDrag?: boolean;
   onMoveToTab?: (noteId: string, tabId: string) => void;
+  onLongPress?: (noteId: string) => void;
 }
 
 /**
@@ -260,9 +338,74 @@ function NoteRow({
   onToggleFavorite,
   enableDrag = false,
   onMoveToTab,
+  onLongPress,
 }: NoteRowProps) {
   const draggable = useDraggable({ id: note.id, disabled: !enableDrag });
   const [isMoveMenuOpen, setIsMoveMenuOpen] = useState(false);
+
+  // Long-press recogniser (mobile-only — desktop lacks `touchstart`).
+  //   - `touchStart` records the start position + arms a 500ms timer.
+  //   - `touchMove` cancels if the finger drifts >10px (covers scroll).
+  //   - `touchEnd` cancels if the timer hasn't fired yet (covers tap).
+  //   - When the timer fires, set `longPressFiredRef` so the post-touch
+  //     synthesised `click` is suppressed.
+  const longPressTimerRef = useRef<number | null>(null);
+  const longPressStartRef = useRef<{ x: number; y: number } | null>(null);
+  const longPressFiredRef = useRef<boolean>(false);
+
+  function cancelLongPressTimer() {
+    if (longPressTimerRef.current !== null) {
+      window.clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    longPressStartRef.current = null;
+  }
+
+  function handleTouchStart(event: React.TouchEvent<HTMLButtonElement>) {
+    if (!onLongPress) return;
+    const touch = event.touches[0];
+    if (!touch) return;
+    longPressFiredRef.current = false;
+    longPressStartRef.current = { x: touch.clientX, y: touch.clientY };
+    longPressTimerRef.current = window.setTimeout(() => {
+      longPressFiredRef.current = true;
+      longPressTimerRef.current = null;
+      onLongPress?.(note.id);
+    }, LONG_PRESS_MS);
+  }
+
+  function handleTouchMove(event: React.TouchEvent<HTMLButtonElement>) {
+    const start = longPressStartRef.current;
+    if (!start) return;
+    const touch = event.touches[0];
+    if (!touch) return;
+    const dx = touch.clientX - start.x;
+    const dy = touch.clientY - start.y;
+    if (Math.hypot(dx, dy) > LONG_PRESS_MOVE_TOLERANCE_PX) {
+      cancelLongPressTimer();
+    }
+  }
+
+  function handleTouchEnd() {
+    // If the timer already fired (longPressFiredRef === true) the click
+    // suppression handles the synthetic click. If it's still pending, the
+    // touchend is just a tap — clear the timer so it never fires.
+    if (longPressTimerRef.current !== null) {
+      cancelLongPressTimer();
+    }
+  }
+
+  function handleRowClick() {
+    // Suppress the synthesised click the browser fires on touchend if a
+    // long-press already opened the action sheet (REQ-LIST-03 cancel-on-move
+    // test mirrors this: pressing then releasing past 500ms must NOT
+    // double-trigger onNoteSelect).
+    if (longPressFiredRef.current) {
+      longPressFiredRef.current = false;
+      return;
+    }
+    onNoteSelect(note.id);
+  }
 
   // Resolve tab name once per render. If the tab isn't loaded yet, omit the eyebrow.
   const tabName = tabs.find((t) => t.id === note.tabId)?.name ?? null;
@@ -332,7 +475,10 @@ function NoteRow({
 
       <button
         type="button"
-        onClick={() => onNoteSelect(note.id)}
+        onClick={handleRowClick}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
         onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onNoteSelect(note.id); } }}
         aria-current={activeNoteId === note.id ? "true" : undefined}
         data-testid={`note-row-${note.id}`}
