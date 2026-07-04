@@ -8,6 +8,9 @@ import { MainLayout } from "./pages/MainLayout";
 import { SharedNotePage } from "./pages/SharedNotePage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { SettingsPage } from "./pages/SettingsPage";
+import { MobileNotePage } from "./pages/MobileNotePage";
+import { NewNotePage } from "./pages/NewNotePage";
+import { MobileSearchPage } from "./pages/MobileSearchPage";
 import { useTheme } from "./hooks/useTheme";
 import { CloseDialog } from "./components/CloseDialog";
 
@@ -17,44 +20,91 @@ function ThemeWatcher() {
   return null;
 }
 
+/**
+ * AppRoutes — the inner route tree shared between the production
+ * `<App/>` wrapper and unit tests. Extracted so tests can mount the
+ * tree under `<MemoryRouter>` without nesting two Routers.
+ *
+ * PR2 routes added (mobile drill-down, decision #2/#3):
+ *   - `/notes/:id` — MobileNotePage (read-only viewer on mobile)
+ *   - `/new`       — NewNotePage (stub: createNote + redirect)
+ *   - `/search`    — MobileSearchPage (full-screen search)
+ *
+ * The mobile shell (AppBar + Outlet + BottomNav + SideSheet) lives
+ * inside `MainLayout` — the route pages render their content there
+ * via `md:hidden` mounting.
+ */
+export function AppRoutes() {
+  return (
+    <Routes>
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <Route path="/share/:token" element={<SharedNotePage />} />
+      <Route
+        path="/"
+        element={
+          <RequireAuth>
+            <MainLayout />
+          </RequireAuth>
+        }
+      />
+      {/* PR2 mobile drill-down routes — each page renders its content
+          inside MobileShell (mounted as `md:hidden` sibling of MainLayout
+          inside MainLayout's flex tree). */}
+      <Route
+        path="/notes/:id"
+        element={
+          <RequireAuth>
+            <MobileNotePage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/new"
+        element={
+          <RequireAuth>
+            <NewNotePage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/search"
+        element={
+          <RequireAuth>
+            <MobileSearchPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/profile"
+        element={
+          <RequireAuth>
+            <ProfilePage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/settings"
+        element={
+          <RequireAuth>
+            <SettingsPage />
+          </RequireAuth>
+        }
+      />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+}
+
 export default function App() {
   return (
     <BrowserRouter>
       <ThemeWatcher />
       <CloseDialog />
       <AuthProvider>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="/reset-password" element={<ResetPasswordPage />} />
-          <Route path="/share/:token" element={<SharedNotePage />} />
-          <Route
-            path="/"
-            element={
-              <RequireAuth>
-                <MainLayout />
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/profile"
-            element={
-              <RequireAuth>
-                <ProfilePage />
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/settings"
-            element={
-              <RequireAuth>
-                <SettingsPage />
-              </RequireAuth>
-            }
-          />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+        <AppRoutes />
       </AuthProvider>
     </BrowserRouter>
   );
