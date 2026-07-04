@@ -468,3 +468,53 @@ dialog::backdrop {
     min-height: 44px;
   }
 }
+
+/* ── shell-redesign-v1 (PR3) — a11y: focus-visible outlines ─────────────────
+ *
+ * Keyboard focus must be visible without being noisy for mouse users. The
+ * `:focus-visible` pseudo-class (vs. `:focus`) only applies when the
+ * browser thinks focus came from the keyboard — so we don't ring every
+ * click target on desktop, but a Tab user always sees where they are.
+ *
+ * Tokens: we use `var(--color-accent)` so the ring matches the brand
+ * (orange in dark, ember in light) and `var(--space-xs)` (4px) for a
+ * consistent offset. We use `outline` rather than `box-shadow` to avoid
+ * disturbing layout — a 2px ring around a 44px button stays 44px tall.
+ *
+ * Scope: every interactive element. `dialog` is included so the native
+ * <SideSheet> <dialog> shows a clear focus ring when the user tabs back
+ * through the menu entries (PR3 finding: the dialog itself doesn't get
+ * focus by default, but child buttons/links do).
+ */
+:where(button, a, input, select, textarea, [role="button"], dialog):focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: var(--space-xs);
+  border-radius: 2px;
+}
+
+/* ── shell-redesign-v1 (PR3) — a11y: prefers-reduced-motion ─────────────────
+ *
+ * When the user has requested reduced motion at the OS level (Settings →
+ * Accessibility → Reduce Motion on iOS / macOS; Settings → Ease of Access
+ * → Display → Show animations on Windows), we kill every transition and
+ * animation. The component-level animations on AppBar / BottomNav /
+ * SideSheet hover/transition-* still parse but execute in 0.01ms — fast
+ * enough that they don't visibly fire, slow enough that any
+ * transitionend event still resolves.
+ *
+ * The universal selector (`*`, `*::before`, `*::after`) is intentional:
+ * we don't know which Tailwind utilities introduce a transition, so we
+ * blanket-disable rather than enumerate. Components can still opt out
+ * via `transition-none` / `animate-none` if they need a permanent
+ * override (none do today).
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
