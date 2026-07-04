@@ -575,4 +575,147 @@ describe("NoteEditor", () => {
       expect(taskItem?._opts).toMatchObject({ nested: false });
     });
   });
+
+  // ─── mobile-note-edit: variant prop + mobile toolbar + visibility flush ───
+  //
+  // REQ-EDIT-01 / REQ-EDIT-02 / REQ-EDIT-05 / REQ-EDIT-08. The mobile
+  // variant mounts the `NoteEditorMobileToolbar` at the bottom of the
+  // editor pane (sticky), drops the desktop `Cancelar` / `Guardar` row
+  // (status-only header), and applies `pb-[env(safe-area-inset-bottom)]`
+  // on the content area so the soft keyboard never covers the last
+  // line. It also flushes any pending auto-save on
+  // `document.visibilitychange` → "hidden" and on unmount.
+
+  describe("variant prop (mobile vs desktop)", () => {
+    it("desktop variant (default) does NOT mount the mobile toolbar", () => {
+      const { container } = render(<NoteEditor note={mockNote} onSave={vi.fn()} />);
+      expect(container.querySelector('[data-testid="editor-toolbar"]')).toBeNull();
+    });
+
+    it("desktop variant does NOT render the safe-area-inset-bottom padding class", () => {
+      const { container } = render(<NoteEditor note={mockNote} onSave={vi.fn()} />);
+      const content = container.querySelector(".note-editor-content");
+      expect(content).not.toBeNull();
+      expect(content?.className).not.toMatch(/pb-\[env\(safe-area-inset-bottom\)\]/);
+    });
+
+    it("desktop variant still renders the Guardar / Cancelar header buttons (regression guard)", () => {
+      render(
+        <NoteEditor
+          note={mockNote}
+          onSave={vi.fn()}
+          onCancel={vi.fn()}
+        />
+      );
+      expect(screen.getByRole("button", { name: /guardar nota/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /cancelar edición/i })).toBeInTheDocument();
+    });
+
+    it("mobile variant mounts the NoteEditorMobileToolbar at the bottom of the editor pane", () => {
+      const { container } = render(
+        <NoteEditor note={mockNote} onSave={vi.fn()} variant="mobile" />
+      );
+      const toolbar = container.querySelector('[data-testid="editor-toolbar"]');
+      expect(toolbar).not.toBeNull();
+    });
+
+    it("mobile variant does NOT render the desktop Guardar button (auto-save handles persistence)", () => {
+      render(<NoteEditor note={mockNote} onSave={vi.fn()} variant="mobile" />);
+      expect(screen.queryByRole("button", { name: /guardar nota/i })).not.toBeInTheDocument();
+    });
+
+    it("mobile variant does NOT render the desktop Cancelar button", () => {
+      render(
+        <NoteEditor note={mockNote} onSave={vi.fn()} onCancel={vi.fn()} variant="mobile" />
+      );
+      expect(screen.queryByRole("button", { name: /cancelar edición/i })).not.toBeInTheDocument();
+    });
+
+    it("mobile variant applies pb-[env(safe-area-inset-bottom)] to the content area (REQ-EDIT-05)", () => {
+      const { container } = render(
+        <NoteEditor note={mockNote} onSave={vi.fn()} variant="mobile" />
+      );
+      const content = container.querySelector(".note-editor-content");
+      expect(content).not.toBeNull();
+      expect(content?.className).toMatch(/pb-\[env\(safe-area-inset-bottom\)\]/);
+    });
+
+    it("mobile variant header shows the save status indicator (status-only header)", () => {
+      const { container } = render(
+        <NoteEditor note={mockNote} onSave={vi.fn()} variant="mobile" />
+      );
+      // Save status indicator is rendered with role="status" / aria-live
+      // via the SaveStatusIndicator component. The mobile header holds it
+      // (the desktop header holds the buttons instead).
+      expect(container.querySelector("[role='status']")).toBeInTheDocument();
+    });
+  });
+
+  describe("visibilitychange + unmount flush (REQ-EDIT-08)", () => {
+    it("mobile variant flushes a pending save on document visibilitychange → hidden", async () => {
+      const onSave = vi.fn().mockResolvedValue(undefined);
+      render(<NoteEditor note={mockNote} onSave={onSave} variant="mobile" />);
+
+      // Arm the debounce by changing the title
+      const titleInput = screen.getByDisplayValue("Test Note");
+      act(() => {
+        Object.defineProperty(titleInput, "value", { value: "Updated Title", writable: true });
+        titleInput.dispatchEvent(new Event("change", { bubbles: true }));
+      });
+
+      // Simulate the OS backgrounding the tab
+      Object.defineProperty(document, "visibilityState", {
+        configurable: true,
+        get: () => "hidden",
+      });
+      act(() => {
+        document.dispatchEvent(new Event("visibilitychange"));
+      });
+
+      // save() is async — let the microtask queue drain
+      await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      expect(onSave).toHaveBeenCalled();
+    });
+
+    it("mobile variant flushes a pending save on component unmount", async () => {
+      const onSave = vi.fn().mockResolvedValue(undefined);
+      const { unmount } = render(
+        <NoteEditor note={mockNote} onSave={onSave} variant="mobile" />
+      );
+
+      const titleInput = screen.getByDisplayValue("Test Note");
+      act(() => {
+        Object.defineProperty(titleInput, "value", { value: "Updated Title", writable: true });
+        titleInput.dispatchEvent(new Event("change", { bubbles: true }));
+      });
+
+      // Unmount before the 1500ms debounce fires
+      unmount();
+
+      await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      expect(onSave).toHaveBeenCalled();
+    });
+
+    it("desktop variant does NOT register a document visibilitychange listener", () => {
+      const addSpy = vi.spyOn(document, "addEventListener");
+      const removeSpy = vi.spyOn(document, "removeEventListener");
+      const { unmount } = render(<NoteEditor note={mockNote} onSave={vi.fn()} />);
+
+      const visibilityListenerCalls = addSpy.mock.calls.filter(
+        (c) => c[0] === "visibilitychange"
+      );
+      expect(visibilityListenerCalls).toHaveLength(0);
+      unmount();
+      removeSpy.mockRestore();
+      addSpy.mockRestore();
+    });
+  });
 });

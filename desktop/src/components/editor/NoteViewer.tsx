@@ -91,6 +91,16 @@ const viewerExtensions = [
   TableHeader,
 ];
 
+// Exported for the TipTap extensions parity regression test
+// (extensions-parity.test.ts) which locks the bugfix #2227 invariant.
+// Both `editorExtensions` (NoteEditor) and `viewerExtensions`
+// (NoteViewer) MUST share the same core extensions so a future
+// change to one cannot silently re-introduce the "Sin contenido."
+// markdown-not-parsed bug class (the mobile viewer treated the
+// markdown source as raw HTML and leaked the ```` ``` ```` fence
+// characters into the rendered output).
+export { viewerExtensions };
+
 interface NoteViewerProps {
   note: Note;
   onEdit: () => void;
