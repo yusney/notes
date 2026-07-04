@@ -93,7 +93,7 @@ export function SideSheet({ open, onClose, children }: SideSheetProps) {
         data-testid="side-sheet-inner"
         className="flex h-full flex-col gap-2 overflow-y-auto py-4 pl-[var(--safe-left)] pr-2"
       >
-        <h2 className="px-4 text-text-caption font-semibold uppercase tracking-[0.22em] text-text-secondary">
+        <h2 className="px-4 text-[length:var(--type-caption)] font-semibold uppercase tracking-[0.22em] text-text-secondary">
           Menú
         </h2>
         <nav aria-label="Acciones de cuenta">
@@ -101,7 +101,7 @@ export function SideSheet({ open, onClose, children }: SideSheetProps) {
             <li>
               <Link
                 to="/profile"
-                className="flex min-h-11 items-center gap-3 px-4 text-text-body-sm text-text-primary transition-colors hover:bg-surface"
+                className="flex min-h-11 items-center gap-3 px-4 text-[length:var(--type-body-sm)] text-text-primary transition-colors hover:bg-surface"
               >
                 <span aria-hidden="true">👤</span> Perfil
               </Link>
@@ -109,7 +109,7 @@ export function SideSheet({ open, onClose, children }: SideSheetProps) {
             <li>
               <Link
                 to="/settings"
-                className="flex min-h-11 items-center gap-3 px-4 text-text-body-sm text-text-primary transition-colors hover:bg-surface"
+                className="flex min-h-11 items-center gap-3 px-4 text-[length:var(--type-body-sm)] text-text-primary transition-colors hover:bg-surface"
               >
                 <span aria-hidden="true">⚙️</span> Configuración
               </Link>
@@ -120,7 +120,7 @@ export function SideSheet({ open, onClose, children }: SideSheetProps) {
                 disabled
                 aria-disabled="true"
                 title="Disponible en la próxima versión"
-                className="flex w-full min-h-11 items-center gap-3 px-4 text-left text-text-body-sm text-text-secondary opacity-60 cursor-not-allowed"
+                className="flex w-full min-h-11 items-center gap-3 px-4 text-left text-[length:var(--type-body-sm)] text-text-secondary opacity-60 cursor-not-allowed"
               >
                 <span aria-hidden="true">↩</span> Salir
               </button>
