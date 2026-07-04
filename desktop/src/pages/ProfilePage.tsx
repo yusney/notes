@@ -1,7 +1,8 @@
-import { useReducer, useEffect } from "react";
+import { useReducer, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { apiClient } from "../api/client";
 import { PasswordInput } from "../components/ui/PasswordInput";
+import { MobileShell } from "../components/layout/MobileShell";
 
 interface UserProfile {
   name: string;
@@ -62,6 +63,30 @@ export function ProfilePage() {
   const [state, dispatch] = useReducer(profileReducer, INITIAL_STATE);
   const { profile, name, nameSuccess, nameError, currentPassword, newPassword, passwordSuccess, passwordError, isLoading } = state;
 
+  // PR3 — detect mobile viewport to wrap content in MobileShell (AppBar
+  // with back chevron + BottomNav + SideSheet). Desktop layout stays
+  // untouched (REQ-LAY-01). We use matchMedia with a state listener so
+  // the layout responds to viewport changes (e.g. dev-tools resize,
+  // foldables, browser zoom toggle) instead of being a one-shot
+  // measurement at mount.
+  const [isMobile, setIsMobile] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return window.matchMedia("(max-width: 767px)").matches;
+  });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mql = window.matchMedia("(max-width: 767px)");
+    const onChange = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    // Safari < 14 uses addListener; modern browsers use addEventListener.
+    if (mql.addEventListener) {
+      mql.addEventListener("change", onChange);
+      return () => mql.removeEventListener("change", onChange);
+    }
+    mql.addListener(onChange);
+    return () => mql.removeListener(onChange);
+  }, []);
+
   useEffect(() => {
     apiClient
       .get<UserProfile>("/api/user/profile")
@@ -95,15 +120,22 @@ export function ProfilePage() {
 
   const isOAuth = profile && profile.provider !== "local";
 
-  return (
+  // PR3 — mobile wrapper. On mobile we mount the entire content inside
+  // <MobileShell> so the user gets the AppBar (with back chevron) +
+  // BottomNav + SideSheet chrome. The desktop text "← Volver" link is
+  // omitted because the AppBar's back chevron already serves that
+  // purpose — rendering both would be a duplicate affordance.
+  const pageBody = (
     <div className="min-h-screen bg-surface">
       <div className="max-w-lg mx-auto p-6 space-y-8">
-        <Link
-          to="/"
-          className="inline-flex items-center gap-1 text-sm font-medium text-text-secondary hover:text-accent transition-colors"
-        >
-          ← Volver
-        </Link>
+        {!isMobile && (
+          <Link
+            to="/"
+            className="inline-flex items-center gap-1 text-sm font-medium text-text-secondary hover:text-accent transition-colors"
+          >
+            ← Volver
+          </Link>
+        )}
         <h1 className="text-xl font-semibold text-text-primary">Perfil</h1>
 
         {profile && (
@@ -185,4 +217,6 @@ export function ProfilePage() {
       </div>
     </div>
   );
+
+  return isMobile ? <MobileShell>{pageBody}</MobileShell> : pageBody;
 }
