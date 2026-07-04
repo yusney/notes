@@ -19,6 +19,7 @@ import { CodeBlockBubbleMenu } from "./CodeBlockBubbleMenu";
 import { formatCodeBlock } from "./CodeFormatter";
 import type { SupportedFormatLang } from "./CodeFormatter";
 import { countEditorStats } from "./countEditorStats";
+import { NoteEditorMobileToolbar } from "./NoteEditorMobileToolbar";
 
 // REQ-GRMR-01: lazy grammar loading — the editor (desktop) follows the
 // same contract as the viewer. The lowlight instance starts empty and
@@ -54,6 +55,13 @@ const editorExtensions = [
   TableHeader,
   Markdown.configure({ transformPastedText: true, transformCopiedText: false }),
 ];
+
+// Exported for the TipTap extensions parity regression test
+// (extensions-parity.test.ts) which locks the bugfix #2227 invariant:
+// `editorExtensions` and `NoteViewer.viewerExtensions` must share the
+// same core extensions so a future change to one cannot silently
+// re-introduce the "Sin contenido." markdown-not-parsed bug class.
+export { editorExtensions };
 
 function SaveStatusIndicator({ status }: { status: SaveStatus }) {
   if (status === "saving" || status === "pending") {
@@ -221,6 +229,23 @@ interface NoteEditorProps {
   onSave: (data: { title: string; content: string; tagNames?: string[] }) => Promise<void>;
   onSaveAndExit?: (data: { title: string; content: string; tagNames?: string[] }) => Promise<void>;
   onCancel?: () => void;
+  /**
+   * Presentation variant. Defaults to `"desktop"` (the original
+   * behaviour, byte-identical to the pre-mobile-note-edit baseline so
+   * all existing `MainLayout` callers are unaffected). The `"mobile"`
+   * variant:
+   *   - replaces the desktop `Cancelar` / `Guardar` row with a
+   *     status-only header (auto-save handles persistence);
+   *   - mounts `NoteEditorMobileToolbar` at the BOTTOM of the editor
+   *     pane (sticky) with 44×44 px touch targets (REQ-EDIT-03);
+   *   - applies `pb-[env(safe-area-inset-bottom)]` on the content
+   *     area so the virtual keyboard never covers the last line
+   *     (REQ-EDIT-05);
+   *   - flushes any pending auto-save on
+   *     `document.visibilitychange` → "hidden" and on unmount
+   *     (REQ-EDIT-08).
+   */
+  variant?: "desktop" | "mobile";
 }
 
 const EMPTY_TAGS: Tag[] = [];
@@ -245,7 +270,8 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
   }
 }
 
-export function NoteEditor({ note, availableTags = EMPTY_TAGS, onSave, onSaveAndExit, onCancel }: NoteEditorProps) {
+export function NoteEditor({ note, availableTags = EMPTY_TAGS, onSave, onSaveAndExit, onCancel, variant = "desktop" }: NoteEditorProps) {
+  const isMobile = variant === "mobile";
   const [{ title, editorContent, tagNames }, dispatch] = useReducer(editorReducer, {
     title: note.title,
     editorContent: note.content,
@@ -345,11 +371,34 @@ export function NoteEditor({ note, availableTags = EMPTY_TAGS, onSave, onSaveAnd
   // Tags are part of the note state; adding/removing a tag must persist even
   // when the user does not change the title or body afterwards.
   const autoSaveValue = `${title}||TITLE||${editorContent}||TAGS||${tagNames.join(",")}`;
-  const { status } = useAutoSave({
+  const { status, save } = useAutoSave({
     value: autoSaveValue,
     onSave: handleAutoSave,
     delay: 1500,
   });
+
+  // REQ-EDIT-08 — mobile-only flush-on-unmount + visibility-change flush.
+  // The hook's debounce timer can hold a pending save that the user
+  // expects to land in the backend before the tab is closed or the
+  // app is backgrounded. We listen for the document-level event and
+  // call the hook's `save()` to cancel the timer + invoke onSave
+  // immediately. The cleanup also calls `save()` so route changes
+  // don't drop the pending debounce.
+  useEffect(() => {
+    if (!isMobile) return;
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "hidden") {
+        void save();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      // Flush any pending debounce before the component unmounts.
+      // (Route change, tab close, parent re-mount, etc.)
+      void save();
+    };
+  }, [isMobile, save]);
 
   async function handleFormatCodeBlock() {
     if (!editor) return;
@@ -410,34 +459,50 @@ export function NoteEditor({ note, availableTags = EMPTY_TAGS, onSave, onSaveAnd
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-surface">
-      <div className="shrink-0 flex items-center justify-between border-b border-border bg-surface-elevated/85 px-8 py-4 backdrop-blur">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-text-secondary">Editor</p>
+      {isMobile ? (
+        <div
+          role="status"
+          aria-live="polite"
+          className="shrink-0 flex items-center justify-between border-b border-border bg-surface-elevated/85 px-4 py-2 backdrop-blur"
+        >
           <SaveStatusIndicator status={status} />
         </div>
-        <div className="flex gap-2">
-          {onCancel && (
+      ) : (
+        <div className="shrink-0 flex items-center justify-between border-b border-border bg-surface-elevated/85 px-8 py-4 backdrop-blur">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-text-secondary">Editor</p>
+            <SaveStatusIndicator status={status} />
+          </div>
+          <div className="flex gap-2">
+            {onCancel && (
+              <button
+                type="button"
+                onClick={onCancel}
+                aria-label="Cancelar edición"
+                className="border border-border bg-surface-elevated px-4 py-2 text-sm font-semibold text-text-primary transition-colors hover:bg-surface"
+              >
+                Cancelar
+              </button>
+            )}
             <button
               type="button"
-              onClick={onCancel}
-              aria-label="Cancelar edición"
-              className="border border-border bg-surface-elevated px-4 py-2 text-sm font-semibold text-text-primary transition-colors hover:bg-surface"
+              onClick={handleManualSave}
+              aria-label="Guardar nota"
+              className="bg-accent px-4 py-2 text-sm font-bold text-accent-text transition-colors hover:bg-accent-hover"
             >
-              Cancelar
+              Guardar
             </button>
-          )}
-          <button
-            type="button"
-            onClick={handleManualSave}
-            aria-label="Guardar nota"
-            className="bg-accent px-4 py-2 text-sm font-bold text-accent-text transition-colors hover:bg-accent-hover"
-          >
-            Guardar
-          </button>
+          </div>
         </div>
-      </div>
+      )}
 
-      <div className="shrink-0 mx-auto w-full max-w-4xl px-10 pt-8">
+      <div
+        className={
+          isMobile
+            ? "shrink-0 mx-auto w-full px-4 pt-3"
+            : "shrink-0 mx-auto w-full max-w-4xl px-10 pt-8"
+        }
+      >
         <input
           type="text"
           aria-label="Título de la nota"
@@ -448,7 +513,13 @@ export function NoteEditor({ note, availableTags = EMPTY_TAGS, onSave, onSaveAnd
         />
       </div>
 
-      <div className="shrink-0 mx-auto w-full max-w-4xl px-10 py-4">
+      <div
+        className={
+          isMobile
+            ? "shrink-0 mx-auto w-full px-4 py-2"
+            : "shrink-0 mx-auto w-full max-w-4xl px-10 py-4"
+        }
+      >
         <TagInput
           availableTags={availableTags}
           selectedTagNames={tagNames}
@@ -456,18 +527,32 @@ export function NoteEditor({ note, availableTags = EMPTY_TAGS, onSave, onSaveAnd
         />
       </div>
 
-      <div className="note-editor mx-auto w-full max-w-4xl min-h-0 flex-1 overflow-hidden border border-b-0 border-border bg-surface-elevated flex flex-col">
-        <EditorToolbar editor={editor} />
+      <div
+        className={
+          isMobile
+            ? "note-editor flex min-h-0 flex-1 flex-col overflow-hidden border-x-0 border-t border-b-0 border-border bg-surface-elevated"
+            : "note-editor mx-auto w-full max-w-4xl min-h-0 flex-1 overflow-hidden border border-b-0 border-border bg-surface-elevated flex flex-col"
+        }
+      >
+        {!isMobile && <EditorToolbar editor={editor} />}
         {editor && (
           <CodeBlockBubbleMenu editor={editor} onFormat={handleFormatCodeBlock} />
         )}
         <div
-          className="note-editor-content flex-1 overflow-y-auto px-10 py-8 text-text-primary [&_.ProseMirror]:min-h-[55vh] [&_.ProseMirror]:outline-none [&_.ProseMirror_p]:leading-7"
+          className={
+            isMobile
+              ? "note-editor-content flex-1 overflow-y-auto px-4 py-4 pb-[env(safe-area-inset-bottom)] text-text-primary [&_.ProseMirror]:min-h-[55vh] [&_.ProseMirror]:outline-none [&_.ProseMirror_p]:leading-7"
+              : "note-editor-content flex-1 overflow-y-auto px-10 py-8 text-text-primary [&_.ProseMirror]:min-h-[55vh] [&_.ProseMirror]:outline-none [&_.ProseMirror_p]:leading-7"
+          }
           data-placeholder-enabled={editorContent === "" ? "true" : undefined}
         >
           <EditorContent editor={editor} />
         </div>
-        <EditorStatusBar text={editorText} onCopy={handleCopyContent} />
+        {isMobile && editor ? (
+          <NoteEditorMobileToolbar editor={editor} />
+        ) : (
+          <EditorStatusBar text={editorText} onCopy={handleCopyContent} />
+        )}
       </div>
     </div>
   );
