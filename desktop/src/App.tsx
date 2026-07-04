@@ -11,6 +11,7 @@ import { SettingsPage } from "./pages/SettingsPage";
 import { MobileNotePage } from "./pages/MobileNotePage";
 import { NewNotePage } from "./pages/NewNotePage";
 import { MobileSearchPage } from "./pages/MobileSearchPage";
+import { MobileHomePage } from "./pages/MobileHomePage";
 import { MobileShell } from "./components/layout/MobileShell";
 import { useTheme } from "./hooks/useTheme";
 import { CloseDialog } from "./components/CloseDialog";
@@ -50,7 +51,21 @@ export function AppRoutes() {
             <MainLayout />
           </RequireAuth>
         }
-      />
+      >
+        {/*
+          PR3 hotfix (shell-redesign-v1): the `/` route is now a
+          layout route with an index child route. The child
+          (MobileHomePage) is what `<Outlet/>` inside the
+          MobileShell mounted in MainLayout renders. Pre-PR3
+          the `<Outlet/>` resolved to nothing (no child route
+          existed), leaving the mobile home body empty between
+          AppBar and BottomNav. Adding this index route is the
+          minimal structural fix — the desktop branch is
+          unchanged because the MobileShell subtree stays
+          `md:hidden` (REQ-LAY-01 desktop-pixel-identical).
+        */}
+        <Route index element={<MobileHomePage />} />
+      </Route>
       {/* PR2 mobile drill-down routes — each page renders its content
           inside MobileShell so the chrome (AppBar + BottomNav + SideSheet)
           is consistent regardless of whether the user navigated here from
