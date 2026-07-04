@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { AppBar } from "./AppBar";
 import { BottomNav } from "./BottomNav";
@@ -54,7 +54,19 @@ function getMobileTitle(pathname: string): string {
   return "";
 }
 
-export function MobileShell() {
+export interface MobileShellProps {
+  /**
+   * Optional children to render in the main slot. When omitted, the
+   * shell renders react-router's `<Outlet/>` so the shell can also be
+   * used as a layout route (`<Route element={<MobileShell />}>`).
+   *
+   * Both modes share the same chrome (AppBar + main + BottomNav +
+   * SideSheet) — the slot is just where the page content lives.
+   */
+  children?: ReactNode;
+}
+
+export function MobileShell({ children }: MobileShellProps = {}) {
   const location = useLocation();
   const navigate = useNavigate();
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -109,7 +121,7 @@ export function MobileShell() {
     >
       <AppBar title={title} leading={leading} />
       <main className="flex-1 overflow-hidden">
-        <Outlet />
+        {children !== undefined ? children : <Outlet />}
       </main>
       <BottomNav />
       <SideSheet open={sheetOpen} onClose={() => setSheetOpen(false)} />

@@ -11,6 +11,7 @@ import { SettingsPage } from "./pages/SettingsPage";
 import { MobileNotePage } from "./pages/MobileNotePage";
 import { NewNotePage } from "./pages/NewNotePage";
 import { MobileSearchPage } from "./pages/MobileSearchPage";
+import { MobileShell } from "./components/layout/MobileShell";
 import { useTheme } from "./hooks/useTheme";
 import { CloseDialog } from "./components/CloseDialog";
 
@@ -51,13 +52,17 @@ export function AppRoutes() {
         }
       />
       {/* PR2 mobile drill-down routes — each page renders its content
-          inside MobileShell (mounted as `md:hidden` sibling of MainLayout
-          inside MainLayout's flex tree). */}
+          inside MobileShell so the chrome (AppBar + BottomNav + SideSheet)
+          is consistent regardless of whether the user navigated here from
+          `/` (where MobileShell is already mounted inside MainLayout) or
+          directly via deep-link / browser history. */}
       <Route
         path="/notes/:id"
         element={
           <RequireAuth>
-            <MobileNotePage />
+            <MobileShell>
+              <MobileNotePage />
+            </MobileShell>
           </RequireAuth>
         }
       />
@@ -65,7 +70,9 @@ export function AppRoutes() {
         path="/new"
         element={
           <RequireAuth>
-            <NewNotePage />
+            <MobileShell>
+              <NewNotePage />
+            </MobileShell>
           </RequireAuth>
         }
       />
@@ -73,7 +80,9 @@ export function AppRoutes() {
         path="/search"
         element={
           <RequireAuth>
-            <MobileSearchPage />
+            <MobileShell>
+              <MobileSearchPage />
+            </MobileShell>
           </RequireAuth>
         }
       />
