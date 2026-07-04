@@ -1177,23 +1177,25 @@ describe("NoteList — mobile row density (REQ-LIST-02)", () => {
     expect(classes).toMatch(/\bmd:py-3\b/);
   });
 
-  it("preview line is hidden on mobile and 2-line clamp on desktop (hidden md:block)", () => {
+  it("preview line is 1-line clamp on mobile and 2-line clamp on desktop", () => {
     render(
       <NoteList notes={mockNotes} activeNoteId={null} onNoteSelect={vi.fn()} onCreateNote={vi.fn()} />,
     );
 
     // The row contains a <p> for the preview. Find it directly via its
-    // content (the preview text from the mock note).
+    // content (the preview text from the mock note). After the v2 spec
+    // amendment, the preview is visible on mobile too (1-line clamp) so
+    // the user gets the full context — only the tag chip row remains
+    // hidden on mobile.
     const preview = screen.getByText(/detailed guide about hooks/i);
     const classes = preview.className;
-    // Mobile: hidden (≤56px row budget — title only).
-    expect(classes).toMatch(/\bhidden\b/);
-    // Desktop ≥768px: visible, 2-line clamp.
-    expect(classes).toMatch(/\bmd:block\b/);
+    // Mobile: 1-line clamp (visible).
+    expect(classes).toMatch(/\bline-clamp-1\b/);
+    // Desktop ≥768px: 2-line clamp override.
     expect(classes).toMatch(/\bmd:line-clamp-2\b/);
   });
 
-  it("tab eyebrow chip is hidden on mobile, visible on desktop (md:hidden)", () => {
+  it("tab eyebrow chip is visible on mobile AND desktop (no responsive gate)", () => {
     render(
       <NoteList
         notes={mockNotes}
@@ -1204,11 +1206,13 @@ describe("NoteList — mobile row density (REQ-LIST-02)", () => {
       />,
     );
 
-    // The wrapper <div> carries the responsive gate (the inner <span> is
-    // always `inline-flex` for layout — `hidden` lives on the parent).
+    // After the v2 spec amendment, the tab chip is rendered on both
+    // viewports so the user can see which Espacio a note belongs to.
+    // The wrapper <div> has no `hidden` class — only the tag chip row
+    // remains desktop-only.
     const eyebrowWrap = screen.getByTestId("note-tab-eyebrow-wrap-n1");
-    expect(eyebrowWrap.className).toMatch(/\bhidden\b/);
-    expect(eyebrowWrap.className).toMatch(/\bmd:flex\b/);
+    expect(eyebrowWrap.className).not.toMatch(/\bhidden\b/);
+    expect(eyebrowWrap.className).toMatch(/\bflex\b/);
   });
 
   it("tag chip row is hidden on mobile, visible on desktop (md:hidden)", () => {
@@ -1237,23 +1241,21 @@ describe("NoteList — mobile row density (REQ-LIST-02)", () => {
     expect(tagRow.className).toMatch(/\bmd:flex\b/);
   });
 
-  it("row mock geometry fits the ≤56px mobile contract via getBoundingClientRect", () => {
-    // Mirrors the NoteEditorMobileToolbar.test precedent (mocking the
-    // intrinsic rect so the assertion can run in jsdom where media queries
-    // don't fire). We mock the row's rect to the spec limit; the actual
-    // height is driven by the Tailwind tokens asserted above.
+  it("row mock geometry fits the ≤80px mobile contract (v2: tab + title + preview)", () => {
+    // After the v2 spec amendment, the mobile row shows the tab eyebrow
+    // chip + title + 1-line preview. Target row height: ~72-80px. We mock
+    // the row's rect to the spec limit; the actual height is driven by
+    // the Tailwind tokens asserted above.
     const originalGetRect = Element.prototype.getBoundingClientRect;
     Element.prototype.getBoundingClientRect = vi.fn(function (this: Element) {
-      // Only return a 56px-tall rect for the row buttons; everything else
-      // uses the default jsdom rect.
       if (this instanceof HTMLButtonElement && this.hasAttribute("data-testid") && this.getAttribute("data-testid")?.startsWith("note-row-")) {
         return {
           width: 327,
-          height: 56,
+          height: 76,
           top: 0,
           left: 0,
           right: 327,
-          bottom: 56,
+          bottom: 76,
           x: 0,
           y: 0,
           toJSON: () => ({}),
@@ -1271,7 +1273,9 @@ describe("NoteList — mobile row density (REQ-LIST-02)", () => {
       );
       const row = screen.getByTestId("note-row-n1");
       const rect = row.getBoundingClientRect();
-      expect(rect.height).toBeLessThanOrEqual(56);
+      // v2 spec: tab (12) + mb-1 (4) + title (18) + mt-1 (4) + preview (16) +
+      // py-2 (16) + li mb-1 (4) = 72px nominal. 80px gives a 8px buffer.
+      expect(rect.height).toBeLessThanOrEqual(80);
     } finally {
       Element.prototype.getBoundingClientRect = originalGetRect;
     }
