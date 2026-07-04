@@ -1,5 +1,6 @@
-import { useEffect, useRef, type MouseEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { Link } from "react-router-dom";
+import { useAuthStore } from "../../stores/useAuthStore";
 
 interface SideSheetProps {
   /**
@@ -11,7 +12,7 @@ interface SideSheetProps {
   open: boolean;
   /**
    * Called whenever the user dismisses the sheet (Escape, backdrop
-   * click, or — when PR3 wires it — the "Salir" confirmation flow).
+   * click, or the "Salir" confirmation flow).
    * The host must treat this as the new `open = false` signal.
    */
   onClose: () => void;
@@ -37,15 +38,23 @@ interface SideSheetProps {
  * subtree so the drawer only appears on mobile widths.
  *
  * Auto-managed entries (Perfil → /profile, Configuración → /settings,
- * Salir → disabled placeholder) are baked into the component. PR3
- * (T3.3 "SideSheet Salir subtree") will replace the disabled Salir
- * with a real confirmation flow wired to `useAuthStore.logout()`.
+ * Salir → confirmation sub-step) are baked into the component.
+ *
+ * PR3 wiring: Salir now opens a confirmation sub-step (¿Cerrar sesión? /
+ * Cancelar / Cerrar sesión). Confirming calls `useAuthStore.logout()`
+ * and `onClose`. Cancelling returns to the menu (the sheet stays open
+ * so the user can navigate to Perfil or Configuración instead). This
+ * subtree was extracted from the old `MobileSettingsSheet.tsx` (now
+ * deleted) so the user has a single, consistent drawer for the
+ * account menu.
  *
  * Safe-area: `pl-[var(--safe-left)]` on the inner wrapper pushes the
  * content away from the left-side camera/notch on landscape devices.
  */
 export function SideSheet({ open, onClose, children }: SideSheetProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const logout = useAuthStore((s) => s.logout);
+  const [confirming, setConfirming] = useState(false);
 
   // Mount/unmount the native <dialog> when `open` toggles.
   useEffect(() => {
@@ -55,6 +64,9 @@ export function SideSheet({ open, onClose, children }: SideSheetProps) {
       dlg.showModal();
     } else if (!open && dlg.open) {
       dlg.close();
+      // Reset the confirmation sub-step when the sheet fully closes so
+      // the next open lands on the menu (not stuck on "¿Cerrar sesión?").
+      setConfirming(false);
     }
   }, [open]);
 
@@ -72,6 +84,12 @@ export function SideSheet({ open, onClose, children }: SideSheetProps) {
     if (e.target === dialogRef.current) {
       onClose();
     }
+  }
+
+  async function handleConfirmSalir() {
+    await logout();
+    setConfirming(false);
+    onClose();
   }
 
   // The dialog isn't rendered when `open=false`; the effect above
@@ -96,37 +114,66 @@ export function SideSheet({ open, onClose, children }: SideSheetProps) {
         <h2 className="px-4 text-[length:var(--type-caption)] font-semibold uppercase tracking-[0.22em] text-text-secondary">
           Menú
         </h2>
-        <nav aria-label="Acciones de cuenta">
-          <ul className="mt-2 flex flex-col gap-1">
-            <li>
-              <Link
-                to="/profile"
-                className="flex min-h-11 items-center gap-3 px-4 text-[length:var(--type-body-sm)] text-text-primary transition-colors hover:bg-surface"
-              >
-                <span aria-hidden="true">👤</span> Perfil
-              </Link>
-            </li>
-            <li>
-              <Link
-                to="/settings"
-                className="flex min-h-11 items-center gap-3 px-4 text-[length:var(--type-body-sm)] text-text-primary transition-colors hover:bg-surface"
-              >
-                <span aria-hidden="true">⚙️</span> Configuración
-              </Link>
-            </li>
-            <li>
+        {!confirming ? (
+          <nav aria-label="Acciones de cuenta">
+            <ul className="mt-2 flex flex-col gap-1">
+              <li>
+                <Link
+                  to="/profile"
+                  className="flex min-h-11 items-center gap-3 px-4 text-[length:var(--type-body-sm)] text-text-primary transition-colors hover:bg-surface"
+                >
+                  <span aria-hidden="true">👤</span> Perfil
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/settings"
+                  className="flex min-h-11 items-center gap-3 px-4 text-[length:var(--type-body-sm)] text-text-primary transition-colors hover:bg-surface"
+                >
+                  <span aria-hidden="true">⚙️</span> Configuración
+                </Link>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => setConfirming(true)}
+                  data-testid="side-sheet-salir"
+                  className="flex w-full min-h-11 items-center gap-3 px-4 text-left text-[length:var(--type-body-sm)] text-text-primary transition-colors hover:bg-surface"
+                >
+                  <span aria-hidden="true">↩</span> Salir
+                </button>
+              </li>
+            </ul>
+          </nav>
+        ) : (
+          <div data-testid="side-sheet-salir-confirm" className="mt-2 px-4">
+            <h3 className="text-[length:var(--type-body)] font-semibold text-text-primary">
+              ¿Cerrar sesión?
+            </h3>
+            <p className="mt-1 text-[length:var(--type-body-sm)] text-text-secondary">
+              Cerraremos tu sesión en este dispositivo. Vas a tener que volver a
+              ingresar tu email y contraseña para entrar.
+            </p>
+            <div className="mt-4 flex gap-2">
               <button
                 type="button"
-                disabled
-                aria-disabled="true"
-                title="Disponible en la próxima versión"
-                className="flex w-full min-h-11 items-center gap-3 px-4 text-left text-[length:var(--type-body-sm)] text-text-secondary opacity-60 cursor-not-allowed"
+                onClick={() => setConfirming(false)}
+                data-testid="side-sheet-salir-cancel"
+                className="flex-1 rounded border border-border bg-surface px-4 py-2 text-[length:var(--type-body-sm)] font-semibold text-text-primary transition-colors hover:bg-surface-elevated"
               >
-                <span aria-hidden="true">↩</span> Salir
+                Cancelar
               </button>
-            </li>
-          </ul>
-        </nav>
+              <button
+                type="button"
+                onClick={handleConfirmSalir}
+                data-testid="side-sheet-salir-confirm-btn"
+                className="flex-1 rounded border border-danger bg-danger px-4 py-2 text-[length:var(--type-body-sm)] font-semibold text-white transition-colors hover:bg-danger-hover"
+              >
+                Cerrar sesión
+              </button>
+            </div>
+          </div>
+        )}
         {children !== undefined && (
           <div data-testid="side-sheet-children" className="mt-4 flex-1">
             {children}
