@@ -718,4 +718,58 @@ describe("NoteEditor", () => {
       addSpy.mockRestore();
     });
   });
+
+  // ─── Sync fix: re-sync editor when the store returns fresh content ─────
+  //
+  // When the list endpoint strips `content` (server-side projection),
+  // MobileNotePage calls `fetchNote(id)` on mount to get the full
+  // note. The store updates `note.content`, but the editor's
+  // `useEffect` previously only re-synced on id change — so the
+  // user saw the empty content from the list-endpoint projection
+  // instead of the freshly-fetched markdown. Fix: re-sync when the
+  // store's content differs from the last synced content AND the
+  // editor's current HTML doesn't already match (the second guard
+  // prevents the user-typing flow from triggering a cursor reset).
+
+  describe("content re-sync (same note, fresh content from store)", () => {
+    it("re-syncs the editor when the store returns fresh content for the same note id", () => {
+      const setContentSpy = vi.fn();
+      mockEditorInstance.commands.setContent = setContentSpy;
+      // The editor's current HTML doesn't match the new content (simulates
+      // the fetchNote flow: editor was mounted with the list-endpoint
+      // projection's empty content, store now returns the full content)
+      mockEditorInstance.getHTML = vi.fn(() => "<p></p>");
+
+      const { rerender } = render(<NoteEditor note={mockNote} onSave={vi.fn()} />);
+
+      // Same id, different content (simulates fetchNote returning fresh data)
+      const updatedNote = { ...mockNote, content: "<p>fresh content from store</p>" };
+      rerender(<NoteEditor note={updatedNote} onSave={vi.fn()} />);
+
+      // The editor must re-sync because the store content differs from
+      // what the editor currently holds
+      expect(setContentSpy).toHaveBeenCalledWith(
+        "<p>fresh content from store</p>",
+        expect.objectContaining({ emitUpdate: false })
+      );
+    });
+
+    it("does NOT re-sync when the editor's HTML already matches the store content", () => {
+      const setContentSpy = vi.fn();
+      mockEditorInstance.commands.setContent = setContentSpy;
+      // The editor's current HTML matches the new content (post-save state)
+      mockEditorInstance.getHTML = vi.fn(() => "<p>user just typed this</p>");
+
+      const { rerender } = render(<NoteEditor note={mockNote} onSave={vi.fn()} />);
+
+      // The store updates with the same content the editor already holds
+      // (this is what happens after the debounce fires and the round-trip
+      // returns the same HTML)
+      const updatedNote = { ...mockNote, content: "<p>user just typed this</p>" };
+      rerender(<NoteEditor note={updatedNote} onSave={vi.fn()} />);
+
+      // setContent must NOT be called — would reset the cursor
+      expect(setContentSpy).not.toHaveBeenCalled();
+    });
+  });
 });
