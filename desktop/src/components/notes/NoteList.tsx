@@ -140,6 +140,12 @@ export function NoteList({
   // Delete-dialog state for the share-warning gate (REQ-LIST-04/05). Lives
   // at the NoteList level so the dialog can own its own pending state.
   const [deleteDialogNoteId, setDeleteDialogNoteId] = useState<string | null>(null);
+  // Ref to the scrollable <ul> container. The InfiniteScrollSentinel uses
+  // this as its IntersectionObserver root so it fires when the sentinel
+  // enters the SCROLLER, not just the viewport. The <ul> has
+  // `overflow-y-auto` (line ~228) so without this ref the IO would watch
+  // the wrong container and never fire as the user scrolls inside the list.
+  const listRef = useRef<HTMLUListElement | null>(null);
   const sheetNote = sheetNoteId
     ? notes.find((n) => n.id === sheetNoteId) ?? null
     : null;
@@ -225,7 +231,11 @@ export function NoteList({
         </div>
       )}
 
-      <ul className="flex-1 min-h-0 overflow-y-auto p-2">
+      <ul
+        ref={listRef}
+        data-testid="note-list-scroller"
+        className="flex-1 min-h-0 overflow-y-auto p-2"
+      >
         {notes.length === 0 ? (
           <li className="m-2 border border-dashed border-border bg-surface-elevated/70 px-5 py-8 text-center text-sm text-text-secondary">
             {searchQuery ? (
@@ -282,6 +292,7 @@ export function NoteList({
               <InfiniteScrollSentinel
                 enabled={hasMore && !isLoadingMore}
                 onIntersect={() => onLoadMore?.()}
+                rootRef={listRef}
               />
             </li>
             {hasMore && (

@@ -4,6 +4,45 @@ import userEvent from "@testing-library/user-event";
 import { NoteList } from "./NoteList";
 import type { Note, Tab } from "../../types";
 
+/**
+ * Per-test IntersectionObserver stub. We capture every instance created so
+ * tests can trigger intersection manually (jsdom has no real scroll layout).
+ */
+type IOCallback = (entries: Array<{ isIntersecting: boolean }>) => void;
+interface FakeIO {
+  observe: ReturnType<typeof vi.fn>;
+  disconnect: ReturnType<typeof vi.fn>;
+  trigger: (isIntersecting: boolean) => void;
+  root: Element | null;
+  rootMargin: string;
+}
+let ioInstances: FakeIO[] = [];
+function latestIoWithRoot(root: Element | null): FakeIO | null {
+  // Returns the LAST IO whose root matches — supports re-mounts.
+  const matches = ioInstances.filter((i) => i.root === root);
+  return matches.length > 0 ? matches[matches.length - 1] : null;
+}
+function installIOMock() {
+  ioInstances = [];
+  (globalThis as { IntersectionObserver: unknown }).IntersectionObserver = class {
+    public root: Element | null;
+    public rootMargin: string;
+    public observe = vi.fn();
+    public disconnect = vi.fn();
+    constructor(cb: IOCallback, opts?: { root?: Element | null; rootMargin?: string }) {
+      this.root = opts?.root ?? null;
+      this.rootMargin = opts?.rootMargin ?? "0px";
+      ioInstances.push({
+        observe: this.observe,
+        disconnect: this.disconnect,
+        trigger: (isIntersecting: boolean) => cb([{ isIntersecting }]),
+        root: this.root,
+        rootMargin: this.rootMargin,
+      });
+    }
+  };
+}
+
 const mockNotes: Note[] = [
   {
     id: "n1",
@@ -28,6 +67,13 @@ const mockNotes: Note[] = [
 ];
 
 describe("NoteList", () => {
+  beforeEach(() => {
+    installIOMock();
+  });
+  afterEach(() => {
+    ioInstances = [];
+  });
+
   it("renders all provided notes", () => {
     render(
       <NoteList notes={mockNotes} activeNoteId={null} onNoteSelect={vi.fn()} onCreateNote={vi.fn()} />
@@ -1279,6 +1325,36 @@ describe("NoteList — mobile row density (REQ-LIST-02)", () => {
     } finally {
       Element.prototype.getBoundingClientRect = originalGetRect;
     }
+  });
+
+  it("infiniteScroll fires onLoadMore when the sentinel intersects the <ul> scroller (regression)", () => {
+    // The <ul> is a nested scroller (overflow-y-auto). The IO MUST observe
+    // against the <ul>, not the viewport. We mock the IO with a "withRoot"
+    // helper that captures the root the sentinel passed, then trigger
+    // intersection and assert the parent's onLoadMore fires.
+    // This is the bug the user reported: "no se mueve las notas" — the
+    // sentinel was watching the viewport instead of the scroller.
+    const onLoadMore = vi.fn();
+    render(
+      <NoteList
+        notes={mockNotes}
+        activeNoteId={null}
+        onNoteSelect={vi.fn()}
+        onCreateNote={vi.fn()}
+        infiniteScroll
+        hasMore
+        isLoadingMore={false}
+        onLoadMore={onLoadMore}
+      />,
+    );
+    // Find the IO instance whose root is the <ul> scroller.
+    const scroller = document.querySelector('[data-testid="note-list-scroller"]') as HTMLElement | null;
+    expect(scroller).not.toBeNull();
+    const io = latestIoWithRoot(scroller as Element);
+    expect(io).not.toBeNull();
+    // Simulate the sentinel entering the scroller.
+    io!.trigger(true);
+    expect(onLoadMore).toHaveBeenCalledTimes(1);
   });
 
   // Regression coverage for the w-80 → w-full md:w-80 change. The container
