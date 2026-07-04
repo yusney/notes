@@ -282,6 +282,14 @@ export function NoteEditor({ note, availableTags = EMPTY_TAGS, onSave, onSaveAnd
   const setTagNames = (names: string[]) => dispatch({ type: "set-tags", names });
   const isSavingManually = useRef(false);
   const previousNoteId = useRef(note.id);
+  // Tracks the last `note.content` we synced to the editor. The
+  // sync useEffect below re-syncs when this ref's value differs from
+  // the current `note.content` AND the editor's current HTML doesn't
+  // match the new content. The second guard is what protects the
+  // user-typing flow: after a debounce fires, the store updates with
+  // the same HTML the editor already holds, so the re-sync is a no-op
+  // and the cursor is preserved.
+  const lastSyncedContentRef = useRef(note.content);
 
   const editorRef = useRef<ReturnType<typeof useEditor>>(null);
 
@@ -326,10 +334,29 @@ export function NoteEditor({ note, availableTags = EMPTY_TAGS, onSave, onSaveAnd
   const editorText = editor?.getText() ?? "";
 
   useEffect(() => {
-    if (previousNoteId.current === note.id) return;
-    previousNoteId.current = note.id;
-    dispatch({ type: "sync-note", note });
-    editor?.commands.setContent(note.content, { emitUpdate: false });
+    // Different note — always sync (handled by the `key={note.id}` on
+    // the parent, but we keep the explicit guard as defence-in-depth).
+    if (previousNoteId.current !== note.id) {
+      previousNoteId.current = note.id;
+      lastSyncedContentRef.current = note.content;
+      dispatch({ type: "sync-note", note });
+      editor?.commands.setContent(note.content, { emitUpdate: false });
+      return;
+    }
+    // Same note — re-sync only if the content changed AND the
+    // editor's current HTML doesn't already match. The second
+    // condition protects the user-typing flow: after the debounce
+    // fires, the store updates with the same HTML the editor holds,
+    // so the re-sync is skipped (no cursor reset).
+    if (
+      lastSyncedContentRef.current !== note.content &&
+      editor &&
+      editor.getHTML() !== note.content
+    ) {
+      lastSyncedContentRef.current = note.content;
+      dispatch({ type: "sync-note", note });
+      editor.commands.setContent(note.content, { emitUpdate: false });
+    }
   }, [editor, note]);
 
   // REQ-GRMR-01: lazy grammar discovery on every editor mount / update
