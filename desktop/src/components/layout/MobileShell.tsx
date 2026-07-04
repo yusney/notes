@@ -1,0 +1,118 @@
+import { useEffect, useState } from "react";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { AppBar } from "./AppBar";
+import { BottomNav } from "./BottomNav";
+import { SideSheet } from "./SideSheet";
+import { useNoteStore } from "../../stores/useNoteStore";
+
+/**
+ * Mobile shell — single-column mobile-only chrome that wraps react-router's
+ * `<Outlet/>` with the AppBar (top), BottomNav (bottom) and a SideSheet
+ * drawer opened from a hamburger trigger.
+ *
+ * Mount: caller (`MainLayout`) places this inside a `md:hidden` sibling
+ * so the mobile shell only renders at <768px. MobileShell itself is
+ * mount-agnostic — its visibility is decided by the parent.
+ *
+ * Mobile-only behaviours encoded here:
+ *   1. **Hamburger vs. back chevron** — `/` shows a hamburger (opens
+ *      SideSheet); every other route shows a back chevron that calls
+ *      `navigate(-1)`.
+ *   2. **Auto-close on route change** — any `pathname` change forces the
+ *      SideSheet closed so navigation + drawer state never go out of
+ *      sync.
+ *   3. **Store override** — the desktop list↔main split-view is driven
+ *      by `useNoteStore.activeNoteId`. On non-home mobile routes we
+ *      clear that field so the desktop `<main>` block doesn't fight the
+ *      mobile `<Outlet/>`. The reset happens via `useNoteStore.setState`
+ *      inside an effect keyed on `pathname`, NOT on `activeNoteId` —
+ *      that prevents an infinite loop where clearing triggers a
+ *      re-render that re-clears.
+ *   4. **Title derivation** — AppBar shows a route-aware title (Notas,
+ *      Buscar, Nueva nota, Perfil, Configuración, Nota). This keeps
+ *      the shell mount-agnostic while still giving the user context
+ *      about which screen they are on.
+ *
+ * REQ-LAY-01 (desktop-pixel-identical): this component is added as a
+ * `md:hidden` sibling of the existing flex tree in `MainLayout`; the
+ * desktop markup (`md:flex-row`, `md:flex`, etc.) is untouched.
+ */
+
+// Routes that show a back chevron. Anything else (only `/`) shows a hamburger.
+function isHomeRoute(pathname: string): boolean {
+  return pathname === "/";
+}
+
+// Route → AppBar title. Kept as a pure helper for easy unit-testing.
+function getMobileTitle(pathname: string): string {
+  if (pathname === "/") return "Notas";
+  if (pathname === "/new") return "Nueva nota";
+  if (pathname === "/search") return "Buscar";
+  if (pathname === "/profile") return "Perfil";
+  if (pathname === "/settings") return "Configuración";
+  if (pathname.startsWith("/notes/")) return "Nota";
+  return "";
+}
+
+export function MobileShell() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [sheetOpen, setSheetOpen] = useState(false);
+
+  // Auto-close the drawer on any URL change. The URL is the source of
+  // truth for "where am I" — keeping the sheet open across navigation
+  // would feel like the drawer is sticky and broken.
+  useEffect(() => {
+    setSheetOpen(false);
+  }, [location.pathname]);
+
+  // Mobile/desktop branch coexistence: the desktop split-view uses the
+  // store's `activeNoteId` to decide whether to render the list or the
+  // viewer. On mobile we don't want that signal — the route IS the
+  // source of truth. Resetting on every non-home route keeps the
+  // desktop <main> hidden so the mobile <Outlet> owns the viewport.
+  useEffect(() => {
+    if (location.pathname !== "/") {
+      useNoteStore.setState({ activeNoteId: null });
+    }
+  }, [location.pathname]);
+
+  const onHome = isHomeRoute(location.pathname);
+  const title = getMobileTitle(location.pathname);
+
+  const leading = onHome ? (
+    <button
+      type="button"
+      data-testid="mobile-menu-button"
+      aria-label="Menú"
+      onClick={() => setSheetOpen(true)}
+      className="grid size-9 place-items-center rounded text-text-secondary transition-colors hover:bg-surface hover:text-text-primary"
+    >
+      <span aria-hidden="true" className="text-xl leading-none">≡</span>
+    </button>
+  ) : (
+    <button
+      type="button"
+      data-testid="mobile-back-button"
+      aria-label="Volver"
+      onClick={() => navigate(-1)}
+      className="grid size-9 place-items-center rounded text-text-secondary transition-colors hover:bg-surface hover:text-text-primary"
+    >
+      <span aria-hidden="true" className="text-lg leading-none">←</span>
+    </button>
+  );
+
+  return (
+    <div
+      data-testid="mobile-shell"
+      className="md:hidden flex h-screen flex-col bg-surface text-text-primary"
+    >
+      <AppBar title={title} leading={leading} />
+      <main className="flex-1 overflow-hidden">
+        <Outlet />
+      </main>
+      <BottomNav />
+      <SideSheet open={sheetOpen} onClose={() => setSheetOpen(false)} />
+    </div>
+  );
+}
