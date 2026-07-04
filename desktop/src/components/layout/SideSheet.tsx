@@ -17,6 +17,17 @@ interface SideSheetProps {
    */
   onClose: () => void;
   /**
+   * Optional content rendered ABOVE the built-in nav list (Perfil /
+   * Configuración / Salir). Used by `tabs-mobile-grouping` to mount
+   * the mobile-only `EspaciosSection` at the top of the drawer per
+   * REQ-TAB-01. Renders in BOTH the menu and the "confirming Salir"
+   * sub-step — orthogonal to logout, no extra gating needed.
+   *
+   * If you want a footer / below-the-nav section, use `children`
+   * (the existing slot, which renders BELOW the nav).
+   */
+  header?: ReactNode;
+  /**
    * Optional content rendered after the built-in nav list. PR1 leaves
    * this empty; future work (e.g. PR3) can append additional sections.
    */
@@ -51,7 +62,7 @@ interface SideSheetProps {
  * Safe-area: `pl-[var(--safe-left)]` on the inner wrapper pushes the
  * content away from the left-side camera/notch on landscape devices.
  */
-export function SideSheet({ open, onClose, children }: SideSheetProps) {
+export function SideSheet({ open, onClose, header, children }: SideSheetProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const logout = useAuthStore((s) => s.logout);
   const [confirming, setConfirming] = useState(false);
@@ -114,6 +125,9 @@ export function SideSheet({ open, onClose, children }: SideSheetProps) {
         <h2 className="px-4 text-[length:var(--type-caption)] font-semibold uppercase tracking-[0.22em] text-text-secondary">
           Menú
         </h2>
+        {header !== undefined && (
+          <div data-testid="side-sheet-header">{header}</div>
+        )}
         {!confirming ? (
           <nav aria-label="Acciones de cuenta">
             <ul className="mt-2 flex flex-col gap-1">

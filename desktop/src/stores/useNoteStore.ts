@@ -227,7 +227,13 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     }));
   },
 
-  setActiveTab: (tabId) => set({ activeTabId: tabId, activeNoteId: null, page: 1 }),
+  setActiveTab: (tabId) => {
+    // Idempotent: tapping the already-active tab is a no-op so a repeat
+    // tap from the drawer doesn't churn pagination state. See
+    // REQ-TAB-04 "Tapping the active tab is idempotent".
+    if (get().activeTabId === tabId) return;
+    set({ activeTabId: tabId, activeNoteId: null, page: 1 });
+  },
 
   fetchNotes: async (tabId) => {
     set({ isLoading: true, error: null });

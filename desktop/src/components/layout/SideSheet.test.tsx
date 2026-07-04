@@ -76,6 +76,28 @@ describe("SideSheet (PR1 — shell-redesign-v1)", () => {
     expect(screen.queryByTestId("side-sheet-children")).not.toBeInTheDocument();
   });
 
+  it("renders the `header` prop ABOVE the existing nav list when provided", () => {
+    renderSideSheet({ header: <div data-testid="custom-header">my header</div> });
+    const header = screen.getByTestId("custom-header");
+    expect(header).toBeInTheDocument();
+
+    // The header must be a sibling that appears BEFORE the built-in nav
+    // (Perfil / Configuración / Salir). Use DOM order to assert it
+    // precedes the Perfil link.
+    const perfilLink = screen.getByRole("link", { name: /perfil/i });
+    expect(
+      header.compareDocumentPosition(perfilLink) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+  });
+
+  it("does NOT render a header slot when `header` is omitted (back-compat)", () => {
+    renderSideSheet();
+    // No header element was injected — the only header in the markup
+    // is the "Menú" h2. Confirm no `data-testid="side-sheet-header"`
+    // element exists (we use a stable testid in the implementation).
+    expect(screen.queryByTestId("side-sheet-header")).not.toBeInTheDocument();
+  });
+
   it("Escape (native cancel event) fires onClose", () => {
     const onClose = vi.fn();
     renderSideSheet({ onClose });
