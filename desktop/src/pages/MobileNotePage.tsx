@@ -1,19 +1,29 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
-import { NoteViewer } from "../components/editor/NoteViewer";
+import { useParams, useNavigate } from "react-router-dom";
+import { NoteEditor } from "../components/editor/NoteEditor";
 import { useNoteStore } from "../stores/useNoteStore";
 
 /**
- * MobileNotePage — wrapper for `/notes/:id` on mobile (PR2).
+ * MobileNotePage — wrapper for `/notes/:id` on mobile.
  *
  * Resolves the route param to a note from the store. If the note
  * isn't loaded yet (cold load, deep link, fresh tab), the page calls
  * `fetchNote(id)` on mount and shows a brief loader until the note
  * resolves. Errors surface as an inline message + back affordance.
  *
- * The wrapper is read-only on mobile — REQ-VIEW-01 — by passing
- * `readOnly` to NoteViewer, which also forces read-only on mobile
- * even if a future caller tries to opt in.
+ * As of `mobile-note-edit` (release/mobile-v1), the page mounts
+ * `<NoteEditor variant="mobile">` — the mobile editor is ALWAYS
+ * editable (REQ-EDIT-01). The previous read-only `<NoteViewer>`
+ * surface is gone from the mobile route. The TipTap editor handles
+ * the same content shape (markdown) as the viewer, so the parity
+ * invariant from bugfix #2227 is preserved (verified by
+ * `extensions-parity.test.ts`).
+ *
+ * `onSave` calls `updateNote(id, { title, content, tagNames })` for
+ * the auto-save debounce (1500ms) + on unmount / visibility-change
+ * flush. `onSaveAndExit` is the explicit "navigate home" hook for
+ * future UX (e.g. a back gesture that finalises and leaves) — the
+ * current spec does not require it but the API is wired.
  *
  * Note: the MobileShell that wraps this page already renders the
  * back chevron + title in its AppBar (route-aware), so we do NOT
@@ -21,7 +31,8 @@ import { useNoteStore } from "../stores/useNoteStore";
  */
 export function MobileNotePage() {
   const { id } = useParams<{ id: string }>();
-  const { notes, fetchNote } = useNoteStore();
+  const { notes, fetchNote, updateNote } = useNoteStore();
+  const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -34,9 +45,9 @@ export function MobileNotePage() {
     // `content` field (server-side projection to keep the list payload
     // small) — so a note in the store may have `content: ""` even
     // though the note object exists. Guarding on `if (note) return;`
-    // would skip the detail fetch in that case and leave the viewer
-    // rendering the "Sin contenido." fallback forever (PR3-hotfix —
-    // shell-redesign-v1).
+    // would skip the detail fetch in that case and leave the editor
+    // empty (mobile-note-edit lifted the read-only fallback that
+    // PR3-hotfix on shell-redesign-v1 originally protected against).
     if (note?.content) return;
     let cancelled = false;
     setLoading(true);
@@ -85,13 +96,18 @@ export function MobileNotePage() {
   }
 
   return (
-    <NoteViewer
+    <NoteEditor
       key={note.id}
       note={note}
-      readOnly
-      onEdit={() => {
-        // No-op on mobile v1.0 — editing on mobile is out of scope
-        // for PR2. The TipTap editor is desktop-only for now.
+      variant="mobile"
+      onSave={async (data) => {
+        if (!id) return;
+        await updateNote(id, data);
+      }}
+      onSaveAndExit={async (data) => {
+        if (!id) return;
+        await updateNote(id, data);
+        navigate("/", { replace: true });
       }}
     />
   );
