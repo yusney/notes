@@ -43,7 +43,10 @@ export function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-surface">
+    <div
+      data-testid="login-page-root"
+      className="min-h-screen flex items-center justify-center bg-surface pt-[var(--safe-top)] pb-[var(--safe-bottom)]"
+    >
       <div className="bg-surface-elevated border border-border p-8 w-full max-w-sm">
         {/* Header */}
         <div className="flex items-center gap-2 mb-1">
@@ -124,7 +127,7 @@ export function LoginPage() {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full py-2.5 px-4 bg-accent text-accent-text text-sm font-semibold hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="w-full min-h-11 py-2.5 px-4 bg-accent text-accent-text text-sm font-semibold hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {isLoading ? "Iniciando..." : "Iniciar sesión"}
             <Icon name="arrow_forward" />
@@ -147,7 +150,7 @@ export function LoginPage() {
               type="button"
               onClick={() => { clearOAuthError(); startOAuth("google"); }}
               disabled={isOAuthLoading}
-              className="w-full py-2 px-4 border border-border text-sm font-medium text-text-primary hover:bg-surface transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full min-h-11 py-2 px-4 border border-border text-sm font-medium text-text-primary hover:bg-surface transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Icon name="data_object" className="text-text-secondary" />
               {isOAuthLoading ? "Abriendo navegador..." : "Google"}
@@ -156,7 +159,7 @@ export function LoginPage() {
               type="button"
               onClick={() => { clearOAuthError(); startOAuth("github"); }}
               disabled={isOAuthLoading}
-              className="w-full py-2 px-4 border border-border text-sm font-medium text-text-primary hover:bg-surface transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full min-h-11 py-2 px-4 border border-border text-sm font-medium text-text-primary hover:bg-surface transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Icon name="terminal" className="text-text-secondary" />
               {isOAuthLoading ? "Abriendo navegador..." : "GitHub"}
