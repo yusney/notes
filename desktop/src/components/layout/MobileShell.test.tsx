@@ -18,9 +18,19 @@ import { useNoteStore } from "../../stores/useNoteStore";
 // Mock the note store so we can observe setState calls without
 // depending on the real Zustand instance. The hook returns an empty
 // default; the setState/getState surface lets us seed activeNoteId.
+//
+// `tabs-mobile-grouping` adds a new <EspaciosSection/> consumer inside
+// the SideSheet, which reads `tabs`, `activeTabId`, and `notes` and
+// invokes `setActiveTab` / `createTab`. Seed those too so the mobile
+// tests can render the drawer without crashing on `tabs.length`.
 vi.mock("../../stores/useNoteStore", () => {
   const mockState: Record<string, unknown> = {
     activeNoteId: null,
+    tabs: [],
+    activeTabId: null,
+    notes: [],
+    setActiveTab: vi.fn(),
+    createTab: vi.fn(),
   };
   const hook = vi.fn(() => mockState);
   (hook as unknown as { getState: () => Record<string, unknown> }).getState = () => mockState;

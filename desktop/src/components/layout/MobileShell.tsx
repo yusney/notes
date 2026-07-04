@@ -3,6 +3,7 @@ import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { AppBar } from "./AppBar";
 import { BottomNav } from "./BottomNav";
 import { SideSheet } from "./SideSheet";
+import { EspaciosSection } from "./EspaciosSection";
 import { useNoteStore } from "../../stores/useNoteStore";
 
 /**
@@ -124,7 +125,11 @@ export function MobileShell({ children }: MobileShellProps = {}) {
         {children !== undefined ? children : <Outlet />}
       </main>
       <BottomNav />
-      <SideSheet open={sheetOpen} onClose={() => setSheetOpen(false)} />
+      <SideSheet
+        open={sheetOpen}
+        onClose={() => setSheetOpen(false)}
+        header={<EspaciosSection onClose={() => setSheetOpen(false)} />}
+      />
     </div>
   );
 }

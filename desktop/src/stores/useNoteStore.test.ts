@@ -477,6 +477,20 @@ describe("useNoteStore", () => {
       expect(useNoteStore.getState().page).toBe(1);
     });
 
+    it("setActiveTab is idempotent — calling with the active id does NOT bump page or reset activeNoteId", () => {
+      // Defense-in-depth for REQ-TAB-04 "Tapping the active tab is
+      // idempotent": a repeat tap from the drawer must not churn
+      // pagination state or clear the currently-open note.
+      useNoteStore.setState({
+        activeTabId: "tab-1",
+        activeNoteId: "note-9",
+        page: 3,
+      });
+      useNoteStore.getState().setActiveTab("tab-1");
+      expect(useNoteStore.getState().page).toBe(3);
+      expect(useNoteStore.getState().activeNoteId).toBe("note-9");
+    });
+
     it("setSortBy resets page to 1", () => {
       useNoteStore.setState({ page: 4 });
       useNoteStore.getState().setSortBy("alphabetical");
