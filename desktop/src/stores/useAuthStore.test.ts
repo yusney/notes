@@ -121,10 +121,14 @@ describe("useAuthStore", () => {
       // Find the logout call — the test may also pick up other fetches
       // via test-setup mocks, so filter for the logout URL.
       const logoutCall = fetchMock.mock.calls.find(
-        ([url, init]: [unknown, { method?: string }?]) =>
-          typeof url === "string" &&
-          url.endsWith("/api/auth/logout") &&
-          init?.method === "POST"
+        (call) => {
+          const [url, init] = call as [unknown, { method?: string }?];
+          return (
+            typeof url === "string" &&
+            url.endsWith("/api/auth/logout") &&
+            init?.method === "POST"
+          );
+        }
       );
       expect(logoutCall).toBeDefined();
 
@@ -165,16 +169,20 @@ describe("useAuthStore", () => {
       });
 
       const logoutCall = fetchMock.mock.calls.find(
-        ([url]: [unknown]) =>
-          typeof url === "string" && url.includes("/api/auth/logout")
+        (call) => {
+          const [url] = call as [unknown];
+          return typeof url === "string" && url.includes("/api/auth/logout");
+        }
       );
       expect(logoutCall).toBeDefined();
       const [, init] = logoutCall as [string, RequestInit];
       expect(init.method).toBe("POST");
       // No call should target the old endpoint shape
       const oldEndpointCall = fetchMock.mock.calls.find(
-        ([url]: [unknown]) =>
-          typeof url === "string" && url.includes("/api/auth/session")
+        (call) => {
+          const [url] = call as [unknown];
+          return typeof url === "string" && url.includes("/api/auth/session");
+        }
       );
       expect(oldEndpointCall).toBeUndefined();
     });
