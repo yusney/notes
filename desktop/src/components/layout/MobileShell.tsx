@@ -121,7 +121,7 @@ export function MobileShell({ children }: MobileShellProps = {}) {
       className="md:hidden flex h-screen flex-col bg-surface text-text-primary"
     >
       <AppBar title={title} leading={leading} />
-      <main className="flex-1 overflow-hidden">
+      <main className="flex min-h-0 flex-1 overflow-hidden">
         {children !== undefined ? children : <Outlet />}
       </main>
       <BottomNav />
