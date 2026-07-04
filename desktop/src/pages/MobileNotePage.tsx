@@ -29,7 +29,15 @@ export function MobileNotePage() {
 
   useEffect(() => {
     if (!id) return;
-    if (note) return; // already loaded
+    // Only skip the fetch when we already have a note WITH content.
+    // The list endpoint (`GET /api/notes`) returns notes without the
+    // `content` field (server-side projection to keep the list payload
+    // small) — so a note in the store may have `content: ""` even
+    // though the note object exists. Guarding on `if (note) return;`
+    // would skip the detail fetch in that case and leave the viewer
+    // rendering the "Sin contenido." fallback forever (PR3-hotfix —
+    // shell-redesign-v1).
+    if (note?.content) return;
     let cancelled = false;
     setLoading(true);
     fetchNote(id)
