@@ -232,7 +232,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     // tap from the drawer doesn't churn pagination state. See
     // REQ-TAB-04 "Tapping the active tab is idempotent".
     if (get().activeTabId === tabId) return;
-    set({ activeTabId: tabId, activeNoteId: null, page: 1 });
+    set({ activeTabId: tabId, activeNoteId: null, page: 1, visibleNoteIds: [] });
   },
 
   fetchNotes: async (tabId) => {
@@ -240,7 +240,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     try {
       const params = new URLSearchParams();
       if (tabId) params.set("tabId", tabId);
-      const { selectedTagIds, sortBy, sortOrder, isFavoriteOnly, searchQuery, notes, page, pageSize } = get();
+      const { selectedTagIds, sortBy, sortOrder, isFavoriteOnly, searchQuery, notes, page, pageSize, visibleNoteIds } = get();
       if (searchQuery.trim()) params.set("query", searchQuery.trim());
       for (const id of selectedTagIds) params.append("tagIds", id);
       params.set("sortBy", toApiSortBy(sortBy));
@@ -257,12 +257,27 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
       const fetchedById = new Map(fetchedNotes.map((note) => [note.id, note]));
       const totalPages = Math.max(1, Math.ceil(paged.totalCount / paged.pageSize));
 
+      // Infinite-scroll accumulation:
+      //   - When the new page's ids don't overlap with visibleNoteIds AND
+      //     the requested page is > 1, APPEND the new ids. This is the
+      //     "nextPage" case (mobile infinite scroll).
+      //   - Otherwise (initial load, filter change, or explicit pagination
+      //     navigation), REPLACE the list with just the fetched ids.
+      // The dedupe happens via the id set: a page that overlaps with the
+      // tail of visibleNoteIds is treated as a refresh, not an append.
+      const existingIds = new Set(visibleNoteIds);
+      const allNew = fetchedIds.every((id) => !existingIds.has(id));
+      const isAppend = allNew && paged.page > 1;
+      const nextVisibleNoteIds = isAppend
+        ? [...visibleNoteIds, ...fetchedIds]
+        : fetchedIds;
+
       set({
         notes: [
           ...notes.map((note) => fetchedById.get(note.id) ?? note),
           ...fetchedNotes.filter((note) => !notes.some((existing) => existing.id === note.id)),
         ],
-        visibleNoteIds: fetchedIds,
+        visibleNoteIds: nextVisibleNoteIds,
         page: paged.page,
         pageSize: paged.pageSize,
         totalCount: paged.totalCount,
@@ -377,7 +392,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
 
   setActiveNote: (noteId) => set({ activeNoteId: noteId }),
 
-  setSearchQuery: (query) => set({ searchQuery: query, page: 1 }),
+  setSearchQuery: (query) => set({ searchQuery: query, page: 1, visibleNoteIds: [] }),
 
   notesForActiveTab: () => {
     const { notes, activeTabId } = get();
@@ -395,7 +410,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     return activeTabNotes.filter((note) => visibleIdSet.has(note.id));
   },
 
-  setSelectedTagIds: (ids) => set({ selectedTagIds: ids, page: 1 }),
+  setSelectedTagIds: (ids) => set({ selectedTagIds: ids, page: 1, visibleNoteIds: [] }),
 
   toggleTagFilter: (id) =>
     set((s) => ({
@@ -403,13 +418,14 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
         ? s.selectedTagIds.filter((t) => t !== id)
         : [...s.selectedTagIds, id],
       page: 1,
+      visibleNoteIds: [],
     })),
 
-  clearTagFilters: () => set({ selectedTagIds: [], page: 1 }),
+  clearTagFilters: () => set({ selectedTagIds: [], page: 1, visibleNoteIds: [] }),
 
-  setSortBy: (sortBy) => set({ sortBy, page: 1 }),
-  setSortOrder: (sortOrder) => set({ sortOrder, page: 1 }),
-  setFavoriteFilter: (isFavoriteOnly) => set({ isFavoriteOnly, page: 1 }),
+  setSortBy: (sortBy) => set({ sortBy, page: 1, visibleNoteIds: [] }),
+  setSortOrder: (sortOrder) => set({ sortOrder, page: 1, visibleNoteIds: [] }),
+  setFavoriteFilter: (isFavoriteOnly) => set({ isFavoriteOnly, page: 1, visibleNoteIds: [] }),
 
   setPage: async (page) => {
     const { totalPages, page: currentPage } = get();
@@ -426,5 +442,5 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     await get().setPage(get().page - 1);
   },
 
-  resetPage: () => set({ page: 1 }),
+  resetPage: () => set({ page: 1, visibleNoteIds: [] }),
 }));

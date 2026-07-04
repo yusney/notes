@@ -136,7 +136,7 @@ describe("useNoteStore", () => {
       expect(result.current.totalPages).toBe(3);
     });
 
-    it("fetchNotes sets visibleNoteIds to current page only", async () => {
+    it("fetchNotes sets visibleNoteIds to the current page on first load", async () => {
       const page1 = [mockNotes[0]];
       global.fetch = vi.fn().mockResolvedValueOnce({
         ok: true,
@@ -150,6 +150,82 @@ describe("useNoteStore", () => {
         await result.current.fetchNotes();
       });
 
+      expect(result.current.visibleNoteIds).toEqual(["n1"]);
+    });
+
+    // REGRESSION: when the user scrolls past the first page (mobile
+    // infinite scroll), fetchNotes must APPEND the new page's ids to
+    // visibleNoteIds, not replace them. Otherwise the previous page's
+    // notes disappear from the rendered list as soon as the second page
+    // loads — which is exactly what the user reported.
+    it("fetchNotes APPENDS visibleNoteIds when loading the next page (infinite scroll)", async () => {
+      const page1Items = [
+        { id: "n1", title: "A", content: "", tabId: "tab-1", userId: "u1", createdAt: "2024-01-01", updatedAt: "2024-01-01", tags: [] },
+        { id: "n2", title: "B", content: "", tabId: "tab-1", userId: "u1", createdAt: "2024-01-02", updatedAt: "2024-01-02", tags: [] },
+      ];
+      const page2Items = [
+        { id: "n3", title: "C", content: "", tabId: "tab-1", userId: "u1", createdAt: "2024-01-03", updatedAt: "2024-01-03", tags: [] },
+        { id: "n4", title: "D", content: "", tabId: "tab-1", userId: "u1", createdAt: "2024-01-04", updatedAt: "2024-01-04", tags: [] },
+      ];
+      // First load: page 1 returns n1, n2.
+      global.fetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ items: page1Items, totalCount: 25, page: 1, pageSize: 10 }),
+      });
+      const { result } = renderHook(() => useNoteStore());
+      await act(async () => {
+        await result.current.fetchNotes();
+      });
+      expect(result.current.visibleNoteIds).toEqual(["n1", "n2"]);
+
+      // Second load: page 2 returns n3, n4.
+      global.fetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ items: page2Items, totalCount: 25, page: 2, pageSize: 10 }),
+      });
+      // Bump page to 2 (mirrors what setPage/nextPage does).
+      await act(async () => {
+        useNoteStore.setState({ page: 2 });
+        await result.current.fetchNotes();
+      });
+      // The first 2 ids are still there; the new 2 are appended.
+      expect(result.current.visibleNoteIds).toEqual(["n1", "n2", "n3", "n4"]);
+    });
+
+    // REGRESSION: reloading page 1 (after a filter reset) must REPLACE
+    // visibleNoteIds, not append — otherwise stale ids from the previous
+    // filter would leak into the new list.
+    it("fetchNotes REPLACES visibleNoteIds when the new page overlaps (filter reset)", async () => {
+      // First load: page 1, n1.
+      global.fetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ items: [mockNotes[0]], totalCount: 1, page: 1, pageSize: 10 }),
+      });
+      const { result } = renderHook(() => useNoteStore());
+      await act(async () => {
+        await result.current.fetchNotes();
+      });
+      expect(result.current.visibleNoteIds).toEqual(["n1"]);
+
+      // Apply a filter (resets visibleNoteIds to []).
+      await act(async () => {
+        result.current.setSelectedTagIds(["t1"]);
+      });
+      expect(result.current.visibleNoteIds).toEqual([]);
+
+      // Re-fetch with empty filter: page 1 again returns n1. visibleNoteIds
+      // should be exactly ["n1"], not ["n1", "n1"].
+      global.fetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ items: [mockNotes[0]], totalCount: 1, page: 1, pageSize: 10 }),
+      });
+      await act(async () => {
+        await result.current.fetchNotes();
+      });
       expect(result.current.visibleNoteIds).toEqual(["n1"]);
     });
 
