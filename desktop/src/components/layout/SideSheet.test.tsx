@@ -1,8 +1,31 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { SideSheet } from "./SideSheet";
+
+// ── useAuthStore mock ────────────────────────────────────────────────────────
+//
+// The SideSheet's Salir entry triggers `useAuthStore.logout()` on confirm.
+// Mock the hook so we can assert it is called when the user taps
+// "Cerrar sesión". The component calls `useAuthStore((s) => s.logout)`
+// (selector form) and `useAuthStore.getState()` (used elsewhere in the
+// codebase) — both must resolve to the same mocked `logout` function.
+const mockLogout = vi.fn().mockResolvedValue(undefined);
+
+vi.mock("../../stores/useAuthStore", () => {
+  const hook = vi.fn(
+    (selector?: (s: { logout: () => Promise<void> }) => unknown) => {
+      if (selector) return selector({ logout: mockLogout });
+      return { logout: mockLogout };
+    },
+  );
+  (hook as unknown as { getState: () => { logout: () => Promise<void> } }).getState =
+    () => ({
+      logout: mockLogout,
+    });
+  return { useAuthStore: hook };
+});
 
 function renderSideSheet(props: Partial<Parameters<typeof SideSheet>[0]> = {}) {
   const defaultProps = { open: true, onClose: vi.fn(), ...props };
@@ -36,11 +59,11 @@ describe("SideSheet (PR1 — shell-redesign-v1)", () => {
     expect(screen.getByRole("link", { name: /configuración/i })).toHaveAttribute("href", "/settings");
   });
 
-  it("Salir is rendered as a DISABLED placeholder (PR3 wires confirmation flow)", () => {
+  it("Salir is rendered as an ACTIVE button (PR3 wires confirmation flow)", () => {
     renderSideSheet();
     const salir = screen.getByRole("button", { name: /salir/i });
-    expect(salir).toBeDisabled();
-    expect(salir).toHaveAttribute("aria-disabled", "true");
+    expect(salir).toBeEnabled();
+    expect(salir).not.toHaveAttribute("aria-disabled", "true");
   });
 
   it("renders children when provided", () => {
@@ -57,9 +80,8 @@ describe("SideSheet (PR1 — shell-redesign-v1)", () => {
     const onClose = vi.fn();
     renderSideSheet({ onClose });
     const dialog = screen.getByRole("dialog");
-    // Same pattern as MobileSettingsSheet: native <dialog> dispatches
-    // a real 'cancel' Event on Escape; fireEvent.cancel doesn't exist
-    // so we dispatch the event directly.
+    // Native <dialog> dispatches a real 'cancel' Event on Escape;
+    // fireEvent.cancel doesn't exist so we dispatch the event directly.
     act(() => {
       dialog.dispatchEvent(new Event("cancel", { bubbles: true, cancelable: true }));
     });
@@ -91,8 +113,75 @@ describe("SideSheet (PR1 — shell-redesign-v1)", () => {
   });
 
   it("applies safe-area left padding via var(--safe-left) on the inner wrapper", () => {
+  renderSideSheet();
+  const inner = screen.getByTestId("side-sheet-inner");
+  expect(inner.className).toMatch(/pl-\[var\(--safe-left\)\]/);
+});
+});
+
+describe("SideSheet (PR3 — Salir confirmation flow)", () => {
+  beforeEach(() => {
+    mockLogout.mockClear();
+  });
+
+  it("tapping Salir opens a confirmation sub-step with Cancelar + Cerrar sesión", async () => {
+    const user = userEvent.setup();
     renderSideSheet();
-    const inner = screen.getByTestId("side-sheet-inner");
-    expect(inner.className).toMatch(/pl-\[var\(--safe-left\)\]/);
+
+    // First tap: open the confirmation sub-step.
+    await user.click(screen.getByRole("button", { name: /salir/i }));
+
+    // The "Configuración" / "Perfil" menu items disappear and the
+    // confirmation copy appears instead.
+    expect(screen.getByText(/¿cerrar sesión\?/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /cancelar/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /cerrar sesión/i })).toBeInTheDocument();
+    // Logout must NOT have been called yet — confirm is gated.
+    expect(mockLogout).not.toHaveBeenCalled();
+  });
+
+  it("confirming 'Cerrar sesión' calls useAuthStore.logout() and onClose", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    renderSideSheet({ onClose });
+
+    await user.click(screen.getByRole("button", { name: /salir/i }));
+    await user.click(screen.getByRole("button", { name: /cerrar sesión/i }));
+
+    expect(mockLogout).toHaveBeenCalledTimes(1);
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it("cancelling the confirmation does NOT call logout and returns to the menu", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    renderSideSheet({ onClose });
+
+    await user.click(screen.getByRole("button", { name: /salir/i }));
+    await user.click(screen.getByRole("button", { name: /cancelar/i }));
+
+    expect(mockLogout).not.toHaveBeenCalled();
+    // Cancellation should NOT close the sheet — the user may want to
+    // navigate to Perfil or Configuración instead.
+    expect(onClose).not.toHaveBeenCalled();
+    // The menu is back: Perfil + Configuración + Salir are all present.
+    expect(screen.getByRole("link", { name: /perfil/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /configuración/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /salir/i })).toBeInTheDocument();
+  });
+
+  it("Escape on the dialog while confirming still closes the sheet (cancel event)", () => {
+    // The native <dialog> with showModal() emits a 'cancel' event on
+    // Escape regardless of which sub-step is showing. MobileShell wires
+    // the same onClose for both. We don't assert the in-component
+    // state after Escape here because that's the caller's contract;
+    // the integration is covered by MobileShell.test.tsx.
+    renderSideSheet();
+    const dialog = screen.getByRole("dialog");
+    act(() => {
+      dialog.dispatchEvent(new Event("cancel", { bubbles: true, cancelable: true }));
+    });
+    expect(dialog).toBeInTheDocument();
   });
 });
+
