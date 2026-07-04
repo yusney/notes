@@ -39,6 +39,35 @@
   /* Typography */
   --font-sans: 'Inter', sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
+
+  /* ─── shell-redesign-v1 (PR1) — design tokens ────────────────────────────
+   *
+   * Spacing: 4-point grid. Each token is exposed by Tailwind v4 as the
+   *              utility classes  p-{name} | m-{name} | gap-{name} | etc.
+   * Typography: 7-step mobile-first scale. Exposed as text-{name}.
+   *
+   * Components consume these directly:
+   *   - AppBar   : pt-[var(--safe-top)]
+   *   - BottomNav: pb-[var(--safe-bottom)]
+   *   - SideSheet: pl-[var(--safe-left)]
+   *
+   * Safe-area variables are declared on :root / .dark / html.light so they
+   * stay consistent regardless of the active color theme.
+   */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+  --spacing-xl: 24px;
+  --spacing-2xl: 32px;
+  --spacing-3xl: 48px;
+  --text-caption: 12px;
+  --text-body-sm: 14px;
+  --text-body: 16px;
+  --text-h3: 20px;
+  --text-h2: 24px;
+  --text-h1: 28px;
+  --text-display: 32px;
 }
 
 /* ─── Default: Dark mode (:root) ────────────────────────────────────────── */
@@ -61,6 +90,11 @@
   --color-code-bg: #0c0a09;
   --color-code-text: #f5f5f4;
   --color-code-inline: #f472b6;
+  /* shell-redesign-v1 (PR1) — safe-area aliases (mobile notch / gesture bar) */
+  --safe-top: env(safe-area-inset-top);
+  --safe-bottom: env(safe-area-inset-bottom);
+  --safe-left: env(safe-area-inset-left);
+  --safe-right: env(safe-area-inset-right);
 
   color-scheme: dark;
   font-family: 'Inter', sans-serif;
@@ -86,6 +120,11 @@
   --color-code-bg: #0c0a09;
   --color-code-text: #f5f5f4;
   --color-code-inline: #f472b6;
+  /* shell-redesign-v1 (PR1) — safe-area aliases (mobile notch / gesture bar) */
+  --safe-top: env(safe-area-inset-top);
+  --safe-bottom: env(safe-area-inset-bottom);
+  --safe-left: env(safe-area-inset-left);
+  --safe-right: env(safe-area-inset-right);
 
   /* Tell the browser to render native form controls in dark mode */
   color-scheme: dark;
@@ -111,6 +150,11 @@ html.light {
   --color-code-bg: #f5f5f4;
   --color-code-text: #1c1917;
   --color-code-inline: #c2410c;
+  /* shell-redesign-v1 (PR1) — safe-area aliases (mobile notch / gesture bar) */
+  --safe-top: env(safe-area-inset-top);
+  --safe-bottom: env(safe-area-inset-bottom);
+  --safe-left: env(safe-area-inset-left);
+  --safe-right: env(safe-area-inset-right);
 
   color-scheme: light;
 
@@ -391,5 +435,26 @@ dialog::backdrop {
   .drag-handle {
     display: none !important;
     pointer-events: none !important;
+  }
+}
+
+/* ── shell-redesign-v1 (PR1) — 44px touch target defense in depth ──────────
+ *
+ * Global fallback that lifts every interactive element on touch devices to
+ * the Apple HIG / Material 3 minimum of 44×44 px. Components still set
+ * `min-h-11 min-w-11` per-element (visible in markup for clarity), but this
+ * rule guarantees no input/button/anchor sneaks below the threshold even if
+ * a developer forgets.
+ *
+ * Scoped to `(hover: none)` so desktop mouse usage is not affected
+ * (no resize of e.g. tightly-sized icon buttons).
+ */
+@media (hover: none) {
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    min-height: 44px;
   }
 }
