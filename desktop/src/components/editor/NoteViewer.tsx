@@ -10,6 +10,7 @@ import { Table } from "@tiptap/extension-table";
 import { TableRow } from "@tiptap/extension-table-row";
 import { TableCell } from "@tiptap/extension-table-cell";
 import { TableHeader } from "@tiptap/extension-table-header";
+import { Markdown } from "tiptap-markdown";
 import { createLazyLowlight, discoverAndRegisterGrammars } from "./grammarLoader";
 import type { Note } from "../../types";
 import type { NodeViewProps } from "@tiptap/react";
@@ -63,6 +64,21 @@ const CodeBlockWithCopyExtension = CodeBlockLowlight.extend({
 const viewerExtensions = [
   StarterKit.configure({ codeBlock: false }),
   CodeBlockWithCopyExtension.configure({ lowlight, defaultLanguage: null }),
+  // PR3-hotfix (shell-redesign-v1): the Notes.Api stores note content
+  // as MARKDOWN, not HTML. The viewer must parse the markdown so
+  // fenced code blocks render as <pre> blocks (lowlight-highlighted),
+  // headings render as <h1>/<h2>/etc., and inline code/backticks
+  // render as <code>. Without this extension the viewer treated
+  // `note.content` as raw HTML — markdown source (including the
+  // ```` ``` ```` fence characters) leaked into the rendered output
+  // as a single <p> of plain text. The editor (`NoteEditor`) has
+  // always used this extension; the viewer was missing it (likely
+  // because TipTap's default codeBlock handling works for HTML
+  // content, and the original note content was HTML before the
+  // backend migrated to markdown). transformPastedText/transform-
+  // CopiedText are off because the viewer is read-only — there's
+  // no paste/copy flow to convert.
+  Markdown.configure({ transformPastedText: false, transformCopiedText: false }),
   Link.configure({
     openOnClick: true,
     HTMLAttributes: { target: "_blank", rel: "noopener noreferrer" },
@@ -183,19 +199,28 @@ export function NoteViewer({ note, onEdit, readOnly = true }: NoteViewerProps) {
           >
             Compartir
           </button>
-          <button
-            type="button"
-            onClick={onEdit}
-            className="bg-accent px-4 py-1.5 text-sm font-bold text-accent-text transition-colors hover:bg-accent-hover"
-          >
-            Editar
-          </button>
+          {/* Desktop-only Edit button (REQ-VIEW-01 — mobile v1.0 is
+              read-only). Conditionally rendered so it's gone from the
+              DOM on mobile, not just visually hidden. Mirrors the
+              conditional-render pattern of the back chevron above
+              (which uses `{isMobile && (...)}`). The TipTap editor
+              on the desktop side is mounted by the parent route, not
+              by this button — see MainLayout's desktop branch. */}
+          {!isMobile && (
+            <button
+              type="button"
+              onClick={onEdit}
+              className="bg-accent px-4 py-1.5 text-sm font-bold text-accent-text transition-colors hover:bg-accent-hover"
+            >
+              Editar
+            </button>
+          )}
         </div>
       </div>
 
       <ShareDialog noteId={note.id} isOpen={shareOpen} onClose={() => setShareOpen(false)} />
 
-      <div className="note-viewer flex-1 overflow-x-hidden overflow-y-auto px-8 py-6">
+      <div className="note-viewer flex-1 overflow-x-hidden overflow-y-auto px-4 md:px-8 py-6">
         {note.content ? (
           <EditorContent editor={viewer} />
         ) : (
