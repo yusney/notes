@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, act, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { NoteList } from "./NoteList";
@@ -800,10 +800,358 @@ describe("NoteList — drag handle touch affordance (REQ-LAY-03)", () => {
   });
 });
 
+// ── Long-press → NoteActionSheet (REQ-LIST-03) ─────────────────────────────
+//
+// Closes the gap that mobile had no discoverable way to delete a note: the
+// desktop delete button uses `group-hover:flex` only and is invisible on
+// touch devices. Long-press (500ms hold, cancel on move >10px) opens a
+// `<NoteActionSheet>` (TDD-rendered above) with "Eliminar" + share-warning
+// delete dialog (mirrors desktop MainLayout.handleDeleteNote).
+//
+// We assert the contract directly on NoteList via the `onLongPress` callback
+// — wiring the sheet into the list state is T3; here we verify the gesture
+// recogniser.
+
+describe("NoteList — long-press (REQ-LIST-03)", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  function touchStart(target: Element, x = 100, y = 100) {
+    fireEvent.touchStart(target, {
+      touches: [{ clientX: x, clientY: y }],
+    });
+  }
+  function touchMove(target: Element, x: number, y: number) {
+    fireEvent.touchMove(target, {
+      touches: [{ clientX: x, clientY: y }],
+    });
+  }
+  function touchEnd(target: Element) {
+    fireEvent.touchEnd(target, { touches: [] });
+  }
+
+  it("500ms touch start without movement fires onLongPress(noteId)", () => {
+    const onLongPress = vi.fn();
+    render(
+      <NoteList
+        notes={mockNotes}
+        activeNoteId={null}
+        onNoteSelect={vi.fn()}
+        onCreateNote={vi.fn()}
+        onLongPress={onLongPress}
+      />,
+    );
+
+    const row = screen.getByRole("button", { name: /React Hooks Guide/i });
+    touchStart(row);
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+
+    expect(onLongPress).toHaveBeenCalledTimes(1);
+    expect(onLongPress).toHaveBeenCalledWith("n1");
+  });
+
+  it("releasing before 500ms does NOT fire onLongPress (and onNoteSelect still works)", () => {
+    const onLongPress = vi.fn();
+    const onNoteSelect = vi.fn();
+    render(
+      <NoteList
+        notes={mockNotes}
+        activeNoteId={null}
+        onNoteSelect={onNoteSelect}
+        onCreateNote={vi.fn()}
+        onLongPress={onLongPress}
+      />,
+    );
+
+    const row = screen.getByRole("button", { name: /React Hooks Guide/i });
+    touchStart(row);
+    act(() => {
+      vi.advanceTimersByTime(400);
+    });
+    touchEnd(row);
+
+    expect(onLongPress).not.toHaveBeenCalled();
+  });
+
+  it("moving >10px cancels the pending long-press (does NOT fire onLongPress)", () => {
+    const onLongPress = vi.fn();
+    render(
+      <NoteList
+        notes={mockNotes}
+        activeNoteId={null}
+        onNoteSelect={vi.fn()}
+        onCreateNote={vi.fn()}
+        onLongPress={onLongPress}
+      />,
+    );
+
+    const row = screen.getByRole("button", { name: /React Hooks Guide/i });
+    touchStart(row, 100, 100);
+    // Drift >10px BEFORE 500ms elapses — fires touchMove with x+12, y+12.
+    touchMove(row, 112, 112);
+    act(() => {
+      vi.advanceTimersByTime(600);
+    });
+
+    expect(onLongPress).not.toHaveBeenCalled();
+  });
+
+  it("cumulative drift past 10px cancels the timer (boundary case)", () => {
+    // Spec: cancel on movement GREATER THAN 10px. We split drift across two
+    // move events so the second one tips it over the threshold — proving the
+    // recogniser tracks the cumulative distance from the touchstart origin,
+    // not the per-event delta.
+    const onLongPress = vi.fn();
+    render(
+      <NoteList
+        notes={mockNotes}
+        activeNoteId={null}
+        onNoteSelect={vi.fn()}
+        onCreateNote={vi.fn()}
+        onLongPress={onLongPress}
+      />,
+    );
+
+    const row = screen.getByRole("button", { name: /React Hooks Guide/i });
+    touchStart(row, 100, 100);
+    // 8px drift → under threshold → timer survives.
+    touchMove(row, 108, 100);
+    act(() => {
+      vi.advanceTimersByTime(200);
+    });
+    // Additional 4px → cumulative hypot = sqrt(64 + 36) = sqrt(100) = 10px
+    // exactly; spec says cancel on >10 so the timer still survives here.
+    touchMove(row, 108, 104);
+    act(() => {
+      vi.advanceTimersByTime(50);
+    });
+    // One more px each axis → cumulative hypot = sqrt(81 + 49) = sqrt(130)
+    // ≈ 11.4px, strictly > 10 → timer must cancel.
+    touchMove(row, 109, 107);
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+
+    expect(onLongPress).not.toHaveBeenCalled();
+  });
+
+  it("after long-press fires, the subsequent click does NOT trigger onNoteSelect", () => {
+    const onLongPress = vi.fn();
+    const onNoteSelect = vi.fn();
+    render(
+      <NoteList
+        notes={mockNotes}
+        activeNoteId={null}
+        onNoteSelect={onNoteSelect}
+        onCreateNote={vi.fn()}
+        onLongPress={onLongPress}
+      />,
+    );
+
+    const row = screen.getByRole("button", { name: /React Hooks Guide/i });
+    touchStart(row);
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+    touchEnd(row);
+    // The browser synthesises a click on touchend if there was no movement.
+    // Our handler must suppress it because long-press already fired.
+    fireEvent.click(row);
+
+    expect(onLongPress).toHaveBeenCalledTimes(1);
+    expect(onNoteSelect).not.toHaveBeenCalled();
+  });
+
+  it("a normal tap (no long-press) still calls onNoteSelect (the row's primary action)", () => {
+    const onLongPress = vi.fn();
+    const onNoteSelect = vi.fn();
+    render(
+      <NoteList
+        notes={mockNotes}
+        activeNoteId={null}
+        onNoteSelect={onNoteSelect}
+        onCreateNote={vi.fn()}
+        onLongPress={onLongPress}
+      />,
+    );
+
+    const row = screen.getByRole("button", { name: /React Hooks Guide/i });
+    touchStart(row);
+    touchEnd(row);
+
+    expect(onLongPress).not.toHaveBeenCalled();
+    // Note: in jsdom fireEvent.click is the synthetic way to invoke the
+    // tap-then-click chain; we don't rely on browser synthesised mouse → click.
+    fireEvent.click(row);
+    expect(onNoteSelect).toHaveBeenCalledWith("n1");
+  });
+
+  it("does not render any long-press wiring when onLongPress is omitted", () => {
+    // Sans onLongPress prop the row should still tap-open the note via
+    // onNoteSelect — no regressions on desktop.
+    const onNoteSelect = vi.fn();
+    render(
+      <NoteList
+        notes={mockNotes}
+        activeNoteId={null}
+        onNoteSelect={onNoteSelect}
+        onCreateNote={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /React Hooks Guide/i }));
+    expect(onNoteSelect).toHaveBeenCalledWith("n1");
+  });
+});
+
+// ── NoteActionSheet wiring (REQ-LIST-03) ────────────────────────────────────
+//
+// After T2 registers the long-press, T3 confirms the parent (`NoteList`)
+// opens `<NoteActionSheet>` whenever the gesture fires. The sheet is the
+// only surface from which the user can delete a note on mobile.
+
+describe("NoteList — NoteActionSheet wiring (REQ-LIST-03)", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  function touchStart(target: Element, x = 100, y = 100) {
+    fireEvent.touchStart(target, {
+      touches: [{ clientX: x, clientY: y }],
+    });
+  }
+
+  it("does not render the action sheet before a long-press fires", () => {
+    render(
+      <NoteList
+        notes={mockNotes}
+        activeNoteId={null}
+        onNoteSelect={vi.fn()}
+        onCreateNote={vi.fn()}
+      />,
+    );
+    // Sheet's title lives inside the dialog (act flush is required for the
+    // modal to mount its title h2).
+    expect(screen.queryByText(/acciones de la nota/i)).not.toBeInTheDocument();
+  });
+
+  it("long-pressing a row mounts the action sheet with the note's title", () => {
+    render(
+      <NoteList
+        notes={mockNotes}
+        activeNoteId={null}
+        onNoteSelect={vi.fn()}
+        onCreateNote={vi.fn()}
+      />,
+    );
+
+    const row = screen.getByRole("button", { name: /React Hooks Guide/i });
+    touchStart(row);
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+
+    // The dialog title h2 ("Acciones de la nota") confirms the sheet is open.
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toBeInTheDocument();
+    expect(within(dialog).getByText(/acciones de la nota/i)).toBeInTheDocument();
+    // The note title appears in the sheet's body copy, scoped to the dialog
+    // to avoid the duplicate row title.
+    expect(within(dialog).getByText("React Hooks Guide")).toBeInTheDocument();
+  });
+
+  it("the action sheet exposes an Eliminar option with the right data-testid", () => {
+    render(
+      <NoteList
+        notes={mockNotes}
+        activeNoteId={null}
+        onNoteSelect={vi.fn()}
+        onCreateNote={vi.fn()}
+      />,
+    );
+
+    const row = screen.getByRole("button", { name: /React Hooks Guide/i });
+    touchStart(row);
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+
+    const eliminarBtn = screen.getByTestId(
+      "note-action-sheet-option-delete",
+    );
+    expect(eliminarBtn).toBeInTheDocument();
+    expect(eliminarBtn).toHaveTextContent(/eliminar/i);
+  });
+
+  it("tapping Eliminar closes the sheet AND opens DeleteConfirmDialog", () => {
+    render(
+      <NoteList
+        notes={mockNotes}
+        activeNoteId={null}
+        onNoteSelect={vi.fn()}
+        onCreateNote={vi.fn()}
+      />,
+    );
+
+    const row = screen.getByRole("button", { name: /React Hooks Guide/i });
+    touchStart(row);
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+
+    const eliminarBtn = screen.getByTestId(
+      "note-action-sheet-option-delete",
+    );
+    fireEvent.click(eliminarBtn);
+
+    // Sheet closed.
+    expect(screen.queryByText(/acciones de la nota/i)).not.toBeInTheDocument();
+    // DeleteConfirmDialog opens with a Cancelar button (Cancelar renders
+    // synchronously — no waiting for the share-warning fetch). We assert
+    // on the cancel testid because it's stable across copy edits.
+    expect(screen.getByTestId("delete-confirm-cancel")).toBeInTheDocument();
+    expect(screen.getByTestId("delete-confirm-confirm")).toBeInTheDocument();
+  });
+
+  it("Escape closes the action sheet", () => {
+    render(
+      <NoteList
+        notes={mockNotes}
+        activeNoteId={null}
+        onNoteSelect={vi.fn()}
+        onCreateNote={vi.fn()}
+      />,
+    );
+
+    const row = screen.getByRole("button", { name: /React Hooks Guide/i });
+    touchStart(row);
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+
+    const dialog = screen.getByRole("dialog");
+    act(() => {
+      dialog.dispatchEvent(
+        new Event("cancel", { bubbles: true, cancelable: true }),
+      );
+    });
+
+    expect(screen.queryByText(/acciones de la nota/i)).not.toBeInTheDocument();
+  });
+});
+
 // ── Mobile row density (REQ-LIST-02) ────────────────────────────────────────
 //
 // Spec: at ≤767px, each note row MUST render ≤56px of vertical space. The
-// Tailwind `md:` variants are the gate — desktop at ≥768px reads the `md:*`
+// tail `md:` variants are the gate — desktop at ≥768px reads the `md:*`
 // overrides, mobile only sees the bare tokens. We assert the className
 // tokens directly (jsdom doesn't compute media queries, but Tailwind 4
 // emits the right CSS at build time; the contract is the source).
@@ -834,6 +1182,8 @@ describe("NoteList — mobile row density (REQ-LIST-02)", () => {
       <NoteList notes={mockNotes} activeNoteId={null} onNoteSelect={vi.fn()} onCreateNote={vi.fn()} />,
     );
 
+    // The row contains a <p> for the preview. Find it directly via its
+    // content (the preview text from the mock note).
     const preview = screen.getByText(/detailed guide about hooks/i);
     const classes = preview.className;
     expect(classes).toMatch(/\bline-clamp-1\b/);
@@ -851,6 +1201,8 @@ describe("NoteList — mobile row density (REQ-LIST-02)", () => {
       />,
     );
 
+    // The wrapper <div> carries the responsive gate (the inner <span> is
+    // always `inline-flex` for layout — `hidden` lives on the parent).
     const eyebrowWrap = screen.getByTestId("note-tab-eyebrow-wrap-n1");
     expect(eyebrowWrap.className).toMatch(/\bhidden\b/);
     expect(eyebrowWrap.className).toMatch(/\bmd:flex\b/);
@@ -877,18 +1229,21 @@ describe("NoteList — mobile row density (REQ-LIST-02)", () => {
     );
 
     const tagRow = screen.getByTestId("note-tags-n1");
+    // Wrapper <div> carries the responsive gate.
     expect(tagRow.className).toMatch(/\bhidden\b/);
     expect(tagRow.className).toMatch(/\bmd:flex\b/);
   });
 
   it("row mock geometry fits the ≤56px mobile contract via getBoundingClientRect", () => {
+    // Mirrors the NoteEditorMobileToolbar.test precedent (mocking the
+    // intrinsic rect so the assertion can run in jsdom where media queries
+    // don't fire). We mock the row's rect to the spec limit; the actual
+    // height is driven by the Tailwind tokens asserted above.
     const originalGetRect = Element.prototype.getBoundingClientRect;
     Element.prototype.getBoundingClientRect = vi.fn(function (this: Element) {
-      if (
-        this instanceof HTMLButtonElement &&
-        this.hasAttribute("data-testid") &&
-        this.getAttribute("data-testid")?.startsWith("note-row-")
-      ) {
+      // Only return a 56px-tall rect for the row buttons; everything else
+      // uses the default jsdom rect.
+      if (this instanceof HTMLButtonElement && this.hasAttribute("data-testid") && this.getAttribute("data-testid")?.startsWith("note-row-")) {
         return {
           width: 327,
           height: 56,
