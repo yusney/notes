@@ -799,3 +799,123 @@ describe("NoteList — drag handle touch affordance (REQ-LAY-03)", () => {
     expect(handle.className).toMatch(/\bgroup-hover:opacity-100\b/);
   });
 });
+
+// ── Mobile row density (REQ-LIST-02) ────────────────────────────────────────
+//
+// Spec: at ≤767px, each note row MUST render ≤56px of vertical space. The
+// Tailwind `md:` variants are the gate — desktop at ≥768px reads the `md:*`
+// overrides, mobile only sees the bare tokens. We assert the className
+// tokens directly (jsdom doesn't compute media queries, but Tailwind 4
+// emits the right CSS at build time; the contract is the source).
+
+describe("NoteList — mobile row density (REQ-LIST-02)", () => {
+  it("row button uses mobile-tight padding with md: desktop revert (px-3 py-2 md:px-4 md:py-3)", () => {
+    render(
+      <NoteList
+        notes={mockNotes}
+        activeNoteId={null}
+        onNoteSelect={vi.fn()}
+        onCreateNote={vi.fn()}
+      />,
+    );
+
+    const row = screen.getByTestId("note-row-n1");
+    const classes = row.className;
+    // Mobile default is tighter (py-2 = 8px vs py-3 = 12px).
+    expect(classes).toMatch(/\bpx-3\b/);
+    expect(classes).toMatch(/\bpy-2\b/);
+    // Desktop ≥768px reverts to the original spacing via md: overrides.
+    expect(classes).toMatch(/\bmd:px-4\b/);
+    expect(classes).toMatch(/\bmd:py-3\b/);
+  });
+
+  it("preview line uses 1-line clamp on mobile with 2-line clamp on desktop (line-clamp-1 md:line-clamp-2)", () => {
+    render(
+      <NoteList notes={mockNotes} activeNoteId={null} onNoteSelect={vi.fn()} onCreateNote={vi.fn()} />,
+    );
+
+    const preview = screen.getByText(/detailed guide about hooks/i);
+    const classes = preview.className;
+    expect(classes).toMatch(/\bline-clamp-1\b/);
+    expect(classes).toMatch(/\bmd:line-clamp-2\b/);
+  });
+
+  it("tab eyebrow chip is hidden on mobile, visible on desktop (md:hidden)", () => {
+    render(
+      <NoteList
+        notes={mockNotes}
+        tabs={mockTabs}
+        activeNoteId={null}
+        onNoteSelect={vi.fn()}
+        onCreateNote={vi.fn()}
+      />,
+    );
+
+    const eyebrowWrap = screen.getByTestId("note-tab-eyebrow-wrap-n1");
+    expect(eyebrowWrap.className).toMatch(/\bhidden\b/);
+    expect(eyebrowWrap.className).toMatch(/\bmd:flex\b/);
+  });
+
+  it("tag chip row is hidden on mobile, visible on desktop (md:hidden)", () => {
+    const notesWithTags: Note[] = [
+      {
+        ...mockNotes[0],
+        tags: [
+          { id: "tag-1", name: "react", userId: "u1", createdAt: "2024-01-01" },
+          { id: "tag-2", name: "frontend", userId: "u1", createdAt: "2024-01-01" },
+        ],
+      },
+    ];
+
+    render(
+      <NoteList
+        notes={notesWithTags}
+        activeNoteId={null}
+        onNoteSelect={vi.fn()}
+        onCreateNote={vi.fn()}
+      />,
+    );
+
+    const tagRow = screen.getByTestId("note-tags-n1");
+    expect(tagRow.className).toMatch(/\bhidden\b/);
+    expect(tagRow.className).toMatch(/\bmd:flex\b/);
+  });
+
+  it("row mock geometry fits the ≤56px mobile contract via getBoundingClientRect", () => {
+    const originalGetRect = Element.prototype.getBoundingClientRect;
+    Element.prototype.getBoundingClientRect = vi.fn(function (this: Element) {
+      if (
+        this instanceof HTMLButtonElement &&
+        this.hasAttribute("data-testid") &&
+        this.getAttribute("data-testid")?.startsWith("note-row-")
+      ) {
+        return {
+          width: 327,
+          height: 56,
+          top: 0,
+          left: 0,
+          right: 327,
+          bottom: 56,
+          x: 0,
+          y: 0,
+          toJSON: () => ({}),
+        };
+      }
+      const fallback = originalGetRect.call(this);
+      return fallback.width === 0 && fallback.height === 0
+        ? { width: 800, height: 600, top: 0, left: 0, right: 800, bottom: 600, x: 0, y: 0, toJSON: () => ({}) }
+        : fallback;
+    });
+
+    try {
+      render(
+        <NoteList notes={mockNotes} activeNoteId={null} onNoteSelect={vi.fn()} onCreateNote={vi.fn()} />,
+      );
+      const row = screen.getByTestId("note-row-n1");
+      const rect = row.getBoundingClientRect();
+      expect(rect.height).toBeLessThanOrEqual(56);
+    } finally {
+      Element.prototype.getBoundingClientRect = originalGetRect;
+    }
+  });
+});
