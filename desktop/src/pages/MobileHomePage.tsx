@@ -51,6 +51,11 @@ export function MobileHomePage() {
     error,
     activeTabId,
     tabs,
+    page,
+    pageSize,
+    totalCount,
+    totalPages,
+    setPage,
     createNote,
     createTab,
     setActiveNote,
@@ -76,6 +81,14 @@ export function MobileHomePage() {
     setActiveNote(noteId);
     navigate(`/notes/${noteId}`);
   }
+
+  // Pagination is only wired when more than one page exists — single-page
+  // lists don't need navigation chrome (REQ-LIST-01). The `mobileLayout`
+  // pass-through stacks the buttons vertically on viewports ≤767px (REQ-LAY-05).
+  const pagination =
+    totalPages > 1
+      ? { page, pageSize, totalCount, onPageChange: setPage }
+      : undefined;
 
   // Loading state: brief inline message (the same copy as the
   // desktop list panel).
@@ -114,7 +127,11 @@ export function MobileHomePage() {
   // pagination are wired through so the same component is
   // rendered; the user just doesn't see them on the narrow
   // viewport (the row buttons are gated on visibility in
-  // `NoteList.tsx`).
+  // `NoteList.tsx`). The long-press → action-sheet → delete-dialog
+  // flow is owned internally by `NoteList` (REQs REQ-LIST-03..
+  // REQ-LIST-05); on mobile the desktop delete button (`group-hover`
+  // only) is intentionally not wired — the action sheet is the
+  // discoverable path.
   return (
     <NoteList
       notes={filteredNotes()}
@@ -124,6 +141,8 @@ export function MobileHomePage() {
       onCreateNote={() => { void handleCreateNote(); }}
       enableDrag={false}
       isFavoriteOnly={false}
+      pagination={pagination}
+      paginationMobileLayout
     />
   );
 }

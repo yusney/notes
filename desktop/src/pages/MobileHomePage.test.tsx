@@ -192,4 +192,83 @@ describe("MobileHomePage (PR3 hotfix — shell-redesign-v1)", () => {
     await user.click(row);
     expect(setActiveNote).toHaveBeenCalledWith("n-1");
   });
+
+  // ── Pagination wire-up (REQ-LIST-01 + REQ-LAY-05) ─────────────────────────
+  //
+  // On mobile, MobileHomePage MUST pass the store's pagination state down to
+  // `<NoteList>` so the user sees Anterior / Siguiente when more than one page
+  // exists. The pagination prop is GATED on `totalPages > 1` — single-page
+  // lists don't show the chrome. The vertical mobile layout is opt-in via the
+  // `mobileLayout` prop on `<Pagination>` (T7).
+
+  it("renders pagination chrome when totalPages > 1 (12 notes / pageSize 10)", () => {
+    mockStore({
+      notes: [NOTE],
+      filteredNotes: () => [NOTE],
+      page: 1,
+      pageSize: 10,
+      totalCount: 12,
+      totalPages: 2,
+      setPage: vi.fn().mockResolvedValue(undefined),
+    });
+    renderPage();
+    // Pagination renders when NoteList receives a defined `pagination` prop.
+    expect(screen.getByText(/mostrando 1-10 de 12 notas/i)).toBeInTheDocument();
+    expect(screen.getByText(/página 1 de 2/i)).toBeInTheDocument();
+  });
+
+  it("does NOT render pagination when totalPages === 1 (5 notes / pageSize 10)", () => {
+    mockStore({
+      notes: [NOTE],
+      filteredNotes: () => [NOTE],
+      page: 1,
+      pageSize: 10,
+      totalCount: 5,
+      totalPages: 1,
+      setPage: vi.fn().mockResolvedValue(undefined),
+    });
+    renderPage();
+    // Single-page list: the gated pagination prop is undefined → Pagination
+    // never mounts, so the count chrome disappears entirely.
+    expect(screen.queryByText(/mostrando/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/página/i)).not.toBeInTheDocument();
+  });
+
+  it("clicking Siguiente calls useNoteStore.setPage with the next page", async () => {
+    const user = userEvent.setup();
+    const setPage = vi.fn().mockResolvedValue(undefined);
+    mockStore({
+      notes: [NOTE],
+      filteredNotes: () => [NOTE],
+      page: 1,
+      pageSize: 10,
+      totalCount: 25,
+      totalPages: 3,
+      setPage,
+    });
+    renderPage();
+
+    await user.click(screen.getByRole("button", { name: /siguiente/i }));
+
+    expect(setPage).toHaveBeenCalledWith(2);
+  });
+
+  it("tapping Anterior on page 2 calls useNoteStore.setPage(1)", async () => {
+    const user = userEvent.setup();
+    const setPage = vi.fn().mockResolvedValue(undefined);
+    mockStore({
+      notes: [NOTE],
+      filteredNotes: () => [NOTE],
+      page: 2,
+      pageSize: 10,
+      totalCount: 25,
+      totalPages: 3,
+      setPage,
+    });
+    renderPage();
+
+    await user.click(screen.getByRole("button", { name: /anterior/i }));
+
+    expect(setPage).toHaveBeenCalledWith(1);
+  });
 });

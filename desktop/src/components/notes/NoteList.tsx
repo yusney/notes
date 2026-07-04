@@ -59,6 +59,14 @@ interface NoteListProps {
     totalCount: number;
     onPageChange: (page: number) => void;
   };
+  /**
+   * When true, `<Pagination>` (rendered when `pagination` is set) lays out
+   * its buttons in a vertical stack on viewports ≤767px and gives them
+   * full-width. Required at 360px-class viewports to avoid horizontal
+   * overflow (REQ-LAY-05). Desktop at ≥768px is byte-identical regardless.
+   * Default: false.
+   */
+  paginationMobileLayout?: boolean;
 }
 
 export function NoteList({
@@ -77,6 +85,7 @@ export function NoteList({
   isFavoriteOnly = false,
   onFavoriteFilterToggle,
   pagination,
+  paginationMobileLayout = false,
 }: NoteListProps) {
   const totalTags = notes.reduce((count, note) => count + (note.tags?.length ?? 0), 0);
 
@@ -184,6 +193,7 @@ export function NoteList({
           pageSize={pagination.pageSize}
           totalCount={pagination.totalCount}
           onPageChange={pagination.onPageChange}
+          mobileLayout={paginationMobileLayout}
         />
       )}
     </div>
@@ -265,7 +275,7 @@ function NoteRow({
   return (
     <li
       ref={draggable.setNodeRef}
-      className="group relative mb-2 flex items-stretch gap-1"
+      className="group relative mb-1 md:mb-2 flex items-stretch gap-1"
       style={style}
     >
       {enableDrag && (
@@ -325,14 +335,21 @@ function NoteRow({
         onClick={() => onNoteSelect(note.id)}
         onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onNoteSelect(note.id); } }}
         aria-current={activeNoteId === note.id ? "true" : undefined}
-        className={`min-w-0 flex-1 border px-4 py-3 text-left transition-colors cursor-pointer ${
+        data-testid={`note-row-${note.id}`}
+        className={`min-w-0 flex-1 border px-3 py-2 md:px-4 md:py-3 text-left transition-colors cursor-pointer ${
           activeNoteId === note.id
             ? "border-accent border-2 bg-surface-elevated"
             : "border-border bg-surface-elevated/75 hover:border-accent hover:bg-surface-elevated"
         }`}
       >
         {tabName && (
-          <div className="mb-1.5 flex">
+          // Eyebrow chip: hidden on mobile (≤767px) — density budget; visible
+          // on desktop (≥768px) where vertical space is plentiful. Required
+          // because the mobile row target is ≤56px (REQ-LIST-02).
+          <div
+            data-testid={`note-tab-eyebrow-wrap-${note.id}`}
+            className="mb-1.5 hidden md:flex"
+          >
             <span
               data-testid={`note-tab-eyebrow-${note.id}`}
               className="inline-flex max-w-full items-center gap-1 rounded-full bg-accent-subtle px-2 py-[3px] text-[10px] font-semibold uppercase tracking-wider text-text-secondary"
@@ -343,11 +360,18 @@ function NoteRow({
           </div>
         )}
         <p className={`min-w-0 truncate text-sm font-semibold text-text-primary ${onToggleFavorite ? "pr-7" : ""}`}>{note.title}</p>
-        <p className="mt-1 line-clamp-2 text-xs leading-5 text-text-secondary">
+        {/* Preview: 1-line clamp on mobile (≤56px row budget), 2-line on desktop. */}
+        <p className="mt-1 line-clamp-1 md:line-clamp-2 text-xs leading-4 md:leading-5 text-text-secondary">
           {note.content.replace(/<[^>]*>/g, " ").slice(0, 90) || "Sin contenido todavía"}
         </p>
         {note.tags?.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-1.5">
+          // Tag chip row: hidden on mobile; long-press sheet is the path
+          // back to tags on small viewports (future iteration). Desktop
+          // shows the chip row inline.
+          <div
+            data-testid={`note-tags-${note.id}`}
+            className="hidden md:flex md:mt-3 md:flex-wrap md:gap-1.5"
+          >
             {note.tags.slice(0, 3).map((tag) => (
               <span key={tag.id} className="rounded-full bg-accent-subtle px-2 py-0.5 text-xs text-text-secondary">
                 {tag.name}
