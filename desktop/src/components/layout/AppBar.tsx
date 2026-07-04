@@ -42,7 +42,7 @@ export function AppBar({ title, leading, trailing }: AppBarProps) {
           {leading}
         </div>
       )}
-      <h1 className="flex-1 truncate text-text-body-sm font-semibold">{title}</h1>
+      <h1 className="flex-1 truncate text-[length:var(--type-body-sm)] font-semibold">{title}</h1>
       {trailing !== undefined && (
         <div data-testid="app-bar-trailing" className="flex items-center">
           {trailing}

@@ -7,7 +7,7 @@ exports[`BottomNav (PR1 — shell-redesign-v1) > renders stably at 360px viewpor
 >
   <a
     aria-current="page"
-    class="flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 px-2 py-1 text-text-caption transition-colors text-accent"
+    class="flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 px-2 py-1 text-[length:var(--type-caption)] transition-colors text-accent"
     data-discover="true"
     href="/"
   >
@@ -21,7 +21,7 @@ exports[`BottomNav (PR1 — shell-redesign-v1) > renders stably at 360px viewpor
     </span>
   </a>
   <a
-    class="flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 px-2 py-1 text-text-caption transition-colors hover:text-text-primary"
+    class="flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 px-2 py-1 text-[length:var(--type-caption)] transition-colors hover:text-text-primary"
     data-discover="true"
     href="/search"
   >
@@ -35,7 +35,7 @@ exports[`BottomNav (PR1 — shell-redesign-v1) > renders stably at 360px viewpor
     </span>
   </a>
   <a
-    class="flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 px-2 py-1 text-text-caption transition-colors hover:text-text-primary"
+    class="flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 px-2 py-1 text-[length:var(--type-caption)] transition-colors hover:text-text-primary"
     data-discover="true"
     href="/new"
   >
@@ -50,7 +50,7 @@ exports[`BottomNav (PR1 — shell-redesign-v1) > renders stably at 360px viewpor
     </span>
   </a>
   <a
-    class="flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 px-2 py-1 text-text-caption transition-colors hover:text-text-primary"
+    class="flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 px-2 py-1 text-[length:var(--type-caption)] transition-colors hover:text-text-primary"
     data-discover="true"
     href="/profile"
   >

@@ -61,7 +61,7 @@ export function BottomNav() {
             key={item.path}
             to={item.path}
             aria-current={isActive ? "page" : undefined}
-            className={`flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 px-2 py-1 text-text-caption transition-colors ${
+            className={`flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 px-2 py-1 text-[length:var(--type-caption)] transition-colors ${
               isActive ? "text-accent" : "hover:text-text-primary"
             }`}
           >

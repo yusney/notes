@@ -42,32 +42,42 @@
 
   /* ─── shell-redesign-v1 (PR1) — design tokens ────────────────────────────
    *
-   * Spacing: 4-point grid. Each token is exposed by Tailwind v4 as the
-   *              utility classes  p-{name} | m-{name} | gap-{name} | etc.
-   * Typography: 7-step mobile-first scale. Exposed as text-{name}.
+   * Spacing: 4-point grid. Tokens are deliberately namespaced as
+   *              `--space-*` (NOT `--spacing-*`) to avoid colliding with
+   *              Tailwind v4's internal spacing scale; declaring
+   *              `--spacing-sm` here would shadow `max-w-sm` and friends
+   *              (see Engram #2220). Components consume these via
+   *              arbitrary values: `p-[var(--space-xs)]`, `gap-[var(--space-md)]`, etc.
+   * Typography: 7-step mobile-first scale. Tokens are namespaced as
+   *              `--type-*` (NOT `--text-*`) for the same reason —
+   *              `--text-caption` would shadow Tailwind v4's auto-generated
+   *              `text-caption` font-size utility AND collide with `--text-*`
+   *              namespace fallbacks. The custom `--type-*` namespace is not
+   *              recognized by Tailwind v4, so the tokens are consumed via
+   *              arbitrary values: `text-[length:var(--type-caption)]`, etc.
    *
    * Components consume these directly:
-   *   - AppBar   : pt-[var(--safe-top)]
-   *   - BottomNav: pb-[var(--safe-bottom)]
-   *   - SideSheet: pl-[var(--safe-left)]
+   *   - AppBar   : pt-[var(--safe-top)] + text-[length:var(--type-body-sm)]
+   *   - BottomNav: pb-[var(--safe-bottom)] + text-[length:var(--type-caption)]
+   *   - SideSheet: pl-[var(--safe-left)] + text-[length:var(--type-caption)] / text-[length:var(--type-body-sm)]
    *
    * Safe-area variables are declared on :root / .dark / html.light so they
    * stay consistent regardless of the active color theme.
    */
-  --spacing-xs: 4px;
-  --spacing-sm: 8px;
-  --spacing-md: 12px;
-  --spacing-lg: 16px;
-  --spacing-xl: 24px;
-  --spacing-2xl: 32px;
-  --spacing-3xl: 48px;
-  --text-caption: 12px;
-  --text-body-sm: 14px;
-  --text-body: 16px;
-  --text-h3: 20px;
-  --text-h2: 24px;
-  --text-h1: 28px;
-  --text-display: 32px;
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+  --space-2xl: 32px;
+  --space-3xl: 48px;
+  --type-caption: 12px;
+  --type-body-sm: 14px;
+  --type-body: 16px;
+  --type-h3: 20px;
+  --type-h2: 24px;
+  --type-h1: 28px;
+  --type-display: 32px;
 }
 
 /* ─── Default: Dark mode (:root) ────────────────────────────────────────── */
