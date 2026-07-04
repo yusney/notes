@@ -1,9 +1,10 @@
-import { useReducer, useEffect } from "react";
+import { useReducer, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTheme } from "../hooks/useTheme";
 import type { Theme } from "../hooks/useTheme";
 import { usePreferencesStore, type SortBy, type SortOrder } from "../stores/usePreferencesStore";
 import { Select } from "../components/ui/Select";
+import { MobileShell } from "../components/layout/MobileShell";
 
 const THEME_OPTIONS = [
   { value: "system", label: "Sistema" },
@@ -63,6 +64,26 @@ export function SettingsPage() {
   const [state, dispatch] = useReducer(settingsReducer, INITIAL_STATE);
   const { sortBy, sortOrder, isSaving, success, error } = state;
 
+  // PR3 — detect mobile viewport (same pattern as ProfilePage). Mobile
+  // gets wrapped in <MobileShell> for AppBar+back-chevron+BottomNav
+  // chrome; desktop stays untouched (REQ-LAY-01).
+  const [isMobile, setIsMobile] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return window.matchMedia("(max-width: 767px)").matches;
+  });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mql = window.matchMedia("(max-width: 767px)");
+    const onChange = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    if (mql.addEventListener) {
+      mql.addEventListener("change", onChange);
+      return () => mql.removeEventListener("change", onChange);
+    }
+    mql.addListener(onChange);
+    return () => mql.removeListener(onChange);
+  }, []);
+
   /* eslint-disable react-doctor/exhaustive-deps -- fetchPreferences is a stable Zustand action, adding it would cause infinite re-runs */
   useEffect(() => {
     fetchPreferences().then(() => {
@@ -84,15 +105,20 @@ export function SettingsPage() {
 
   if (prefsLoading) return <div className="p-6 text-sm text-text-secondary">Cargando…</div>;
 
-  return (
+  // PR3 — mobile wrapper: on mobile, the desktop "← Volver" text link
+  // is suppressed (the AppBar back chevron replaces it) and the entire
+  // body is wrapped in <MobileShell> for full chrome.
+  const pageBody = (
     <div className="min-h-screen bg-surface">
       <div className="max-w-lg mx-auto p-6 space-y-8">
-        <Link
-          to="/"
-          className="inline-flex items-center gap-1 text-sm font-medium text-text-secondary hover:text-accent transition-colors"
-        >
-          ← Volver
-        </Link>
+        {!isMobile && (
+          <Link
+            to="/"
+            className="inline-flex items-center gap-1 text-sm font-medium text-text-secondary hover:text-accent transition-colors"
+          >
+            ← Volver
+          </Link>
+        )}
         <h1 className="text-xl font-semibold text-text-primary">Configuración</h1>
 
         <section className="space-y-4">
@@ -145,4 +171,6 @@ export function SettingsPage() {
       </div>
     </div>
   );
+
+  return isMobile ? <MobileShell>{pageBody}</MobileShell> : pageBody;
 }

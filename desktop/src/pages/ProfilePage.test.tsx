@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { ProfilePage } from "./ProfilePage";
 import { useAuthStore } from "../stores/useAuthStore";
@@ -22,24 +22,54 @@ vi.mock("react-router-dom", async () => {
 
 import { apiClient } from "../api/client";
 
-function renderProfilePage() {
+function renderProfilePage(initialPath = "/") {
   return render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[initialPath]}>
       <ProfilePage />
     </MemoryRouter>
   );
+}
+
+/**
+ * Helper to mock `window.matchMedia` so the page renders as either
+ * mobile (matches=true for the mobile query) or desktop (matches=false).
+ * The default jsdom matchMedia polyfill in test-setup.ts always returns
+ * matches=false, which is the desktop shape — we override per-test.
+ */
+function mockMatchMedia(mobile: boolean) {
+  Object.defineProperty(window, "matchMedia", {
+    writable: true,
+    configurable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches:
+        query === "(max-width: 767px)"
+          ? mobile
+          : query === "(prefers-reduced-motion: reduce)"
+            ? false
+            : false,
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  });
 }
 
 beforeEach(() => {
   useAuthStore.setState({
     user: { id: "u1", name: "Juan Pérez", email: "juan@test.com" },
     accessToken: "tok",
-    
+
     isAuthenticated: true,
     isLoading: false,
     error: null,
   });
   vi.clearAllMocks();
+});
+
+afterEach(() => {
+  cleanup();
 });
 
 describe("ProfilePage", () => {
@@ -127,5 +157,69 @@ describe("ProfilePage", () => {
       expect(screen.getByText(/github/i)).toBeInTheDocument();
     });
     expect(screen.queryByLabelText(/contraseña actual/i)).not.toBeInTheDocument();
+  });
+});
+
+describe("ProfilePage (PR3 — mobile wrapper)", () => {
+  afterEach(() => cleanup());
+
+  it("on mobile: wraps content in MobileShell with an AppBar (testid=app-bar)", async () => {
+    mockMatchMedia(true);
+    vi.mocked(apiClient.get).mockResolvedValueOnce({
+      name: "Juan Pérez",
+      email: "juan@test.com",
+      provider: "local",
+    });
+
+    renderProfilePage("/profile");
+
+    await waitFor(() => {
+      // MobileShell always renders the AppBar from PR1.
+      expect(screen.getByTestId("app-bar")).toBeInTheDocument();
+    });
+    // BottomNav mounts inside MobileShell on mobile (4 items).
+    expect(screen.getByRole("navigation")).toBeInTheDocument();
+    // AppBar title is derived from the route (see MobileShell.getMobileTitle).
+    expect(screen.getByTestId("app-bar")).toHaveTextContent(/perfil/i);
+  });
+
+  it("on mobile: shows a back chevron (testid=mobile-back-button) instead of the desktop text link", async () => {
+    mockMatchMedia(true);
+    vi.mocked(apiClient.get).mockResolvedValueOnce({
+      name: "Juan Pérez",
+      email: "juan@test.com",
+      provider: "local",
+    });
+
+    renderProfilePage("/profile");
+
+    await waitFor(() => {
+      expect(screen.getByTestId("app-bar")).toBeInTheDocument();
+    });
+    // Back chevron is provided by MobileShell on non-home routes.
+    expect(screen.getByTestId("mobile-back-button")).toBeInTheDocument();
+    // The desktop-only text link must NOT render on mobile (the AppBar
+    // chevron replaces it — a duplicate "← Volver" would be confusing).
+    expect(screen.queryByRole("link", { name: /volver/i })).not.toBeInTheDocument();
+  });
+
+  it("on desktop: keeps the desktop text '← Volver' Link and does NOT wrap in MobileShell", async () => {
+    mockMatchMedia(false);
+    vi.mocked(apiClient.get).mockResolvedValueOnce({
+      name: "Juan Pérez",
+      email: "juan@test.com",
+      provider: "local",
+    });
+
+    renderProfilePage();
+
+    await waitFor(() => {
+      // The desktop back link is still the first interactive element.
+      expect(screen.getByRole("link", { name: /volver/i })).toBeInTheDocument();
+    });
+    // The mobile AppBar + BottomNav must NOT be in the desktop tree
+    // (REQ-LAY-01 — desktop layout untouched).
+    expect(screen.queryByTestId("app-bar")).not.toBeInTheDocument();
+    expect(screen.queryByRole("navigation")).not.toBeInTheDocument();
   });
 });
