@@ -50,8 +50,10 @@ describe("MobileNotePage (PR2 — shell-redesign-v1)", () => {
         </Routes>
       </MemoryRouter>,
     );
+    // NoteEditor renders the title as an editable input (not a heading
+    // — the mobile editor is always editable on /notes/:id mobile).
     await waitFor(() => {
-      expect(screen.getByRole("heading", { name: /mi nota de prueba/i })).toBeInTheDocument();
+      expect(screen.getByDisplayValue("Mi nota de prueba")).toBeInTheDocument();
     });
   });
 
@@ -95,13 +97,13 @@ describe("MobileNotePage (PR2 — shell-redesign-v1)", () => {
     });
   });
 
-  it("renders the note title via the editor surface (NoteViewer mounted on the route)", async () => {
-    // This test confirms that the page MOUNTS NoteViewer (the
+  it("renders the note title via the editor surface (NoteEditor mounted on the route)", async () => {
+    // This test confirms that the page MOUNTS NoteEditor (the
     // user-visible outcome of a successful render). The MobileShell
     // wraps the page in App.tsx and provides the route-level back
     // chevron — that contract is exercised in MobileShell.test.tsx.
-    // Here we just assert the viewer reached the page (heading is
-    // the simplest user-visible signal).
+    // Here we just assert the editor reached the page (title input
+    // is the simplest user-visible signal).
     render(
       <MemoryRouter initialEntries={["/notes/abc-123"]}>
         <Routes>
@@ -110,7 +112,7 @@ describe("MobileNotePage (PR2 — shell-redesign-v1)", () => {
       </MemoryRouter>,
     );
     await waitFor(() => {
-      expect(screen.getByRole("heading", { level: 1, name: /mi nota de prueba/i })).toBeInTheDocument();
+      expect(screen.getByDisplayValue("Mi nota de prueba")).toBeInTheDocument();
     });
   });
 });
@@ -309,13 +311,19 @@ describe("MobileNotePage — PR3-hotfix viewer mobile regressions", () => {
       </MemoryRouter>,
     );
 
+    // MobileNotePage no longer mounts NoteViewer — the mobile editor
+    // is always editable. The NoteViewer's Editar button regression
+    // guard is now exercised in NoteViewer.test.tsx (desktop branch
+    // there). Here we just confirm the page does NOT render the
+    // Editar button on desktop either (the editor is always editable
+    // on the mobile route).
     expect(
-      screen.getByRole("button", { name: /editar/i })
-    ).toBeInTheDocument();
+      screen.queryByRole("button", { name: /editar/i })
+    ).not.toBeInTheDocument();
   });
 
-  // Test C — mobile padding
-  it("uses tight padding (px-4) on mobile so 375px viewports do not waste 64px on the viewer chrome", () => {
+  // Test C — mobile padding / safe-area (mobile-note-edit)
+  it("applies safe-area-inset-bottom padding on the mobile editor content area (REQ-EDIT-05)", () => {
     vi.mocked(useNoteStore).mockReturnValue({
       notes: [SAMPLE_NOTE],
       fetchNote: vi.fn().mockResolvedValue(SAMPLE_NOTE),
@@ -329,14 +337,96 @@ describe("MobileNotePage — PR3-hotfix viewer mobile regressions", () => {
       </MemoryRouter>,
     );
 
-    const viewer = container.querySelector(".note-viewer");
-    expect(viewer).toBeInTheDocument();
-    // Tailwind 4 compiles px-4 to `padding-inline: 1rem` (16px) and
-    // md:px-8 to `padding-inline: 2rem` (32px) at >=768px. The base
-    // class is what determines the mobile padding.
-    const className = (viewer as HTMLElement).className;
-    expect(className).toMatch(/(^|\s)px-4(\s|$)/);
-    // Desktop padding is preserved via md:px-8 (REQ-LAY-01).
-    expect(className).toMatch(/(^|\s)md:px-8(\s|$)/);
+    // Mobile editor uses .note-editor + .note-editor-content with
+    // pb-[env(safe-area-inset-bottom)] so the virtual keyboard never
+    // covers the last line.
+    const content = container.querySelector(".note-editor-content");
+    expect(content).toBeInTheDocument();
+    expect(content?.className).toMatch(/pb-\[env\(safe-area-inset-bottom\)\]/);
+  });
+});
+
+// ─── mobile-note-edit (REQ-EDIT-01 / REQ-EDIT-07) ───────────────────────────
+//
+// The mobile editor is now writable (no more read-only viewer on
+// /notes/:id). The page mounts `<NoteEditor variant="mobile">` and
+// does NOT mount `<NoteViewer>`. The "Editar" button is absent on
+// mobile (the editor is always editable — no toggle needed).
+
+describe("MobileNotePage — mobile-note-edit (REQ-EDIT-01 / REQ-EDIT-07)", () => {
+  beforeEach(() => {
+    // Mobile viewport
+    Object.defineProperty(window, "matchMedia", {
+      writable: true,
+      value: vi.fn().mockImplementation((query: string) => ({
+        matches: query.includes("767"),
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    });
+  });
+
+  it("mounts NoteEditor (not NoteViewer) on mobile viewports", () => {
+    vi.mocked(useNoteStore).mockReturnValue({
+      notes: [SAMPLE_NOTE],
+      fetchNote: vi.fn().mockResolvedValue(SAMPLE_NOTE),
+    } as never);
+
+    const { container } = render(
+      <MemoryRouter initialEntries={["/notes/abc-123"]}>
+        <Routes>
+          <Route path="/notes/:id" element={<MobileNotePage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    // NoteEditor mounts the editor content area with the `note-editor`
+    // wrapper class; NoteViewer uses `note-viewer`. The mobile variant
+    // also renders the bottom toolbar with `data-testid="editor-toolbar"`.
+    expect(container.querySelector(".note-editor")).toBeInTheDocument();
+    expect(container.querySelector('[data-testid="editor-toolbar"]')).toBeInTheDocument();
+    expect(container.querySelector(".note-viewer")).not.toBeInTheDocument();
+  });
+
+  it("does NOT render any element with text 'Editar' on mobile (REQ-EDIT-07)", () => {
+    vi.mocked(useNoteStore).mockReturnValue({
+      notes: [SAMPLE_NOTE],
+      fetchNote: vi.fn().mockResolvedValue(SAMPLE_NOTE),
+    } as never);
+
+    render(
+      <MemoryRouter initialEntries={["/notes/abc-123"]}>
+        <Routes>
+          <Route path="/notes/:id" element={<MobileNotePage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(
+      screen.queryByRole("button", { name: /editar/i })
+    ).not.toBeInTheDocument();
+  });
+
+  it("does NOT render the desktop Guardar / Cancelar buttons on mobile (status-only header)", () => {
+    vi.mocked(useNoteStore).mockReturnValue({
+      notes: [SAMPLE_NOTE],
+      fetchNote: vi.fn().mockResolvedValue(SAMPLE_NOTE),
+    } as never);
+
+    render(
+      <MemoryRouter initialEntries={["/notes/abc-123"]}>
+        <Routes>
+          <Route path="/notes/:id" element={<MobileNotePage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByRole("button", { name: /guardar nota/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /cancelar edición/i })).not.toBeInTheDocument();
   });
 });
