@@ -182,7 +182,7 @@ export function NoteList({
   return (
     <div
       data-testid="note-list"
-      className="flex min-h-0 flex-1 w-full flex-col border-r border-border bg-surface md:w-80"
+      className="flex min-h-0 flex-1 w-full flex-col overflow-hidden border-r border-border bg-surface md:w-80"
     >
       <div className="border-b border-border p-4">
         <div className="flex items-center justify-between">
