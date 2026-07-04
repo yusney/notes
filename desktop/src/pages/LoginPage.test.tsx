@@ -148,4 +148,32 @@ describe("LoginPage", () => {
       expect(openUrl).toHaveBeenCalledWith(expect.stringContaining("github"));
     });
   });
+
+  // ── shell-redesign-v1 (PR1) — mobile-first touch targets + safe-area ────
+
+  it("[mobile] root container applies safe-area top and bottom padding", () => {
+    renderLoginPage();
+    // The first <div> rendered by LoginPage wraps the whole page; it
+    // must push content below the status-bar notch and above the
+    // gesture bar on viewport-fit=cover devices.
+    const root = document.querySelector("[data-testid='login-page-root']");
+    expect(root).not.toBeNull();
+    expect(root!.className).toMatch(/pt-\[var\(--safe-top\)\]/);
+    expect(root!.className).toMatch(/pb-\[var\(--safe-bottom\)\]/);
+  });
+
+  it("[mobile] submit button has 44px min-height (Apple HIG)", () => {
+    renderLoginPage();
+    expect(screen.getByRole("button", { name: /iniciar sesión/i }).className).toMatch(/\bmin-h-11\b/);
+  });
+
+  it("[mobile] Google OAuth button has 44px min-height", () => {
+    renderLoginPage();
+    expect(screen.getByRole("button", { name: /google/i }).className).toMatch(/\bmin-h-11\b/);
+  });
+
+  it("[mobile] GitHub OAuth button has 44px min-height", () => {
+    renderLoginPage();
+    expect(screen.getByRole("button", { name: /github/i }).className).toMatch(/\bmin-h-11\b/);
+  });
 });
