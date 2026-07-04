@@ -290,6 +290,16 @@ export function NoteEditor({ note, availableTags = EMPTY_TAGS, onSave, onSaveAnd
   // the same HTML the editor already holds, so the re-sync is a no-op
   // and the cursor is preserved.
   const lastSyncedContentRef = useRef(note.content);
+  // TipTap fires `onUpdate` once during the editor's initial
+  // render (the ProseMirror view processes the `content` option and
+  // emits a "transaction" event). Without this guard, that initial
+  // `onUpdate` would set `editorContent` to the editor's initial
+  // HTML (e.g. "<p></p>" for an empty note), arm the debounce, and
+  // 1500ms later the auto-save would PUT the empty content — wiping
+  // the real content the list endpoint just stripped. By skipping
+  // the first `onUpdate` we let the editor's initial state settle
+  // without triggering a round-trip.
+  const isFirstEditorUpdate = useRef(true);
 
   const editorRef = useRef<ReturnType<typeof useEditor>>(null);
 
@@ -297,6 +307,10 @@ export function NoteEditor({ note, availableTags = EMPTY_TAGS, onSave, onSaveAnd
     extensions: editorExtensions,
     content: note.content,
     onUpdate: ({ editor }) => {
+      if (isFirstEditorUpdate.current) {
+        isFirstEditorUpdate.current = false;
+        return;
+      }
       setEditorContent(editor.getHTML());
     },
     editorProps: {
@@ -384,6 +398,13 @@ export function NoteEditor({ note, availableTags = EMPTY_TAGS, onSave, onSaveAnd
     const idx = value.indexOf(sep);
     const autoTitle = idx !== -1 ? value.substring(0, idx) : title;
     const autoContent = getCurrentContent();
+    // Don't auto-save the editor's initial empty state. The editor
+    // initialises with `<p></p>` for an empty note, which differs
+    // from the store's `note.content` (which is `""` from the
+    // list-endpoint projection). Without this guard, the auto-save
+    // would PUT the empty `<p></p>` and wipe the backend's real
+    // content before fetchNote returns it.
+    if (autoContent === "<p></p>" || autoContent === "" || autoContent === "<p><br class=\"ProseMirror-trailingBreak\"></p>") return;
     await onSave({ title: autoTitle, content: autoContent, tagNames });
   }
 
