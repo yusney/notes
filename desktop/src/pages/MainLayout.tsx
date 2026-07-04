@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { DndContext, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { Sidebar } from "../components/layout/Sidebar";
 import { NoteList } from "../components/notes/NoteList";
@@ -55,8 +56,21 @@ export function MainLayout() {
   const { tags, fetchTags } = useTagStore();
 
   const searchRef = useRef<HTMLInputElement>(null);
+  const location = useLocation();
 
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+
+  // ── Reset active note when arriving at "/" via the in-viewer back button.
+  // The viewer navigates to "/" with `replace: true` from
+  // NoteViewer.tsx; without this effect the list stays hidden behind the
+  // still-open note because activeNoteId persists across routes.
+  // We also reset on initial mount so the home shows the list, not the
+  // last note the user had open before navigating away.
+  useEffect(() => {
+    if (location.pathname === "/") {
+      setActiveNote(null);
+    }
+  }, [location.pathname, setActiveNote]);
 
   // ── Init: load saved preferences first, then fetch data + tags ─────────────
   // Only run when authenticated — prevents 401 storms on login page
@@ -230,7 +244,7 @@ export function MainLayout() {
         - Desktop (≥768px): md:flex-row → identical 3-column layout to
           pre-PR2 (REQ-DESKTOP-01 / S9 visual-regression baseline).
       */}
-      <div className="relative flex h-screen flex-col md:flex-row overflow-hidden bg-surface text-text-primary">
+      <div className="relative flex h-screen flex-col md:flex-row overflow-hidden bg-surface text-text-primary pt-[env(safe-area-inset-top)] md:pt-0">
         <div className="hidden md:flex md:w-60 md:shrink-0 md:flex-col md:border-r md:border-border md:bg-surface-elevated md:text-text-primary">
           <Sidebar
             tabs={tabs}
@@ -245,7 +259,7 @@ export function MainLayout() {
           />
         </div>
 
-        <div className="flex w-full min-w-0 shrink-0 flex-col border-b md:border-b-0 md:border-r border-border bg-surface overflow-hidden md:h-full md:w-80 md:min-w-[200px]">
+        <div className={`${activeNote ? "hidden" : "flex"} md:flex w-full min-w-0 shrink-0 flex-col border-b md:border-b-0 md:border-r border-border bg-surface overflow-hidden md:h-full md:w-80 md:min-w-[200px]`}>
           <div className="border-b border-border p-4 pb-3">
             <SearchBar onSearch={handleSearchNotes} />
           </div>
@@ -306,7 +320,7 @@ export function MainLayout() {
           )}
         </div>
 
-        <main className="min-w-0 flex-1 overflow-hidden h-full">
+        <main className={`${activeNote ? "flex-1 overflow-hidden h-full min-w-0" : "hidden md:block md:min-w-0 md:flex-1 md:overflow-hidden md:h-full"}`}>
           {activeNote ? (
             isEditing ? (
               <NoteEditor
