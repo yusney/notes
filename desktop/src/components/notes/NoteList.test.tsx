@@ -1177,7 +1177,7 @@ describe("NoteList — mobile row density (REQ-LIST-02)", () => {
     expect(classes).toMatch(/\bmd:py-3\b/);
   });
 
-  it("preview line uses 1-line clamp on mobile with 2-line clamp on desktop (line-clamp-1 md:line-clamp-2)", () => {
+  it("preview line is hidden on mobile and 2-line clamp on desktop (hidden md:block)", () => {
     render(
       <NoteList notes={mockNotes} activeNoteId={null} onNoteSelect={vi.fn()} onCreateNote={vi.fn()} />,
     );
@@ -1186,7 +1186,10 @@ describe("NoteList — mobile row density (REQ-LIST-02)", () => {
     // content (the preview text from the mock note).
     const preview = screen.getByText(/detailed guide about hooks/i);
     const classes = preview.className;
-    expect(classes).toMatch(/\bline-clamp-1\b/);
+    // Mobile: hidden (≤56px row budget — title only).
+    expect(classes).toMatch(/\bhidden\b/);
+    // Desktop ≥768px: visible, 2-line clamp.
+    expect(classes).toMatch(/\bmd:block\b/);
     expect(classes).toMatch(/\bmd:line-clamp-2\b/);
   });
 
@@ -1272,5 +1275,20 @@ describe("NoteList — mobile row density (REQ-LIST-02)", () => {
     } finally {
       Element.prototype.getBoundingClientRect = originalGetRect;
     }
+  });
+
+  // Regression coverage for the w-80 → w-full md:w-80 change. The container
+  // MUST be full-width on mobile (where MobileHomePage mounts it as the
+  // entire body) and fixed at md:w-80 only on desktop (where MainLayout
+  // still uses the 3-column sidebar layout). See git blame NoteList.tsx:152
+  // for the original report.
+  it("uses w-full on mobile and md:w-80 on desktop (regression: 320px hardcoded sidebar)", () => {
+    render(
+      <NoteList notes={mockNotes} activeNoteId={null} onNoteSelect={vi.fn()} onCreateNote={vi.fn()} />,
+    );
+    const list = screen.getByTestId("note-list");
+    expect(list.className).toContain("w-full");
+    expect(list.className).toContain("md:w-80");
+    expect(list.className).not.toMatch(/(^|\s)w-80(\s|$)/);
   });
 });

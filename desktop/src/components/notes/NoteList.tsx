@@ -149,7 +149,7 @@ export function NoteList({
   return (
     <div
       data-testid="note-list"
-      className="flex min-h-0 flex-1 w-80 flex-col border-r border-border bg-surface"
+      className="flex min-h-0 flex-1 w-full flex-col border-r border-border bg-surface md:w-80"
     >
       <div className="border-b border-border p-4">
         <div className="flex items-center justify-between">
@@ -506,8 +506,8 @@ function NoteRow({
           </div>
         )}
         <p className={`min-w-0 truncate text-sm font-semibold text-text-primary ${onToggleFavorite ? "pr-7" : ""}`}>{note.title}</p>
-        {/* Preview: 1-line clamp on mobile (≤56px row budget), 2-line on desktop. */}
-        <p className="mt-1 line-clamp-1 md:line-clamp-2 text-xs leading-4 md:leading-5 text-text-secondary">
+        {/* Preview: hidden on mobile (≤56px row budget, title-only), 2-line clamp on desktop. */}
+        <p className="hidden mt-1 line-clamp-1 md:line-clamp-2 md:block text-xs leading-4 md:leading-5 text-text-secondary">
           {note.content.replace(/<[^>]*>/g, " ").slice(0, 90) || "Sin contenido todavía"}
         </p>
         {note.tags?.length > 0 && (
