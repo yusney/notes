@@ -201,7 +201,7 @@ describe("MobileHomePage (PR3 hotfix — shell-redesign-v1)", () => {
   // lists don't show the chrome. The vertical mobile layout is opt-in via the
   // `mobileLayout` prop on `<Pagination>` (T7).
 
-  it("renders pagination chrome when totalPages > 1 (12 notes / pageSize 10)", () => {
+  it("renders the 'Cargar más' button when there are more pages (12 notes / pageSize 10)", () => {
     mockStore({
       notes: [NOTE],
       filteredNotes: () => [NOTE],
@@ -209,15 +209,17 @@ describe("MobileHomePage (PR3 hotfix — shell-redesign-v1)", () => {
       pageSize: 10,
       totalCount: 12,
       totalPages: 2,
-      setPage: vi.fn().mockResolvedValue(undefined),
+      nextPage: vi.fn().mockResolvedValue(undefined),
     });
     renderPage();
-    // Pagination renders when NoteList receives a defined `pagination` prop.
-    expect(screen.getByText(/mostrando 1-10 de 12 notas/i)).toBeInTheDocument();
-    expect(screen.getByText(/página 1 de 2/i)).toBeInTheDocument();
+    // Mobile uses infinite scroll (REQ-LIST-06), not explicit pagination.
+    // When there are more pages, a "Cargar más" button MUST be visible.
+    expect(screen.getByTestId("load-more")).toBeInTheDocument();
+    // The sentinel is always mounted when notes are present.
+    expect(screen.getByTestId("infinite-scroll-sentinel")).toBeInTheDocument();
   });
 
-  it("does NOT render pagination when totalPages === 1 (5 notes / pageSize 10)", () => {
+  it("does NOT render 'Cargar más' when totalPages === 1 (5 notes / pageSize 10)", () => {
     mockStore({
       notes: [NOTE],
       filteredNotes: () => [NOTE],
@@ -225,18 +227,18 @@ describe("MobileHomePage (PR3 hotfix — shell-redesign-v1)", () => {
       pageSize: 10,
       totalCount: 5,
       totalPages: 1,
-      setPage: vi.fn().mockResolvedValue(undefined),
+      nextPage: vi.fn().mockResolvedValue(undefined),
     });
     renderPage();
-    // Single-page list: the gated pagination prop is undefined → Pagination
-    // never mounts, so the count chrome disappears entirely.
-    expect(screen.queryByText(/mostrando/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/página/i)).not.toBeInTheDocument();
+    // Single-page list: the fallback button is hidden (no more data) and
+    // a "— 1 notas —" end-of-list caption is rendered instead.
+    expect(screen.queryByTestId("load-more")).not.toBeInTheDocument();
+    expect(screen.getByText(/—\s*1\s*notas\s*—/i)).toBeInTheDocument();
   });
 
-  it("clicking Siguiente calls useNoteStore.setPage with the next page", async () => {
+  it("clicking 'Cargar más' calls useNoteStore.nextPage", async () => {
     const user = userEvent.setup();
-    const setPage = vi.fn().mockResolvedValue(undefined);
+    const nextPage = vi.fn().mockResolvedValue(undefined);
     mockStore({
       notes: [NOTE],
       filteredNotes: () => [NOTE],
@@ -244,31 +246,36 @@ describe("MobileHomePage (PR3 hotfix — shell-redesign-v1)", () => {
       pageSize: 10,
       totalCount: 25,
       totalPages: 3,
-      setPage,
+      nextPage,
     });
     renderPage();
 
-    await user.click(screen.getByRole("button", { name: /siguiente/i }));
+    await user.click(screen.getByTestId("load-more"));
 
-    expect(setPage).toHaveBeenCalledWith(2);
+    expect(nextPage).toHaveBeenCalledTimes(1);
   });
 
-  it("tapping Anterior on page 2 calls useNoteStore.setPage(1)", async () => {
-    const user = userEvent.setup();
-    const setPage = vi.fn().mockResolvedValue(undefined);
+  it("does NOT call nextPage on mount or while loading the next page (sentinel guard)", () => {
+    // The sentinel mounts the IO but stays inert until the parent flips
+    // `isLoadingMore` to false again. This test asserts the guard
+    // wiring: the parent passes isLoadingMore derived from the store,
+    // and the sentinel's `enabled` prop is `hasMore && !isLoadingMore`.
+    // We mock the IO so it never fires in jsdom, and assert nextPage
+    // was never called just by mounting the page.
+    const nextPage = vi.fn().mockResolvedValue(undefined);
     mockStore({
       notes: [NOTE],
       filteredNotes: () => [NOTE],
-      page: 2,
+      page: 1,
       pageSize: 10,
       totalCount: 25,
       totalPages: 3,
-      setPage,
+      isLoading: true, // simulates a "next page in flight" — but isLoading
+                        // is also true on initial mount, so we keep
+                        // page === 1 here to model "loading more".
+      nextPage,
     });
     renderPage();
-
-    await user.click(screen.getByRole("button", { name: /anterior/i }));
-
-    expect(setPage).toHaveBeenCalledWith(1);
+    expect(nextPage).not.toHaveBeenCalled();
   });
 });

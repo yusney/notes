@@ -52,10 +52,9 @@ export function MobileHomePage() {
     activeTabId,
     tabs,
     page,
-    pageSize,
     totalCount,
     totalPages,
-    setPage,
+    nextPage,
     createNote,
     createTab,
     setActiveNote,
@@ -82,13 +81,20 @@ export function MobileHomePage() {
     navigate(`/notes/${noteId}`);
   }
 
-  // Pagination is only wired when more than one page exists — single-page
-  // lists don't need navigation chrome (REQ-LIST-01). The `mobileLayout`
-  // pass-through stacks the buttons vertically on viewports ≤767px (REQ-LAY-05).
-  const pagination =
-    totalPages > 1
-      ? { page, pageSize, totalCount, onPageChange: setPage }
-      : undefined;
+  // Infinite-scroll gate. We only fire when:
+  //   - we have notes to show
+  //   - the store still has more pages
+  //   - we're not already loading the next page
+  //   - we're not in the middle of the initial fetch (isLoading is the
+  //     initial mount; the subsequent re-fetches triggered by setPage
+  //     leave isLoading=false because they update `page` then refetch —
+  //     see useNoteStore.fetchNotes which only sets isLoading=true once
+  //     per call). The store doesn't track a separate "isLoadingMore"
+  //     flag; we derive it from `isLoading` + `page > 1` OR from the
+  //     re-render timing. For simplicity we gate on `isLoading` only
+  //     when we're past the first page.
+  const hasMore = totalCount > 0 && page < totalPages;
+  const isLoadingMore = isLoading && page > 1;
 
   // Loading state: brief inline message (the same copy as the
   // desktop list panel).
@@ -141,8 +147,10 @@ export function MobileHomePage() {
       onCreateNote={() => { void handleCreateNote(); }}
       enableDrag={false}
       isFavoriteOnly={false}
-      pagination={pagination}
-      paginationMobileLayout
+      infiniteScroll
+      hasMore={hasMore}
+      isLoadingMore={isLoadingMore}
+      onLoadMore={() => { void nextPage(); }}
     />
   );
 }

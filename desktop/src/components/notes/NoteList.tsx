@@ -7,6 +7,7 @@ import { Pagination } from "./Pagination";
 import { MoveToTabMenu } from "./MoveToTabMenu";
 import { NoteActionSheet } from "./NoteActionSheet";
 import { DeleteConfirmDialog } from "./DeleteConfirmDialog";
+import { InfiniteScrollSentinel } from "./InfiniteScrollSentinel";
 
 const SORT_OPTIONS: { value: SortBy; label: string }[] = [
   { value: "creation", label: "Fecha de creación" },
@@ -83,6 +84,28 @@ interface NoteListProps {
    * Default: false.
    */
   paginationMobileLayout?: boolean;
+  /**
+   * When true, mounts an `<InfiniteScrollSentinel>` after the last note
+   * and a manual "Cargar más" fallback button. Mobile-only — the parent
+   * (`MobileHomePage`) passes `true` here. Desktop renders explicit
+   * `<Pagination>` instead. REQ-LIST-06.
+   */
+  infiniteScroll?: boolean;
+  /**
+   * Whether more pages exist. When `false`, the sentinel + "Cargar más"
+   * button are not rendered (REQ-LIST-06 last-page scenario).
+   */
+  hasMore?: boolean;
+  /**
+   * Currently fetching the next page. The parent should suppress the
+   * sentinel from firing while this is `true` to avoid double-fetches.
+   */
+  isLoadingMore?: boolean;
+  /**
+   * Called when the sentinel intersects the viewport OR the "Cargar más"
+   * button is tapped. The parent invokes `useNoteStore.nextPage()` here.
+   */
+  onLoadMore?: () => void;
 }
 
 export function NoteList({
@@ -103,6 +126,10 @@ export function NoteList({
   onFavoriteFilterToggle,
   pagination,
   paginationMobileLayout = false,
+  infiniteScroll = false,
+  hasMore = false,
+  isLoadingMore = false,
+  onLoadMore,
 }: NoteListProps) {
   const totalTags = notes.reduce((count, note) => count + (note.tags?.length ?? 0), 0);
 
@@ -244,8 +271,43 @@ export function NoteList({
             />
           ))
         )}
+        {/* Mobile infinite-scroll sentinel + fallback button. Mounted as a
+            sibling of the rows so the parent <ul> scrolls them into view
+            together. The sentinel is invisible (h-1) and only fires the
+            parent's onLoadMore when it enters the viewport. The fallback
+            button is the user's escape hatch when IO is broken / disabled. */}
+        {infiniteScroll && notes.length > 0 && (
+          <>
+            <li className="px-2 pb-1">
+              <InfiniteScrollSentinel
+                enabled={hasMore && !isLoadingMore}
+                onIntersect={() => onLoadMore?.()}
+              />
+            </li>
+            {hasMore && (
+              <li className="px-2 pb-2">
+                <button
+                  type="button"
+                  onClick={onLoadMore}
+                  disabled={isLoadingMore}
+                  data-testid="load-more"
+                  className="w-full rounded border border-border bg-surface-elevated px-3 py-2 text-xs font-semibold text-text-primary transition-colors hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isLoadingMore ? "Cargando…" : "Cargar más"}
+                </button>
+              </li>
+            )}
+            {!hasMore && notes.length > 0 && (
+              <li className="px-2 pb-2 text-center text-[11px] text-text-secondary">
+                — {notes.length} notas —
+              </li>
+            )}
+          </>
+        )}
       </ul>
-      {pagination && (
+      {/* Desktop: explicit <Pagination> control. Mobile goes infinite scroll
+          (see the sentinel above) and does NOT render this — REQ-LIST-06. */}
+      {pagination && !infiniteScroll && (
         <Pagination
           page={pagination.page}
           pageSize={pagination.pageSize}
@@ -489,16 +551,16 @@ function NoteRow({
         }`}
       >
         {tabName && (
-          // Eyebrow chip: hidden on mobile (≤767px) — density budget; visible
-          // on desktop (≥768px) where vertical space is plentiful. Required
-          // because the mobile row target is ≤56px (REQ-LIST-02).
+          // Eyebrow chip: visible on mobile AND desktop. Compact size keeps
+          // the mobile row near 72px (chip + title + preview). At ≥768px the
+          // desktop padding lifts the row, but the chip stays the same.
           <div
             data-testid={`note-tab-eyebrow-wrap-${note.id}`}
-            className="mb-1.5 hidden md:flex"
+            className="mb-1 flex"
           >
             <span
               data-testid={`note-tab-eyebrow-${note.id}`}
-              className="inline-flex max-w-full items-center gap-1 rounded-full bg-accent-subtle px-2 py-[3px] text-[10px] font-semibold uppercase tracking-wider text-text-secondary"
+              className="inline-flex max-w-full items-center gap-1 rounded-full bg-accent-subtle px-2 py-[2px] text-[10px] font-semibold uppercase tracking-wider text-text-secondary"
             >
               {FOLDER_GLYPH}
               <span className="truncate">{tabName}</span>
@@ -506,8 +568,8 @@ function NoteRow({
           </div>
         )}
         <p className={`min-w-0 truncate text-sm font-semibold text-text-primary ${onToggleFavorite ? "pr-7" : ""}`}>{note.title}</p>
-        {/* Preview: hidden on mobile (≤56px row budget, title-only), 2-line clamp on desktop. */}
-        <p className="hidden mt-1 line-clamp-1 md:line-clamp-2 md:block text-xs leading-4 md:leading-5 text-text-secondary">
+        {/* Preview: 1-line clamp on mobile (≤80px row budget), 2-line on desktop. */}
+        <p className="mt-1 line-clamp-1 md:line-clamp-2 text-xs leading-4 md:leading-5 text-text-secondary">
           {note.content.replace(/<[^>]*>/g, " ").slice(0, 90) || "Sin contenido todavía"}
         </p>
         {note.tags?.length > 0 && (
