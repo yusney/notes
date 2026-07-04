@@ -2,13 +2,13 @@ import { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { DndContext, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { Sidebar } from "../components/layout/Sidebar";
+import { MobileShell } from "../components/layout/MobileShell";
 import { NoteList } from "../components/notes/NoteList";
 import { NoteEditor } from "../components/editor/NoteEditor";
 import { NoteViewer } from "../components/editor/NoteViewer";
 import { SearchBar } from "../components/notes/SearchBar";
 import { ShareWarningDialog } from "../components/share/ShareWarningDialog";
 import { CreateTabDialog } from "../components/CreateTabDialog";
-import { FloatingActionButton } from "../components/ui/FloatingActionButton";
 import { TagFilter } from "../components/notes/TagFilter";
 import { ActiveFiltersBar } from "../components/notes/ActiveFiltersBar";
 import { UndoMoveToast } from "../components/notes/UndoMoveToast";
@@ -233,16 +233,23 @@ export function MainLayout() {
     <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
       {/*
         Responsive root (REQ-LAY-01):
-        - Mobile (<768px): flex-col → the three panels stack vertically.
-          The Sidebar panel is `hidden md:flex` (mobile-only access via
-          hamburger menu in the mobile settings sheet — PR2 T2.20). The
-          list panel and the main viewer pane sit one below the other and
-          only ONE is visible at a time because the main element renders
-          the active note OR the empty state, and on mobile a selected note
-          occupies the full viewport via the NoteViewer read-only mode +
-          back button.
+        - Mobile (<768px): flex-col → the desktop branch's three panels
+          collapse (Sidebar is `hidden md:flex`, list/main swap to hidden
+          on mobile). The new MobileShell subtree (last sibling) carries
+          `md:hidden` so it's invisible at desktop and the only visible
+          surface at <768px. MobileShell contains the AppBar + Outlet
+          (rendering MobileNotePage / NewNotePage / MobileSearchPage) +
+          BottomNav + SideSheet.
         - Desktop (≥768px): md:flex-row → identical 3-column layout to
           pre-PR2 (REQ-DESKTOP-01 / S9 visual-regression baseline).
+          MobileShell subtree is `md:hidden` and contributes zero pixels
+          to the desktop viewport.
+
+        PR2 wiring: PR2 also DROPS the FAB (`<FloatingActionButton />`)
+        per REQ-LAY-02. The "+" action moves to the BottomNav "Nueva"
+        tab inside MobileShell (also reaches the same thumb zone on
+        mobile). On desktop, the existing "+" inside the list panel
+        header stays.
       */}
       <div className="relative flex h-screen flex-col md:flex-row overflow-hidden bg-surface text-text-primary pt-[env(safe-area-inset-top)] md:pt-0">
         <div className="hidden md:flex md:w-60 md:shrink-0 md:flex-col md:border-r md:border-border md:bg-surface-elevated md:text-text-primary">
@@ -259,7 +266,15 @@ export function MainLayout() {
           />
         </div>
 
-        <div className={`${activeNote ? "hidden" : "flex"} md:flex w-full min-w-0 shrink-0 flex-col border-b md:border-b-0 md:border-r border-border bg-surface overflow-hidden md:h-full md:w-80 md:min-w-[200px]`}>
+        {/*
+          Desktop-only list panel — PR2 removes the activeNote-conditional
+          visibility swap. Pre-PR2 the list was `hidden` on mobile when a
+          note was active; in PR2 the mobile surface is owned by
+          MobileShell (added as a `md:hidden` sibling below). The desktop
+          list is hidden on mobile via `hidden md:flex` and the panel
+          takes its full desktop width via `md:w-80`.
+        */}
+        <div className="hidden md:flex w-full min-w-0 shrink-0 flex-col border-b md:border-b-0 md:border-r border-border bg-surface overflow-hidden md:h-full md:w-80 md:min-w-[200px]">
           <div className="border-b border-border p-4 pb-3">
             <SearchBar onSearch={handleSearchNotes} />
           </div>
@@ -320,7 +335,7 @@ export function MainLayout() {
           )}
         </div>
 
-        <main className={`${activeNote ? "flex-1 overflow-hidden h-full min-w-0" : "hidden md:block md:min-w-0 md:flex-1 md:overflow-hidden md:h-full"}`}>
+        <main className="hidden md:block md:min-w-0 md:flex-1 md:overflow-hidden md:h-full">
           {activeNote ? (
             isEditing ? (
               <NoteEditor
@@ -369,10 +384,18 @@ export function MainLayout() {
           onCreate={handleCreateTabSubmit}
         />
 
-        <FloatingActionButton
-          aria-label="Crear nota"
-          onClick={handleCreateNote}
-        />
+        {/*
+          PR2 — Mobile shell subtree (REQ-LAY-01 / shell-redesign-v1).
+          Wrapped in `md:hidden` so it contributes zero pixels at
+          desktop viewports. Inside, MobileShell owns the AppBar,
+          Outlet (mobile drill-down routes), BottomNav, and SideSheet.
+          The MobileShell itself also calls `useNoteStore.setState({ activeNoteId: null })`
+          on non-home mobile routes so the desktop store-driven
+          list↔main swap doesn't fight the mobile single-column.
+        */}
+        <div className="md:hidden h-full w-full">
+          <MobileShell />
+        </div>
 
         <UndoMoveToast />
       </div>
