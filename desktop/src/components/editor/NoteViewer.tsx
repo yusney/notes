@@ -156,15 +156,17 @@ export function NoteViewer({ note, onEdit, readOnly = true }: NoteViewerProps) {
       <div className="flex shrink-0 items-center justify-between border-b border-border bg-surface-elevated px-6 py-4">
         <div className="flex min-w-0 items-center gap-2">
           {/* Mobile-only back chevron — visible only at max-width:767px.
-              Uses react-router `navigate(-1)` so the prior list route
-              keeps its scrollTop (S7 — applied by NoteList via
-              location.state.scrollY in a useLayoutEffect). */}
+              Navigates explicitly to "/" (the home/list view). We can't
+              use `navigate(-1)` because the history stack may contain
+              routes like /login, /register, /share/:token from earlier
+              sessions — the back button should always return to the note
+              list, not whatever the user navigated through before. */}
           {isMobile && (
             <button
               type="button"
               data-testid="mobile-back-button"
               aria-label="Volver a la lista"
-              onClick={() => navigate(-1)}
+              onClick={() => navigate("/", { replace: true })}
               className="shrink-0 rounded p-1 text-text-secondary transition-colors hover:bg-surface hover:text-text-primary"
             >
               <span aria-hidden="true" className="text-lg leading-none">←</span>
