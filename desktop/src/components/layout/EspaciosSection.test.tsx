@@ -5,14 +5,15 @@ import { EspaciosSection } from "./EspaciosSection";
 import { useNoteStore } from "../../stores/useNoteStore";
 import type { Note, Tab } from "../../types";
 
-// EspaciosSection reads `tabs`, `activeTabId`, `notes`, `setActiveTab`
-// via destructuring. Mock the hook with a single object we seed
-// per-test; expose the imperative action as a spy for assertions.
+// EspaciosSection reads `tabs`, `activeTabId`, `notes`, `setActiveTab`,
+// `createTab` via destructuring. Mock the hook with a single object we
+// seed per-test; expose the imperative actions as spies for assertions.
 vi.mock("../../stores/useNoteStore", () => ({
   useNoteStore: vi.fn(),
 }));
 
 const mockSetActiveTab = vi.fn();
+const mockCreateTab = vi.fn();
 
 function seedStore(o: { tabs?: Tab[]; activeTabId?: string | null; notes?: Note[] } = {}) {
   vi.mocked(useNoteStore).mockReturnValue({
@@ -20,6 +21,7 @@ function seedStore(o: { tabs?: Tab[]; activeTabId?: string | null; notes?: Note[
     activeTabId: o.activeTabId ?? null,
     notes: o.notes ?? [],
     setActiveTab: mockSetActiveTab,
+    createTab: mockCreateTab,
   } as never);
 }
 
@@ -39,6 +41,10 @@ const note = (id: string, tabId: string): Note => ({
 
 beforeEach(() => {
   mockSetActiveTab.mockReset();
+  mockCreateTab.mockReset();
+  // createTab rejects by default so dialog-state tests are deterministic
+  // unless the test stubs a successful resolution.
+  mockCreateTab.mockRejectedValue(new Error("not stubbed"));
 });
 
 function renderSection(onClose = vi.fn()) {
@@ -48,11 +54,12 @@ function renderSection(onClose = vi.fn()) {
 // ── T2 — Empty state ─────────────────────────────────────────────────────────
 
 describe("EspaciosSection (T2 — empty state)", () => {
-  it("renders empty-state copy + Espacios header when no tabs", () => {
+  it("renders empty-state copy + Espacios header + a tappable '+' when no tabs", () => {
     seedStore({ tabs: [], notes: [] });
     renderSection();
     expect(screen.getByText(/no hay espacios\. creá uno para agrupar tus notas\./i)).toBeInTheDocument();
     expect(screen.getByText(/^espacios$/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /nueva tab/i })).toBeEnabled();
   });
 });
 
@@ -153,6 +160,66 @@ describe("EspaciosSection (T5 — tap selects + closes drawer)", () => {
     // (T1) + component-level guard, plus the drawer must still close.
     expect(mockSetActiveTab).not.toHaveBeenCalled();
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ── T8 — Create-tab flow ─────────────────────────────────────────────────────
+
+describe("EspaciosSection (T8 — create-tab flow)", () => {
+  it("clicking '+' opens the CreateTabDialog", async () => {
+    seedStore({ tabs: [], notes: [] });
+    const user = userEvent.setup();
+    renderSection();
+    expect(screen.queryByRole("dialog", { name: /nombre del nuevo espacio/i })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /nueva tab/i }));
+    expect(screen.getByRole("dialog", { name: /nombre del nuevo espacio/i })).toBeInTheDocument();
+  });
+
+  it("submitting a name: createTab → setActiveTab(newId) → closes dialog + drawer", async () => {
+    mockCreateTab.mockResolvedValue({ id: "tab-new", name: "Ideas" } as Tab);
+    seedStore({ tabs: [], notes: [] });
+    const onClose = vi.fn();
+    const user = userEvent.setup();
+    renderSection(onClose);
+
+    await user.click(screen.getByRole("button", { name: /nueva tab/i }));
+    await user.type(screen.getByRole("textbox", { name: /nombre del espacio/i }), "Ideas");
+    await user.click(screen.getByRole("button", { name: /creá/i }));
+
+    expect(mockCreateTab).toHaveBeenCalledWith("Ideas");
+    expect(mockSetActiveTab).toHaveBeenCalledWith("tab-new");
+    expect(screen.queryByRole("dialog", { name: /nombre del nuevo espacio/i })).not.toBeInTheDocument();
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("cancelling does NOT call createTab and does NOT call onClose", async () => {
+    seedStore({ tabs: [], notes: [] });
+    const onClose = vi.fn();
+    const user = userEvent.setup();
+    renderSection(onClose);
+
+    await user.click(screen.getByRole("button", { name: /nueva tab/i }));
+    await user.click(screen.getByRole("button", { name: /cancelar/i }));
+
+    expect(mockCreateTab).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.queryByRole("dialog", { name: /nombre del nuevo espacio/i })).not.toBeInTheDocument();
+  });
+
+  it("when createTab rejects, the dialog stays open and onClose is NOT called", async () => {
+    mockCreateTab.mockRejectedValue(new Error("network"));
+    seedStore({ tabs: [], notes: [] });
+    const onClose = vi.fn();
+    const user = userEvent.setup();
+    renderSection(onClose);
+
+    await user.click(screen.getByRole("button", { name: /nueva tab/i }));
+    await user.type(screen.getByRole("textbox", { name: /nombre del espacio/i }), "Ideas");
+    await user.click(screen.getByRole("button", { name: /creá/i }));
+
+    expect(mockCreateTab).toHaveBeenCalledTimes(1);
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog", { name: /nombre del nuevo espacio/i })).toBeInTheDocument();
   });
 });
 
