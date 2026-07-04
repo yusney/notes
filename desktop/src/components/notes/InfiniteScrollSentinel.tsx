@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type RefObject } from "react";
 
 interface InfiniteScrollSentinelProps {
   /**
@@ -14,10 +14,18 @@ interface InfiniteScrollSentinelProps {
    */
   enabled: boolean;
   /**
-   * IntersectionObserver root. Defaults to `null` (the viewport). Pass a
-   * scrollable container ref to observe against a nested scroller.
+   * Ref to a scrollable container that owns the scroll. The IO observes
+   * against THIS element instead of the viewport. The parent MUST pass
+   * the same ref attached to the <ul>/<div> that has `overflow-y-auto`.
+   *
+   * Why this matters: the <ul> has its own scroll context (overflow-y-auto).
+   * With `root: null` the IO watches the viewport, which never intersects
+   * the sentinel once the list is taller than the screen — so the user
+   * could scroll inside the list forever without the IO firing. Passing
+   * the scrollable container as root makes the IO fire when the sentinel
+   * enters the CONTAINER's viewport, not the browser's.
    */
-  root?: Element | null;
+  rootRef?: RefObject<Element | null>;
   /**
    * Margin around the root. `"100px"` triggers ~one viewport early so
    * the next page starts loading before the user actually reaches the
@@ -28,17 +36,16 @@ interface InfiniteScrollSentinelProps {
 
 /**
  * Invisible sentinel mounted as the last <li> in the note list. When the
- * sentinel enters the viewport, the parent's `onIntersect` fires. Mobile
- * only — desktop uses the explicit <Pagination> control.
+ * sentinel enters the root scroll container, the parent's onIntersect
+ * fires. Mobile only — desktop uses the explicit <Pagination> control.
  *
- * Why a separate component: encapsulates the IntersectionObserver
- * lifecycle, supports JSDOM tests via the `IntersectionObserver` polyfill
- * (vitest setup), and keeps NoteList readable.
+ * The root MUST be the scrollable container (the <ul> with overflow-y-auto),
+ * not the browser viewport. See `rootRef` for the rationale.
  */
 export function InfiniteScrollSentinel({
   onIntersect,
   enabled,
-  root,
+  rootRef,
   rootMargin = "100px",
 }: InfiniteScrollSentinelProps) {
   const ref = useRef<HTMLDivElement | null>(null);
@@ -51,6 +58,7 @@ export function InfiniteScrollSentinel({
     if (!enabled) return;
     const node = ref.current;
     if (!node) return;
+    const root = rootRef?.current ?? null;
     if (typeof IntersectionObserver === "undefined") return;
 
     const observer = new IntersectionObserver(
@@ -62,11 +70,14 @@ export function InfiniteScrollSentinel({
           }
         }
       },
-      { root: root ?? null, rootMargin, threshold: 0 },
+      { root, rootMargin, threshold: 0 },
     );
     observer.observe(node);
     return () => observer.disconnect();
-  }, [enabled, root, rootMargin]);
+    // rootRef.current is read inside but the ref object itself is stable;
+    // the parent doesn't recreate the ref. So we don't include it in deps.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled, rootMargin, rootRef]);
 
   return (
     <div
