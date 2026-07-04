@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { useNoteStore } from "../../stores/useNoteStore";
+import { CreateTabDialog } from "../CreateTabDialog";
 
 /**
  * EspaciosSection — mobile drawer section listing the user's tabs
@@ -7,19 +9,23 @@ import { useNoteStore } from "../../stores/useNoteStore";
  * `md:hidden` subtree, so no extra mobile/desktop gate is needed
  * (REQ-LAY-03). Active-tab tokens are copied verbatim from the desktop
  * `Sidebar` (Sidebar.tsx:117) — no new Tailwind utilities, no
- * theme-token namespace conflicts.
+ * theme-token namespace conflicts. The "+" button opens the existing
+ * `CreateTabDialog`; on success the new tab becomes active and the
+ * drawer auto-closes. On `createTab` rejection the dialog stays open
+ * (the error surfaces through `useNoteStore.error`).
  */
 export interface EspaciosSectionProps {
   /**
-   * Called when the user taps a tab row. `MobileShell` wires this to
-   * `closeSideSheet` so the drawer dismisses and the home view
-   * re-renders with the new filter.
+   * Called when the user taps a tab row OR after a successful create.
+   * `MobileShell` wires this to `closeSideSheet` so the drawer
+   * dismisses and the home view re-renders with the new filter.
    */
   onClose: () => void;
 }
 
 export function EspaciosSection({ onClose }: EspaciosSectionProps) {
-  const { tabs, activeTabId, notes, setActiveTab } = useNoteStore();
+  const { tabs, activeTabId, notes, setActiveTab, createTab } = useNoteStore();
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   const handleSelectTab = (tabId: string) => {
     // Idempotent: tapping the active row skips the store call entirely
@@ -28,6 +34,18 @@ export function EspaciosSection({ onClose }: EspaciosSectionProps) {
       setActiveTab(tabId);
     }
     onClose();
+  };
+
+  const handleCreate = async (name: string) => {
+    try {
+      const newTab = await createTab(name);
+      setActiveTab(newTab.id);
+      setDialogOpen(false);
+      onClose();
+    } catch {
+      // Leave the dialog open so the user can retry; the error
+      // surfaces through useNoteStore.error.
+    }
   };
 
   return (
@@ -39,6 +57,15 @@ export function EspaciosSection({ onClose }: EspaciosSectionProps) {
         <span className="text-xs font-semibold uppercase tracking-[0.22em] text-text-secondary">
           Espacios
         </span>
+        <button
+          type="button"
+          data-testid="espacios-create-tab"
+          onClick={() => setDialogOpen(true)}
+          aria-label="Nueva tab"
+          className="grid size-8 place-items-center rounded-full border border-border bg-surface text-lg leading-none text-accent transition-colors hover:border-accent hover:bg-accent hover:text-accent-text"
+        >
+          +
+        </button>
       </header>
 
       {tabs.length === 0 ? (
@@ -75,6 +102,12 @@ export function EspaciosSection({ onClose }: EspaciosSectionProps) {
           </ul>
         </nav>
       )}
+
+      <CreateTabDialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        onCreate={handleCreate}
+      />
     </div>
   );
 }
