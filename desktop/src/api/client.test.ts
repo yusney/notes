@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { readFileSync, existsSync } from "node:fs";
+import { resolve } from "node:path";
 import { createApiClient, ApiClientError, apiClient, getApiBaseUrl } from "./client";
 
 // Top-level mocks for the Tauri plugins so useOAuth can run in tests.
@@ -418,5 +420,35 @@ describe("ApiClient", () => {
       // This is the same getter the dialog calls when it composes the URL.
       expect(getApiBaseUrl()).toBe(RUNTIME_URL);
     });
+  });
+});
+
+// REQ-PERF-H — Tauri desktop login regression guard (introduced by commit F).
+// Commit F (6bb39d2) migrated every URL call site to use getApiBaseUrl(),
+// which routes through loadRuntimeConfig() and reads desktop/public/config.json.
+// That file shipped {"apiBaseUrl":"http://10.0.2.2:8080"} — the Android
+// emulator's loopback IP — which is unreachable from a real desktop binary.
+// Result: Google OAuth exchange + startURL (useOAuth.ts:43,87) and the
+// apiClient-based regular login all routed to the unreachable host.
+//
+// Fix for desktop: stop shipping a runtime override — the build-time
+// __API_BASE_URL__ (from .env / .env.production) is correct for desktop.
+// Android builds need a separate mechanism (Tauri Android-side config or
+// platform-conditional copy) — out of this cycle.
+//
+// This test reads the bundled desktop public/config.json (if present) and
+// asserts it does not override apiBaseUrl. Guards against re-introduction
+// of the Android emulator URL into the desktop bundle.
+describe("REQ-PERF-H: desktop public/config.json must not override apiBaseUrl", () => {
+  const configPath = resolve(__dirname, "../../public/config.json");
+
+  it("either absent or with no apiBaseUrl key", () => {
+    if (!existsSync(configPath)) {
+      // File missing is an acceptable state — loadRuntimeConfig() will
+      // silently fall back to __API_BASE_URL__ from the Vite define.
+      return;
+    }
+    const config = JSON.parse(readFileSync(configPath, "utf8"));
+    expect(config.apiBaseUrl).toBeUndefined();
   });
 });
