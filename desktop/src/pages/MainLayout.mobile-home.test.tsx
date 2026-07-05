@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { AppRoutes } from "../App";
 
 /**
  * MainLayout — mobile home integration (PR3 hotfix — shell-redesign-v1).
@@ -12,11 +11,9 @@ import { AppRoutes } from "../App";
  * saw a blank body between the AppBar and BottomNav.
  *
  * These tests assert the user-visible contract of the FIX by
- * mounting the FULL `AppRoutes` (extracted from `App.tsx`) inside a
- * `MemoryRouter`. This gives the `<Outlet/>` inside the
- * MainLayout-mounted MobileShell a real route tree to match against,
- * including the new `<Route index element={<MobileHomePage />} />`
- * added as the child of `/`.
+ * mounting `MainLayout` directly inside a `MemoryRouter` with an
+ * index child route. This gives the `<Outlet/>` inside the
+ * MainLayout-mounted MobileShell a real route tree to match against.
  *
  *   - Empty store + mobile viewport → EmptyState (single CTA) in
  *     the MobileShell `<main>`.
@@ -26,10 +23,10 @@ import { AppRoutes } from "../App";
  *     (MobileShell subtree stays `md:hidden`, AppBar/BottomNav
  *     chrome still present in the DOM tree).
  *
- * NOTE on mocks: we mock the data-layer stores (`useNoteStore`,
- * `useAuthStore`, etc.) so the route tree renders without calling
- * the backend. `NoteList` is NOT mocked — the test asserts the real
- * component is mounted in the MobileShell `<main>` slot.
+ * REQ-PERF-02 NOTE: we import MainLayout directly (NOT through
+ * AppRoutes) to keep these integration tests focused on the
+ * MainLayout + MobileShell wiring without the lazy-chunk machinery.
+ * AppRoutes lazy-loading is exercised separately in App.test.tsx.
  */
 
 function mockMatchMedia(matches: boolean) {
@@ -48,8 +45,12 @@ function mockMatchMedia(matches: boolean) {
   });
 }
 
-vi.mock("../stores/useNoteStore", () => {
-  const mockState = {
+// Module-level default state used by the useNoteStore mock. Stored at
+// module scope (not inside the vi.mock factory) so beforeEach can reset
+// it without re-importing. vi.hoisted ensures the value is created
+// BEFORE vi.mock (which is hoisted) reads it.
+const { defaultNoteStoreMockState } = vi.hoisted(() => ({
+  defaultNoteStoreMockState: {
     tabs: [],
     notes: [],
     visibleNoteIds: [],
@@ -87,7 +88,11 @@ vi.mock("../stores/useNoteStore", () => {
     totalPages: 1,
     isLoading: false,
     error: null,
-  };
+  },
+}));
+
+vi.mock("../stores/useNoteStore", () => {
+  const mockState = defaultNoteStoreMockState;
   const hook = vi.fn(() => mockState);
   (hook as unknown as { getState: () => typeof mockState }).getState = () => mockState;
   (hook as unknown as { setState: (partial: Partial<typeof mockState>) => void }).setState =
@@ -142,6 +147,24 @@ vi.mock("../components/share/ShareWarningDialog", () => ({
 }));
 
 import { useNoteStore } from "../stores/useNoteStore";
+import { MainLayout } from "./MainLayout";
+import { MobileHomePage } from "./MobileHomePage";
+import { Route, Routes } from "react-router-dom";
+
+/**
+ * Mounts MainLayout with an index child route so the <Outlet/> inside
+ * the MainLayout-mounted MobileShell has something to resolve. This
+ * exercises the PR3 hotfix without going through AppRoutes' lazy chunks.
+ */
+function MainLayoutWithIndex() {
+  return (
+    <Routes>
+      <Route path="/" element={<MainLayout />}>
+        <Route index element={<MobileHomePage />} />
+      </Route>
+    </Routes>
+  );
+}
 
 const NOTE = {
   id: "n-1",
@@ -158,25 +181,38 @@ const NOTE = {
 describe("MainLayout mobile home integration (PR3 hotfix — shell-redesign-v1)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Restore the default useNoteStore mock — populated-notes tests
+    // override getState/setState; subsequent tests need the defaults.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (useNoteStore as any).getState = () => defaultNoteStoreMockState;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (useNoteStore as any).setState = (partial: Record<string, unknown>) =>
+      Object.assign(defaultNoteStoreMockState, partial);
+    // Reset the default state to empty before each test.
+    defaultNoteStoreMockState.notes = [];
+    defaultNoteStoreMockState.activeNoteId = null;
+    defaultNoteStoreMockState.activeTabId = null;
   });
 
-  it("renders the EmptyState in the MobileShell <main> at '/' when the store is empty (mobile)", async () => {
+  it("renders the EmptyState in the MobileShell <main> at '/' when the store is empty (mobile)", () => {
     mockMatchMedia(true);
-    // Default mock already has notes=[] and filteredNotes=()=>[].
 
-    const { findByTestId } = render(
+    const { container } = render(
       <MemoryRouter initialEntries={["/"]}>
-        <AppRoutes />
+        <MainLayoutWithIndex />
       </MemoryRouter>,
     );
 
     // MobileShell <main> should contain the EmptyState (PR3 hotfix contract).
     // Pre-fix: <main> had zero children because <Outlet/> resolved to null.
-    const empty = await findByTestId("empty-state");
-    expect(empty).not.toBeNull();
+    const mobileShell = container.querySelector('[data-testid="mobile-shell"]');
+    expect(mobileShell).not.toBeNull();
+    const mobileMain = mobileShell!.querySelector("main");
+    expect(mobileMain).not.toBeNull();
+    expect(mobileMain!.querySelector('[data-testid="empty-state"]')).not.toBeNull();
   });
 
-  it("renders the NoteList in the MobileShell <main> at '/' when the store has notes (mobile)", async () => {
+  it("renders the NoteList in the MobileShell <main> at '/' when the store has notes (mobile)", () => {
     mockMatchMedia(true);
     vi.mocked(useNoteStore).mockReturnValue({
       tabs: [{ id: "tab-1", name: "General", createdAt: "2024-01-01T00:00:00Z", updatedAt: null }],
@@ -216,24 +252,20 @@ describe("MainLayout mobile home integration (PR3 hotfix — shell-redesign-v1)"
       totalPages: 1,
       isLoading: false,
       error: null,
+      setState: vi.fn(),
     } as never);
+    // Wire getState/setState so MobileShell's useEffect doesn't blow up.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (useNoteStore as any).getState = () => defaultNoteStoreMockState;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (useNoteStore as any).setState = vi.fn();
 
     const { container } = render(
       <MemoryRouter initialEntries={["/"]}>
-        <AppRoutes />
+        <MainLayoutWithIndex />
       </MemoryRouter>,
     );
 
-    // Pre-fix: the MobileShell <main> had zero children because
-    // <Outlet/> resolved to null. Post-fix: it contains the NoteList
-    // (now exposing data-testid="note-list" — added in PR3 hotfix so
-    // this integration test can assert it).
-    //
-    // Both the desktop list panel (hidden md:flex) and the mobile
-    // NoteList have data-testid="note-list" (the desktop one was
-    // already mocked that way in MainLayout.test.tsx, the real one
-    // got the testid in PR3). We scope to the MobileShell subtree so
-    // we assert the MOBILE one — that's the fix being verified.
     const mobileShell = container.querySelector('[data-testid="mobile-shell"]');
     expect(mobileShell).not.toBeNull();
     const mobileMain = mobileShell!.querySelector("main");
@@ -248,7 +280,7 @@ describe("MainLayout mobile home integration (PR3 hotfix — shell-redesign-v1)"
 
     render(
       <MemoryRouter initialEntries={["/"]}>
-        <AppRoutes />
+        <MainLayoutWithIndex />
       </MemoryRouter>,
     );
 

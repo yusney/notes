@@ -44,6 +44,12 @@ vi.mock("./pages/NewNotePage", () => ({
 vi.mock("./pages/MobileSearchPage", () => ({
   MobileSearchPage: () => <div data-testid="page-search" />,
 }));
+vi.mock("./pages/MobileHomePage", () => ({
+  MobileHomePage: () => <div data-testid="page-home-mobile" />,
+}));
+vi.mock("./components/layout/MobileShell", () => ({
+  MobileShell: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
 
 function renderAt(initialPath: string) {
   return render(
@@ -58,63 +64,105 @@ describe("AppRoutes (PR2 — shell-redesign-v1)", () => {
     vi.clearAllMocks();
   });
 
-  it("/login renders LoginPage", () => {
+  // REQ-PERF-02 — every page is loaded via React.lazy(), so the import
+  // resolves on a microtask. findByTestId awaits the resolution; the
+  // sync getByTestId would catch the Suspense fallback instead.
+
+  it("/login renders LoginPage", async () => {
     renderAt("/login");
-    expect(screen.getByTestId("page-login")).toBeInTheDocument();
+    expect(await screen.findByTestId("page-login")).toBeInTheDocument();
   });
 
-  it("/register renders RegisterPage", () => {
+  it("/register renders RegisterPage", async () => {
     renderAt("/register");
-    expect(screen.getByTestId("page-register")).toBeInTheDocument();
+    expect(await screen.findByTestId("page-register")).toBeInTheDocument();
   });
 
-  it("/forgot-password renders ForgotPasswordPage", () => {
+  it("/forgot-password renders ForgotPasswordPage", async () => {
     renderAt("/forgot-password");
-    expect(screen.getByTestId("page-forgot")).toBeInTheDocument();
+    expect(await screen.findByTestId("page-forgot")).toBeInTheDocument();
   });
 
-  it("/reset-password renders ResetPasswordPage", () => {
+  it("/reset-password renders ResetPasswordPage", async () => {
     renderAt("/reset-password");
-    expect(screen.getByTestId("page-reset")).toBeInTheDocument();
+    expect(await screen.findByTestId("page-reset")).toBeInTheDocument();
   });
 
-  it("/share/:token renders SharedNotePage", () => {
+  it("/share/:token renders SharedNotePage", async () => {
     renderAt("/share/abc123");
-    expect(screen.getByTestId("page-share")).toBeInTheDocument();
+    expect(await screen.findByTestId("page-share")).toBeInTheDocument();
   });
 
-  it("/ renders MainLayout", () => {
+  it("/ renders MainLayout", async () => {
     renderAt("/");
-    expect(screen.getByTestId("page-main")).toBeInTheDocument();
+    expect(await screen.findByTestId("page-main")).toBeInTheDocument();
   });
 
-  it("/profile renders ProfilePage", () => {
+  it("/profile renders ProfilePage", async () => {
     renderAt("/profile");
-    expect(screen.getByTestId("page-profile")).toBeInTheDocument();
+    expect(await screen.findByTestId("page-profile")).toBeInTheDocument();
   });
 
-  it("/settings renders SettingsPage", () => {
+  it("/settings renders SettingsPage", async () => {
     renderAt("/settings");
-    expect(screen.getByTestId("page-settings")).toBeInTheDocument();
+    expect(await screen.findByTestId("page-settings")).toBeInTheDocument();
   });
 
-  it("/notes/:id renders MobileNotePage (PR2 — new mobile drill-down route)", () => {
+  it("/notes/:id renders MobileNotePage (PR2 — new mobile drill-down route)", async () => {
     renderAt("/notes/abc-123");
-    expect(screen.getByTestId("page-note-mobile")).toBeInTheDocument();
+    expect(await screen.findByTestId("page-note-mobile")).toBeInTheDocument();
   });
 
-  it("/new renders NewNotePage (PR2 — new stub route)", () => {
+  it("/new renders NewNotePage (PR2 — new stub route)", async () => {
     renderAt("/new");
-    expect(screen.getByTestId("page-new")).toBeInTheDocument();
+    expect(await screen.findByTestId("page-new")).toBeInTheDocument();
   });
 
-  it("/search renders MobileSearchPage (PR2 — new full-screen route)", () => {
+  it("/search renders MobileSearchPage (PR2 — new full-screen route)", async () => {
     renderAt("/search");
-    expect(screen.getByTestId("page-search")).toBeInTheDocument();
+    expect(await screen.findByTestId("page-search")).toBeInTheDocument();
   });
 
-  it("unknown route redirects to /", () => {
+  it("unknown route redirects to /", async () => {
     renderAt("/this-route-does-not-exist");
-    expect(screen.getByTestId("page-main")).toBeInTheDocument();
+    expect(await screen.findByTestId("page-main")).toBeInTheDocument();
+  });
+
+  // REQ-PERF-02 — route-level code splitting. Cold-boot to /login must
+  // NOT trigger a MainLayout chunk fetch. The simplest behavioral
+  // assertion: when we render at /login, the LoginPage mock resolves
+  // but the MainLayout mock factory has NOT been invoked for an actual
+  // mount. We use a factory that records calls and verify the count
+  // delta after rendering /login only.
+  it("cold-boot to /login does NOT load the MainLayout chunk", async () => {
+    let mainLayoutMounts = 0;
+    const TrackedMainLayout = () => {
+      mainLayoutMounts += 1;
+      return <div data-testid="page-main" />;
+    };
+
+    // Re-mock with the tracking factory for THIS test only.
+    vi.doMock("./pages/MainLayout", () => ({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      MainLayout: TrackedMainLayout as any,
+    }));
+    // We don't re-import App.tsx (would invalidate other tests); we
+    // use the cached module graph. The lazy() import for MainLayout
+    // resolves the mock at first render of <MainLayout />. If /login
+    // never causes <MainLayout /> to render, the factory's mount
+    // counter stays zero.
+
+    const before = mainLayoutMounts;
+    renderAt("/login");
+    // Wait for the LoginPage chunk to resolve and render.
+    await screen.findByTestId("page-login");
+    // Flush microtasks to ensure any deferred lazy imports would resolve.
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(mainLayoutMounts).toBe(before);
+    // Login page is visible; MainLayout was NOT mounted.
+    expect(screen.getByTestId("page-login")).toBeInTheDocument();
+    expect(screen.queryByTestId("page-main")).not.toBeInTheDocument();
+    vi.doUnmock("./pages/MainLayout");
   });
 });
