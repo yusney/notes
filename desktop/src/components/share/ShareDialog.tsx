@@ -1,7 +1,7 @@
 /* eslint-disable react-doctor/no-noninteractive-element-interactions -- <dialog> is a native interactive element; onMouseDown on root closes on backdrop click */
 import { useEffect, useReducer } from "react";
 import { DayPicker } from "react-day-picker";
-import { API_BASE_URL } from "../../api/client";
+import { getApiBaseUrl } from "../../api/client";
 import { useShareStore } from "../../stores/useShareStore";
 
 interface ShareDialogProps {
@@ -73,7 +73,7 @@ export function ShareDialog({ noteId, isOpen, onClose }: ShareDialogProps) {
 
   const handleCopy = () => {
     if (createdToken) {
-      navigator.clipboard.writeText(`${API_BASE_URL}/s/${createdToken}`);
+      navigator.clipboard.writeText(`${getApiBaseUrl()}/s/${createdToken}`);
     }
   };
 
@@ -195,7 +195,7 @@ export function ShareDialog({ noteId, isOpen, onClose }: ShareDialogProps) {
           <>
             <p className="text-sm text-text-secondary mb-2">Enlace creado:</p>
             <code className="block w-full border border-border bg-surface px-3 py-2 text-xs text-text-primary break-all">
-              {`${API_BASE_URL}/s/${createdToken}`}
+              {`${getApiBaseUrl()}/s/${createdToken}`}
             </code>
             <div className="mt-5 flex justify-end gap-2">
               <button

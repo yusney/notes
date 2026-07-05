@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { invoke } from "@tauri-apps/api/core";
 import type { User, AuthTokens } from "../types";
-import { API_BASE_URL, ApiClientError, createApiClient, getApiBaseUrl, loadRuntimeConfig } from "../api/client";
+import { ApiClientError, createApiClient, getApiBaseUrl, loadRuntimeConfig } from "../api/client";
 
 // ─── OS Keychain access via Tauri commands ────────────────────────────────────
 // The refresh token is stored in the OS keychain (Keychain on macOS,
@@ -70,7 +70,9 @@ interface AuthState {
   clearError: () => void;
 }
 
-const authApiClient = createApiClient({ baseUrl: API_BASE_URL });
+// Lazy URL resolution via `getBaseUrl` — ensures login/register hit the
+// runtime URL after `loadRuntimeConfig()` resolves. REQ-PERF-01.
+const authApiClient = createApiClient({ getBaseUrl: getApiBaseUrl });
 
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,

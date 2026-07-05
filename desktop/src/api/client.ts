@@ -9,7 +9,13 @@ export class ApiClientError extends Error {
 }
 
 export interface ApiClientOptions {
-  baseUrl: string;
+  /**
+   * Lazy URL resolution — resolved at request time so that runtime config
+   * overrides applied via `loadRuntimeConfig()` flow through to every call.
+   * REQ-PERF-01 — clients built from this factory always use the latest URL,
+   * even if it changes after the client was constructed.
+   */
+  getBaseUrl: () => string;
   getToken?: () => string | null;
   onUnauthorized?: () => Promise<void>;
 }
@@ -24,7 +30,7 @@ export interface ApiClient {
 }
 
 async function request<T>(
-  url: string,
+  path: string,
   options: RequestInit,
   clientOptions: ApiClientOptions,
   isRetry = false
@@ -39,12 +45,15 @@ async function request<T>(
     headers["Authorization"] = `Bearer ${token}`;
   }
 
+  // Resolve the base URL at request time (not at construction time) so that
+  // `loadRuntimeConfig()` overrides flow through to every call.
+  const url = `${clientOptions.getBaseUrl()}${path}`;
   const response = await fetch(url, { ...options, headers });
 
   if (!response.ok) {
     if (response.status === 401 && !isRetry && clientOptions.onUnauthorized) {
       await clientOptions.onUnauthorized();
-      return request<T>(url, options, clientOptions, true);
+      return request<T>(path, options, clientOptions, true);
     }
 
     let message = "Request failed";
@@ -65,42 +74,43 @@ async function request<T>(
 }
 
 export function createApiClient(options: ApiClientOptions): ApiClient {
-  const { baseUrl } = options;
-
   return {
     get<T>(path: string): Promise<T> {
-      return request<T>(`${baseUrl}${path}`, { method: "GET" }, options);
+      return request<T>(path, { method: "GET" }, options);
     },
     post<T>(path: string, body?: unknown): Promise<T> {
       return request<T>(
-        `${baseUrl}${path}`,
+        path,
         { method: "POST", body: body !== undefined ? JSON.stringify(body) : undefined },
         options
       );
     },
     put<T>(path: string, body?: unknown): Promise<T> {
       return request<T>(
-        `${baseUrl}${path}`,
+        path,
         { method: "PUT", body: body !== undefined ? JSON.stringify(body) : undefined },
         options
       );
     },
     patch<T>(path: string, body?: unknown): Promise<T> {
       return request<T>(
-        `${baseUrl}${path}`,
+        path,
         { method: "PATCH", body: body !== undefined ? JSON.stringify(body) : undefined },
         options
       );
     },
     delete<T>(path: string): Promise<T> {
-      return request<T>(`${baseUrl}${path}`, { method: "DELETE" }, options);
+      return request<T>(path, { method: "DELETE" }, options);
     },
     async downloadBlob(path: string, filename: string): Promise<void> {
       const token = options.getToken?.();
       const headers: Record<string, string> = {};
       if (token) headers["Authorization"] = `Bearer ${token}`;
 
-      const response = await fetch(`${baseUrl}${path}`, { method: "GET", headers });
+      const response = await fetch(`${options.getBaseUrl()}${path}`, {
+        method: "GET",
+        headers,
+      });
 
       if (!response.ok) {
         if (response.status === 401 && options.onUnauthorized) {
@@ -154,15 +164,19 @@ function resolveBaseUrl(): string {
 }
 
 /**
- * Returns the current API base URL. Callers MUST use this getter rather
- * than reading the `API_BASE_URL` constant when the URL may have been
- * mutated by `loadRuntimeConfig()` after module load. REQ-PERF-01.
+ * Returns the current API base URL. Callers MUST use this getter rather than
+ * caching the value at module load when the URL may have been mutated by
+ * `loadRuntimeConfig()` after the module was evaluated.
+ *
+ * Used directly by raw fetch call sites (`useAuthStore`, `useOAuth`,
+ * `ShareDialog`) and by the `apiClient` / `authApiClient` singletons via
+ * `createApiClient({ getBaseUrl: getApiBaseUrl })`.
+ *
+ * REQ-PERF-01 — runtime URL resolution must reach every API call site.
  */
 export function getApiBaseUrl(): string {
   return resolveBaseUrl();
 }
-
-export const API_BASE_URL = resolveBaseUrl();
 
 let _tokenGetter: (() => string | null) | null = null;
 let _onUnauthorized: (() => Promise<void>) | null = null;
@@ -175,8 +189,10 @@ export function configureApiClient(
   _onUnauthorized = onUnauthorized;
 }
 
+// Singletons — bound to `getApiBaseUrl` so they always hit the latest URL
+// after `loadRuntimeConfig()` resolves. REQ-PERF-01.
 export const apiClient = createApiClient({
-  baseUrl: API_BASE_URL,
+  getBaseUrl: getApiBaseUrl,
   getToken: () => _tokenGetter?.() ?? null,
   onUnauthorized: () => _onUnauthorized?.() ?? Promise.resolve(),
 });
