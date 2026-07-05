@@ -304,9 +304,11 @@ html {
 }
 
 /* ─── Lowlight / highlight.js token colors ──────────────────────────────────
- * Extracted to a dedicated file for maintainability. Imported below.
+ * Extracted to a dedicated file for maintainability. Statically imported
+ * by NoteEditor.tsx and NoteViewer.tsx so the CSS lands in the same lazy
+ * chunk as the editor — moved out of the cold-boot render-blocking chain
+ * (REQ-PERF-05).
  * ─────────────────────────────────────────────────────────────────────────── */
-@import "./styles/lowlight.css";
 
 /* ─── Task list — checkbox cursor & interactivity ───────────────────────────
  * In the editor, checkboxes are interactive → pointer cursor.
