@@ -1,7 +1,6 @@
 /* eslint-disable react-doctor/no-noninteractive-element-interactions -- <dialog> is a native interactive element; onMouseDown on root closes on backdrop click */
-import { useReducer } from "react";
+import { useEffect, useReducer } from "react";
 import { DayPicker } from "react-day-picker";
-import "react-day-picker/style.css";
 import { API_BASE_URL } from "../../api/client";
 import { useShareStore } from "../../stores/useShareStore";
 
@@ -50,6 +49,14 @@ export function ShareDialog({ noteId, isOpen, onClose }: ShareDialogProps) {
   const [state, dispatch] = useReducer(shareReducer, INITIAL_STATE);
   const { hasExpiry, selectedDay, hour, minute, createdToken } = state;
   const { createShareLink, isLoading } = useShareStore();
+
+  // REQ-PERF-05 — lazy CSS: keep react-day-picker/style.css out of the
+  // cold-boot render-blocking chain. Load it on first dialog open.
+  // Brief FOUC on first paint of the calendar widget (~1 frame) is
+  // accepted in exchange for ~10 KB off the cold-boot payload.
+  useEffect(() => {
+    if (isOpen) void import("react-day-picker/style.css");
+  }, [isOpen]);
 
   if (!isOpen) return null;
 

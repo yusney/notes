@@ -305,4 +305,49 @@ describe("MainLayout responsive (REQ-LAY-01)", () => {
       /\$\{activeNote\s*\?\s*"hidden"\s*:\s*"flex"\}\s*md:flex/;
     expect(src.match(pattern), "list-panel activeNote swap should be removed in PR2").toBeNull();
   });
+
+  // ────────────────────────────────────────────────────────────────────────
+  // REQ-PERF-06 — NoteEditor + NoteViewer are loaded via React.lazy()
+  // inside MainLayout. They mount only when a note is selected AND
+  // isEditing matches the editor/viewer type.
+  // ────────────────────────────────────────────────────────────────────────
+  describe("editor/viewer lazy gate (REQ-PERF-06)", () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const fs = require("fs") as typeof import("fs");
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const path = require("path") as typeof import("path");
+    const src = fs.readFileSync(
+      path.resolve(__dirname, "MainLayout.tsx"),
+      "utf8"
+    );
+
+    it("loads NoteEditor via React.lazy() — no eager import", () => {
+      // The source must NOT have an eager named import of NoteEditor
+      // (the only path through which it should be loaded is the
+      // lazy() adapter below).
+      const noBlockComments = src.replace(/\/\*[\s\S]*?\*\//g, "");
+      const noLineComments = noBlockComments.replace(/^\s*\/\/.*$/gm, "");
+      expect(noLineComments).not.toMatch(/^import\s*\{[^}]*\bNoteEditor\b[^}]*\}\s*from\s*["']\.\.\/components\/editor\/NoteEditor["']/m);
+      // And it MUST have a lazy() call that imports NoteEditor.
+      expect(src).toMatch(/lazy\s*\(\s*\(\s*\)\s*=>\s*import\(\s*["']\.\.\/components\/editor\/NoteEditor["']/);
+    });
+
+    it("loads NoteViewer via React.lazy() — no eager import", () => {
+      const noBlockComments = src.replace(/\/\*[\s\S]*?\*\//g, "");
+      const noLineComments = noBlockComments.replace(/^\s*\/\/.*$/gm, "");
+      expect(noLineComments).not.toMatch(/^import\s*\{[^}]*\bNoteViewer\b[^}]*\}\s*from\s*["']\.\.\/components\/editor\/NoteViewer["']/m);
+      expect(src).toMatch(/lazy\s*\(\s*\(\s*\)\s*=>\s*import\(\s*["']\.\.\/components\/editor\/NoteViewer["']/);
+    });
+
+    it("wraps the editor/viewer render in <Suspense fallback={<EditorSkeleton/>}>", () => {
+      // The activeNote-conditional render section must be wrapped in
+      // <Suspense fallback={<EditorSkeleton/>}> so the chunk resolves
+      // with a stable CLS footprint.
+      expect(src).toMatch(/Suspense\s+fallback=\{<EditorSkeleton\s*\/>\}/);
+      // The <Suspense> wrap must be INSIDE the activeNote ternary
+      // (so no skeleton mounts on the empty-state path).
+      const activeNoteMatch = src.match(/\{activeNote\s*\?\s*\([\s\S]*?\)\s*:\s*\(/);
+      expect(activeNoteMatch).not.toBeNull();
+    });
+  });
 });

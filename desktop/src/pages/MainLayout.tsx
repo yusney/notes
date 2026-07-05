@@ -1,22 +1,33 @@
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { DndContext, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { Sidebar } from "../components/layout/Sidebar";
 import { MobileShell } from "../components/layout/MobileShell";
 import { NoteList } from "../components/notes/NoteList";
-import { NoteEditor } from "../components/editor/NoteEditor";
-import { NoteViewer } from "../components/editor/NoteViewer";
 import { SearchBar } from "../components/notes/SearchBar";
 import { ShareWarningDialog } from "../components/share/ShareWarningDialog";
 import { CreateTabDialog } from "../components/CreateTabDialog";
 import { TagFilter } from "../components/notes/TagFilter";
 import { ActiveFiltersBar } from "../components/notes/ActiveFiltersBar";
 import { UndoMoveToast } from "../components/notes/UndoMoveToast";
+import { EditorSkeleton } from "../components/editor/EditorSkeleton";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import { useNoteStore } from "../stores/useNoteStore";
 import { useAuthStore } from "../stores/useAuthStore";
 import { useTagStore } from "../stores/useTagStore";
 import { usePreferencesStore } from "../stores/usePreferencesStore";
+
+// REQ-PERF-06 — NoteEditor + NoteViewer are loaded via React.lazy() so
+// the TipTap bundle (~620 KB raw / ~207 KB gzip) only lands when the
+// user actually selects a note to edit/view. The chunk cache means
+// toggling isEditing true→false→true re-uses the same chunk.
+// Pages are named-exported, so use the .then adapter form.
+const NoteEditor = lazy(() =>
+  import("../components/editor/NoteEditor").then((m) => ({ default: m.NoteEditor }))
+);
+const NoteViewer = lazy(() =>
+  import("../components/editor/NoteViewer").then((m) => ({ default: m.NoteViewer }))
+);
 
 export function MainLayout() {
   const { user, logout } = useAuthStore();
@@ -337,20 +348,22 @@ export function MainLayout() {
 
         <main className="hidden md:block md:min-w-0 md:flex-1 md:overflow-hidden md:h-full">
           {activeNote ? (
-            isEditing ? (
-              <NoteEditor
-                key={activeNote.id}
-                note={activeNote}
-                availableTags={tags}
-                onSave={handleSaveNote}
-                onSaveAndExit={handleSaveAndExit}
-                onCancel={() => setIsEditing(false)}
-              />
-            ) : (
-              <div data-testid={`editor-${activeNote.id}`} className="h-full">
-                <NoteViewer note={activeNote} onEdit={() => setIsEditing(true)} />
-              </div>
-            )
+            <Suspense fallback={<EditorSkeleton />}>
+              {isEditing ? (
+                <NoteEditor
+                  key={activeNote.id}
+                  note={activeNote}
+                  availableTags={tags}
+                  onSave={handleSaveNote}
+                  onSaveAndExit={handleSaveAndExit}
+                  onCancel={() => setIsEditing(false)}
+                />
+              ) : (
+                <div data-testid={`editor-${activeNote.id}`} className="h-full">
+                  <NoteViewer note={activeNote} onEdit={() => setIsEditing(true)} />
+                </div>
+              )}
+            </Suspense>
           ) : (
             <div className="flex h-full items-center justify-center bg-surface p-10 text-text-secondary">
               <div className="max-w-md border border-border bg-surface-elevated/75 p-8 text-center backdrop-blur">

@@ -62,4 +62,45 @@ describe("ShareDialog", () => {
     expect(screen.getAllByRole("button", { name: "+" }).length).toBeGreaterThanOrEqual(2);
     expect(screen.getAllByRole("button", { name: "−" }).length).toBeGreaterThanOrEqual(2);
   });
+
+  // ────────────────────────────────────────────────────────────────────────
+  // REQ-PERF-05 — react-day-picker CSS MUST NOT be in the cold-boot
+  // render-blocking chain. Source-level assertion (mirrors the
+  // vite.config.test.ts pattern): the import must be a dynamic
+  // `import("react-day-picker/style.css")` inside a useEffect, NOT a
+  // static top-level import.
+  // ────────────────────────────────────────────────────────────────────────
+  describe("lazy day-picker CSS (REQ-PERF-05)", () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const fs = require("fs") as typeof import("fs");
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const path = require("path") as typeof import("path");
+    const source = fs.readFileSync(
+      path.resolve(__dirname, "ShareDialog.tsx"),
+      "utf8"
+    );
+
+    it("does NOT have a static top-level import of react-day-picker/style.css", () => {
+      // Strip comments before checking.
+      const noBlockComments = source.replace(/\/\*[\s\S]*?\*\//g, "");
+      const noLineComments = noBlockComments.replace(/^\s*\/\/.*$/gm, "");
+      // A static import would look like:
+      //   import "react-day-picker/style.css";
+      // at the top of the file. We assert no such line exists.
+      expect(noLineComments).not.toMatch(/^import\s+["']react-day-picker\/style\.css["']\s*;/m);
+    });
+
+    it("dynamically imports react-day-picker/style.css inside a useEffect gated by isOpen", () => {
+      // The lazy-load pattern must be:
+      //   useEffect(() => {
+      //     if (isOpen) void import("react-day-picker/style.css");
+      //   }, [isOpen]);
+      // We assert the structural pieces are present.
+      expect(source).toMatch(/useEffect/);
+      expect(source).toMatch(/if\s*\(\s*isOpen\s*\)/);
+      expect(source).toMatch(/import\(\s*["']react-day-picker\/style\.css["']\s*\)/);
+      // The useEffect's dependency array must include isOpen.
+      expect(source).toMatch(/\[\s*isOpen\s*\]/);
+    });
+  });
 });

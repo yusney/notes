@@ -1,6 +1,9 @@
 /* eslint-disable react-doctor/prefer-tag-over-role -- div[role=status] is correct ARIA live region; no native HTML equivalent */
 import { useEffect, useReducer, useRef } from "react";
 import { useEditor, EditorContent, Extension } from "@tiptap/react";
+// REQ-PERF-05 — lowlight CSS ships with the editor lazy chunk (was
+// previously in the cold-boot render-blocking chain via index.css).
+import "../../styles/lowlight.css";
 import { StarterKit } from "@tiptap/starter-kit";
 import { CodeBlockLowlight } from "@tiptap/extension-code-block-lowlight";
 import { Link } from "@tiptap/extension-link";
