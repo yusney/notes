@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { getCurrent, onOpenUrl } from "@tauri-apps/plugin-deep-link";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useAuthStore } from "../stores/useAuthStore";
-import { API_BASE_URL } from "../api/client";
+import { getApiBaseUrl } from "../api/client";
 
 /**
  * Handles OAuth login via the OS browser + deep link callback.
@@ -40,7 +40,7 @@ export function useOAuthLogin() {
           throw new Error("OAuth callback code is missing");
         }
 
-        const response = await fetch(`${API_BASE_URL}/api/auth/oauth/desktop/exchange`, {
+        const response = await fetch(`${getApiBaseUrl()}/api/auth/oauth/desktop/exchange`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ code }),
@@ -84,7 +84,7 @@ export function useOAuthLogin() {
     setIsLoading(true);
     setError(null);
     try {
-      await openUrl(`${API_BASE_URL}/api/auth/oauth/${provider}`);
+      await openUrl(`${getApiBaseUrl()}/api/auth/oauth/${provider}`);
     } catch (err) {
       console.error("[OAuth] Failed to open browser:", err);
       setError("No se pudo abrir el navegador");
