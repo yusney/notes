@@ -227,6 +227,177 @@ describe("useAuthStore", () => {
     });
   });
 
+  // ────────────────────────────────────────────────────────────────────────
+  // REQ-PERF-01 — Auth init parallelization
+  // initialize() MUST run loadRuntimeConfig and restoreToken concurrently via
+  // Promise.all, so the login route can paint before token resolve.
+  // NOTE: this block must come BEFORE the "initialize without Tauri runtime"
+  // block below — the vi.doMock in those tests corrupts the global invoke
+  // mock for any test that comes after.
+  // ────────────────────────────────────────────────────────────────────────
+  describe("initialize() parallel init (REQ-PERF-01)", () => {
+    it("runs loadRuntimeConfig and restoreToken concurrently via Promise.all", async () => {
+      const callOrder: string[] = [];
+
+      const configPromise = new Promise<void>((resolve) => {
+        setTimeout(() => {
+          callOrder.push("config-resolved");
+          resolve();
+        }, 20);
+      });
+
+      const tokenPromise = new Promise<string | null>((resolve) => {
+        setTimeout(() => {
+          callOrder.push("token-resolved");
+          resolve(null);
+        }, 20);
+      });
+
+      const clientModule = await import("../api/client");
+      const loadSpy = vi.spyOn(clientModule, "loadRuntimeConfig").mockImplementation(async () => {
+        callOrder.push("config-called");
+        await configPromise;
+      });
+      const invokeMod = await import("@tauri-apps/api/core");
+      const invokeSpy = invokeMod.invoke as unknown as ReturnType<typeof vi.fn>;
+      invokeSpy.mockImplementationOnce(async (cmd: string) => {
+        if (cmd === "load_token") {
+          callOrder.push("token-called");
+          return tokenPromise;
+        }
+        return null;
+      });
+
+      const { result } = renderHook(() => useAuthStore());
+      await act(async () => {
+        await result.current.initialize();
+      });
+
+      const configIdx = callOrder.indexOf("config-called");
+      const tokenIdx = callOrder.indexOf("token-called");
+      const configResolvedIdx = callOrder.indexOf("config-resolved");
+      const tokenResolvedIdx = callOrder.indexOf("token-resolved");
+      expect(configIdx).toBeGreaterThanOrEqual(0);
+      expect(tokenIdx).toBeGreaterThanOrEqual(0);
+      expect(configIdx).toBeLessThan(configResolvedIdx);
+      expect(tokenIdx).toBeLessThan(tokenResolvedIdx);
+
+      expect(result.current.isInitialized).toBe(true);
+      expect(result.current.isAuthenticated).toBe(false);
+
+      loadSpy.mockRestore();
+    });
+
+    it("sets isInitialized=true when no stored refresh token is present", async () => {
+      const clientModule = await import("../api/client");
+      vi.spyOn(clientModule, "loadRuntimeConfig").mockResolvedValue();
+
+      const invokeMod = await import("@tauri-apps/api/core");
+      const invokeSpy = invokeMod.invoke as unknown as ReturnType<typeof vi.fn>;
+      invokeSpy.mockImplementationOnce(async (cmd: string) => {
+        if (cmd === "load_token") return null;
+        return null;
+      });
+
+      const { result } = renderHook(() => useAuthStore());
+      await act(async () => {
+        await result.current.initialize();
+      });
+
+      expect(result.current.isInitialized).toBe(true);
+      expect(result.current.isAuthenticated).toBe(false);
+      expect(result.current.user).toBeNull();
+    });
+
+    it("clears stale token and sets isInitialized=true when rawRefresh returns null", async () => {
+      const clientModule = await import("../api/client");
+      vi.spyOn(clientModule, "loadRuntimeConfig").mockResolvedValue();
+
+      const invokeMod = await import("@tauri-apps/api/core");
+      const invokeSpy = invokeMod.invoke as unknown as ReturnType<typeof vi.fn>;
+      let deleteTokenCalled = false;
+      invokeSpy.mockImplementation(async (cmd: string) => {
+        if (cmd === "load_token") return "stale-refresh-token";
+        if (cmd === "delete_token") { deleteTokenCalled = true; return; }
+        return null;
+      });
+
+      global.fetch = vi.fn().mockResolvedValueOnce({ ok: false, status: 401 });
+
+      const { result } = renderHook(() => useAuthStore());
+      await act(async () => {
+        await result.current.initialize();
+      });
+
+      expect(deleteTokenCalled).toBe(true);
+      expect(result.current.isInitialized).toBe(true);
+      expect(result.current.isAuthenticated).toBe(false);
+    });
+
+    it("rotates refresh token when server issues a new one different from the stored token", async () => {
+      const clientModule = await import("../api/client");
+      vi.spyOn(clientModule, "loadRuntimeConfig").mockResolvedValue();
+
+      const invokeMod = await import("@tauri-apps/api/core");
+      const invokeSpy = invokeMod.invoke as unknown as ReturnType<typeof vi.fn>;
+      let saveTokenCalled = false;
+      invokeSpy.mockImplementation(async (cmd: string) => {
+        if (cmd === "load_token") return "old-refresh";
+        if (cmd === "save_token") { saveTokenCalled = true; return; }
+        if (cmd === "delete_token") return;
+        return null;
+      });
+
+      const newTokens = {
+        accessToken: "new-access",
+        refreshToken: "new-refresh-rotated",
+      };
+      const profile = { id: "u1", email: "a@b.com", displayName: "Test" };
+
+      global.fetch = vi.fn()
+        .mockResolvedValueOnce({ ok: true, status: 200, json: async () => newTokens })
+        .mockResolvedValueOnce({ ok: true, status: 200, json: async () => profile });
+
+      const { result } = renderHook(() => useAuthStore());
+      await act(async () => {
+        await result.current.initialize();
+      });
+
+      expect(saveTokenCalled).toBe(true);
+      expect(result.current.accessToken).toBe("new-access");
+      expect(result.current.isAuthenticated).toBe(true);
+      expect(result.current.user).toMatchObject({ email: "a@b.com" });
+    });
+
+    it("does NOT rotate refresh token when server reuses the stored one", async () => {
+      const clientModule = await import("../api/client");
+      vi.spyOn(clientModule, "loadRuntimeConfig").mockResolvedValue();
+
+      const invokeMod = await import("@tauri-apps/api/core");
+      const invokeSpy = invokeMod.invoke as unknown as ReturnType<typeof vi.fn>;
+      let saveTokenCalled = false;
+      invokeSpy.mockImplementation(async (cmd: string) => {
+        if (cmd === "load_token") return "same-refresh";
+        if (cmd === "save_token") { saveTokenCalled = true; return; }
+        return null;
+      });
+
+      const sameTokens = { accessToken: "new-access", refreshToken: "same-refresh" };
+      const profile = { id: "u1", email: "a@b.com", displayName: "Test" };
+      global.fetch = vi.fn()
+        .mockResolvedValueOnce({ ok: true, status: 200, json: async () => sameTokens })
+        .mockResolvedValueOnce({ ok: true, status: 200, json: async () => profile });
+
+      const { result } = renderHook(() => useAuthStore());
+      await act(async () => {
+        await result.current.initialize();
+      });
+
+      expect(saveTokenCalled).toBe(false);
+      expect(result.current.isAuthenticated).toBe(true);
+    });
+  });
+
   describe("initialize without Tauri runtime", () => {
     it("recovers when restoreToken throws (browser/jsdom dev mode)", async () => {
       // Simulate plain browser dev: invoke() is unavailable and throws.

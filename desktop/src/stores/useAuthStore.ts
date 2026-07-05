@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { invoke } from "@tauri-apps/api/core";
 import type { User, AuthTokens } from "../types";
-import { API_BASE_URL, ApiClientError, createApiClient } from "../api/client";
+import { API_BASE_URL, ApiClientError, createApiClient, getApiBaseUrl, loadRuntimeConfig } from "../api/client";
 
 // ─── OS Keychain access via Tauri commands ────────────────────────────────────
 // The refresh token is stored in the OS keychain (Keychain on macOS,
@@ -25,7 +25,7 @@ async function clearToken(): Promise<void> {
 // This prevents the 401-retry loop that would happen if we used apiClient here.
 async function rawRefresh(refreshToken: string): Promise<AuthTokens | null> {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
+    const res = await fetch(`${getApiBaseUrl()}/api/auth/refresh`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ token: refreshToken }),
@@ -40,7 +40,7 @@ async function rawRefresh(refreshToken: string): Promise<AuthTokens | null> {
 // ─── Raw profile fetch ────────────────────────────────────────────────────────
 async function fetchProfile(accessToken: string): Promise<User | null> {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/user/profile`, {
+    const res = await fetch(`${getApiBaseUrl()}/api/user/profile`, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
     if (!res.ok) return null;
@@ -81,10 +81,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   error: null,
 
   // Called once on app start. Tries to restore the session silently.
+  // REQ-PERF-01: parallelize loadRuntimeConfig + restoreToken via Promise.all
+  // so the login route can paint before token resolution completes.
   initialize: async () => {
     let refreshToken: string | null;
     try {
-      refreshToken = await restoreToken();
+      // Parallel init: loadRuntimeConfig (HTTP) and restoreToken (IPC) are
+      // independent — kick them off together. rawRefresh + fetchProfile stay
+      // sequential because both depend on the resolved refresh token.
+      const [, token] = await Promise.all([
+        loadRuntimeConfig(),
+        restoreToken().catch(() => null),
+      ]);
+      refreshToken = token;
     } catch {
       // invoke("load_token") throws when __TAURI_INTERNALS__ is undefined
       // (plain browser dev, vitest jsdom). Treat as no stored session.
@@ -247,7 +256,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       if (accessToken) {
         headers["Authorization"] = `Bearer ${accessToken}`;
       }
-      fetch(`${API_BASE_URL}/api/auth/logout`, {
+      fetch(`${getApiBaseUrl()}/api/auth/logout`, {
         method: "POST",
         headers,
         body: JSON.stringify({ token: refreshToken }),

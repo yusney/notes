@@ -193,4 +193,24 @@ describe("ApiClient", () => {
       );
     });
   });
+
+  // ────────────────────────────────────────────────────────────────────────
+  // REQ-PERF-01 — getApiBaseUrl() exports a getter so callers always see
+  // the latest URL after loadRuntimeConfig() resolves.
+  // ────────────────────────────────────────────────────────────────────────
+  describe("getApiBaseUrl (REQ-PERF-01)", () => {
+    it("returns the runtime URL after loadRuntimeConfig resolves", async () => {
+      const fetchMock = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ apiBaseUrl: "https://api.example.com" }),
+      });
+      global.fetch = fetchMock as unknown as typeof fetch;
+
+      const client = await import("./client");
+      await client.loadRuntimeConfig();
+
+      expect(client.getApiBaseUrl()).toBe("https://api.example.com");
+    });
+  });
 });
