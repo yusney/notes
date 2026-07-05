@@ -23,6 +23,14 @@ export default defineConfig(({ mode }) => {
     // enable long-term browser cache hits per vendor group.
     build: {
       target: "esnext",
+      // REQ-PERF-G — Tauri WebView2 hang mitigation. Vite's default with
+      // manualChunks emits <link rel="modulepreload" crossorigin> per vendor
+      // chunk; Chrome tolerates the crossorigin attr but WebView2 does not
+      // (CORS preflight on tauri:// assets hangs the webview until the
+      // "Force close or wait" ANR dialog). Disabling modulePreload drops
+      // those <link> tags from dist/index.html — lazy chunks still load
+      // via dynamic import(). See bugfix/tauri-modulepreload-hang.
+      modulePreload: false,
       rollupOptions: {
         output: {
           manualChunks(id) {

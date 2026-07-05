@@ -75,4 +75,18 @@ describe("vite.config.ts — manualChunks (REQ-PERF-03)", () => {
   it("targets esnext", () => {
     expect(source).toMatch(/target:\s*["']esnext["']/);
   });
+
+  // REQ-PERF-G — Tauri WebView2 hang regression guard
+  // Vite emits <link rel="modulepreload" crossorigin> per vendor chunk when
+  // manualChunks is in play. Chrome tolerates the crossorigin attribute, but
+  // WebView2 (Tauri's Windows webview) has a known incompatibility: the
+  // crossorigin attribute triggers CORS preflight on tauri:// assets that
+  // WebView2 cannot satisfy, hanging the webview indefinitely until the
+  // "Force close or wait" ANR dialog. Setting build.modulePreload: false
+  // removes those <link> tags from dist/index.html; lazy chunks still load
+  // via dynamic import() so no behavioral change.
+  // See: bugfix/tauri-modulepreload-hang in Engram.
+  it("disables modulePreload to prevent Tauri WebView2 hang (REQ-PERF-G)", () => {
+    expect(source).toMatch(/modulePreload:\s*false/);
+  });
 });
