@@ -1,7 +1,7 @@
 import { ReactNode, useEffect } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuthStore } from "../../stores/useAuthStore";
-import { configureApiClient, loadRuntimeConfig } from "../../api/client";
+import { configureApiClient } from "../../api/client";
 
 interface AuthProviderProps {
   children: ReactNode;
@@ -21,34 +21,21 @@ function LoadingScreen() {
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
-  const { isInitialized, isAuthenticated } = useAuthStore();
-
+  // REQ-PERF-01: AuthProvider is now a transparent pass-through. Init is
+  // delegated to the store (initialize() runs config + token restore in
+  // parallel via Promise.all). The per-route RequireAuth gate still blocks
+  // protected content while isInitialized=false — login routes render
+  // immediately on cold-boot without waiting for session restore.
   useEffect(() => {
-    // Sequential init: load runtime config → wire API client → restore session
-    (async () => {
-      await loadRuntimeConfig();
-      configureApiClient(
-        () => useAuthStore.getState().accessToken,
-        () => useAuthStore.getState().refreshAccessToken()
-      );
-      useAuthStore.getState().initialize();
-    })();
+    // Wire the apiClient interceptor before init kicks off so any
+    // immediate fetches (e.g. /config.json) get the token getter once
+    // available.
+    configureApiClient(
+      () => useAuthStore.getState().accessToken,
+      () => useAuthStore.getState().refreshAccessToken()
+    );
+    useAuthStore.getState().initialize();
   }, []);
-
-  // Keep the apiClient's unauthorized handler reactive when token refreshes
-  const hasAuth = isAuthenticated;
-  useEffect(() => {
-    if (hasAuth) {
-      configureApiClient(
-        () => useAuthStore.getState().accessToken,
-        () => useAuthStore.getState().refreshAccessToken()
-      );
-    }
-  }, [hasAuth]);
-
-  if (!isInitialized) {
-    return <LoadingScreen />;
-  }
 
   return <>{children}</>;
 }

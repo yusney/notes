@@ -153,6 +153,15 @@ function resolveBaseUrl(): string {
   return "http://localhost:8080";
 }
 
+/**
+ * Returns the current API base URL. Callers MUST use this getter rather
+ * than reading the `API_BASE_URL` constant when the URL may have been
+ * mutated by `loadRuntimeConfig()` after module load. REQ-PERF-01.
+ */
+export function getApiBaseUrl(): string {
+  return resolveBaseUrl();
+}
+
 export const API_BASE_URL = resolveBaseUrl();
 
 let _tokenGetter: (() => string | null) | null = null;

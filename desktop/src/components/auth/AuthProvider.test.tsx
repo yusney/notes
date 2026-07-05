@@ -82,3 +82,75 @@ describe("AuthProvider / RequireAuth", () => {
     );
   });
 });
+
+// ────────────────────────────────────────────────────────────────────────
+// REQ-PERF-01 — Auth-gate split
+// AuthProvider MUST NOT block first paint on a global <LoadingScreen />.
+// Login routes render immediately while initialize() is in flight.
+// RequireAuth still blocks protected content with no flash until
+// isInitialized=true.
+// ────────────────────────────────────────────────────────────────────────
+describe("AuthProvider REQ-PERF-01 — non-protected routes render during init", () => {
+  function renderWithAuthState(initialPath: string, opts: { isInitialized: boolean; isAuthenticated: boolean }) {
+    useAuthStore.setState({
+      isAuthenticated: opts.isAuthenticated,
+      isInitialized: opts.isInitialized,
+      user: opts.isAuthenticated ? { id: "1", email: "a@b.com", name: "Test" } : null,
+      accessToken: opts.isAuthenticated ? "token" : null,
+      isLoading: false,
+      error: null,
+    });
+
+    return render(
+      <MemoryRouter initialEntries={[initialPath]}>
+        <AuthProvider>
+          <Routes>
+            <Route path="/login" element={<TestLogin />} />
+            <Route
+              path="/"
+              element={
+                <RequireAuth>
+                  <TestProtected />
+                </RequireAuth>
+              }
+            />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>
+    );
+  }
+
+  it("/login renders Login page immediately when isInitialized=false", () => {
+    // SPEC: Login route MUST NOT block on LoadingScreen during init.
+    renderWithAuthState("/login", { isInitialized: false, isAuthenticated: false });
+
+    // The Login page must be visible WITHOUT needing waitFor — that's the
+    // performance claim under test.
+    expect(screen.getByText("Login page")).toBeInTheDocument();
+    // No global LoadingScreen should be blocking.
+    expect(screen.queryByText(/restaurando sesión/i)).not.toBeInTheDocument();
+  });
+
+  it("RequireAuth blocks protected content with no flash when isInitialized=false", () => {
+    renderWithAuthState("/", { isInitialized: false, isAuthenticated: false });
+
+    // RequireAuth MUST show the LoadingScreen — no protected content flash.
+    expect(screen.queryByText("Protected content")).not.toBeInTheDocument();
+    expect(screen.getByText(/restaurando sesión/i)).toBeInTheDocument();
+  });
+
+  it("RequireAuth renders protected content after init + auth", async () => {
+    renderWithAuthState("/", { isInitialized: true, isAuthenticated: true });
+
+    expect(screen.getByText("Protected content")).toBeInTheDocument();
+  });
+
+  it("RequireAuth redirects to /login when isInitialized=true but !isAuthenticated", async () => {
+    renderWithAuthState("/", { isInitialized: true, isAuthenticated: false });
+
+    await waitFor(() =>
+      expect(screen.getByText("Login page")).toBeInTheDocument()
+    );
+    expect(screen.queryByText("Protected content")).not.toBeInTheDocument();
+  });
+});
