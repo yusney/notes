@@ -1,25 +1,75 @@
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, RequireAuth } from "./components/auth/AuthProvider";
-import { LoginPage } from "./pages/LoginPage";
-import { RegisterPage } from "./pages/RegisterPage";
-import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
-import { ResetPasswordPage } from "./pages/ResetPasswordPage";
-import { MainLayout } from "./pages/MainLayout";
-import { SharedNotePage } from "./pages/SharedNotePage";
-import { ProfilePage } from "./pages/ProfilePage";
-import { SettingsPage } from "./pages/SettingsPage";
-import { MobileNotePage } from "./pages/MobileNotePage";
-import { NewNotePage } from "./pages/NewNotePage";
-import { MobileSearchPage } from "./pages/MobileSearchPage";
-import { MobileHomePage } from "./pages/MobileHomePage";
-import { MobileShell } from "./components/layout/MobileShell";
+import { RouteSuspenseFallback } from "./components/router/RouteSuspenseFallback";
+import { RouteErrorBoundary } from "./components/router/RouteErrorBoundary";
 import { useTheme } from "./hooks/useTheme";
 import { CloseDialog } from "./components/CloseDialog";
+
+// REQ-PERF-02 — every page is loaded via React.lazy() so its module +
+// heavy deps (TipTap on editor routes, etc.) land in a separate chunk
+// instead of the main entry. Each lazy() needs `{ default: ... }` since
+// pages are named-exported.
+const LoginPage = lazy(() =>
+  import("./pages/LoginPage").then((m) => ({ default: m.LoginPage }))
+);
+const RegisterPage = lazy(() =>
+  import("./pages/RegisterPage").then((m) => ({ default: m.RegisterPage }))
+);
+const ForgotPasswordPage = lazy(() =>
+  import("./pages/ForgotPasswordPage").then((m) => ({ default: m.ForgotPasswordPage }))
+);
+const ResetPasswordPage = lazy(() =>
+  import("./pages/ResetPasswordPage").then((m) => ({ default: m.ResetPasswordPage }))
+);
+const MainLayout = lazy(() =>
+  import("./pages/MainLayout").then((m) => ({ default: m.MainLayout }))
+);
+const SharedNotePage = lazy(() =>
+  import("./pages/SharedNotePage").then((m) => ({ default: m.SharedNotePage }))
+);
+const ProfilePage = lazy(() =>
+  import("./pages/ProfilePage").then((m) => ({ default: m.ProfilePage }))
+);
+const SettingsPage = lazy(() =>
+  import("./pages/SettingsPage").then((m) => ({ default: m.SettingsPage }))
+);
+const MobileNotePage = lazy(() =>
+  import("./pages/MobileNotePage").then((m) => ({ default: m.MobileNotePage }))
+);
+const NewNotePage = lazy(() =>
+  import("./pages/NewNotePage").then((m) => ({ default: m.NewNotePage }))
+);
+const MobileSearchPage = lazy(() =>
+  import("./pages/MobileSearchPage").then((m) => ({ default: m.MobileSearchPage }))
+);
+const MobileHomePage = lazy(() =>
+  import("./pages/MobileHomePage").then((m) => ({ default: m.MobileHomePage }))
+);
+const MobileShell = lazy(() =>
+  import("./components/layout/MobileShell").then((m) => ({ default: m.MobileShell }))
+);
 
 function ThemeWatcher() {
   // Mount useTheme to trigger initial theme application via applyThemeToDocument in useTheme.ts
   useTheme();
   return null;
+}
+
+/**
+ * Wrap a route element with the shared Suspense fallback (to handle
+ * the brief chunk-load window) and the per-route error boundary (to
+ * surface chunk-load failures with a retry button — without replacing
+ * the global app shell).
+ */
+function lazyRoute(element: React.ReactNode, minHeight?: string) {
+  return (
+    <RouteErrorBoundary>
+      <Suspense fallback={<RouteSuspenseFallback minHeight={minHeight} />}>
+        {element}
+      </Suspense>
+    </RouteErrorBoundary>
+  );
 }
 
 /**
@@ -39,18 +89,19 @@ function ThemeWatcher() {
 export function AppRoutes() {
   return (
     <Routes>
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />
-      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-      <Route path="/reset-password" element={<ResetPasswordPage />} />
-      <Route path="/share/:token" element={<SharedNotePage />} />
+      <Route path="/login" element={lazyRoute(<LoginPage />, "100vh")} />
+      <Route path="/register" element={lazyRoute(<RegisterPage />)} />
+      <Route path="/forgot-password" element={lazyRoute(<ForgotPasswordPage />)} />
+      <Route path="/reset-password" element={lazyRoute(<ResetPasswordPage />)} />
+      <Route path="/share/:token" element={lazyRoute(<SharedNotePage />)} />
       <Route
         path="/"
-        element={
+        element={lazyRoute(
           <RequireAuth>
             <MainLayout />
-          </RequireAuth>
-        }
+          </RequireAuth>,
+          "100vh"
+        )}
       >
         {/*
           PR3 hotfix (shell-redesign-v1): the `/` route is now a
@@ -64,7 +115,7 @@ export function AppRoutes() {
           unchanged because the MobileShell subtree stays
           `md:hidden` (REQ-LAY-01 desktop-pixel-identical).
         */}
-        <Route index element={<MobileHomePage />} />
+        <Route index element={lazyRoute(<MobileHomePage />)} />
       </Route>
       {/* PR2 mobile drill-down routes — each page renders its content
           inside MobileShell so the chrome (AppBar + BottomNav + SideSheet)
@@ -73,49 +124,49 @@ export function AppRoutes() {
           directly via deep-link / browser history. */}
       <Route
         path="/notes/:id"
-        element={
+        element={lazyRoute(
           <RequireAuth>
             <MobileShell>
               <MobileNotePage />
             </MobileShell>
           </RequireAuth>
-        }
+        )}
       />
       <Route
         path="/new"
-        element={
+        element={lazyRoute(
           <RequireAuth>
             <MobileShell>
               <NewNotePage />
             </MobileShell>
           </RequireAuth>
-        }
+        )}
       />
       <Route
         path="/search"
-        element={
+        element={lazyRoute(
           <RequireAuth>
             <MobileShell>
               <MobileSearchPage />
             </MobileShell>
           </RequireAuth>
-        }
+        )}
       />
       <Route
         path="/profile"
-        element={
+        element={lazyRoute(
           <RequireAuth>
             <ProfilePage />
           </RequireAuth>
-        }
+        )}
       />
       <Route
         path="/settings"
-        element={
+        element={lazyRoute(
           <RequireAuth>
             <SettingsPage />
           </RequireAuth>
-        }
+        )}
       />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
