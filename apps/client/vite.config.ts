@@ -4,13 +4,16 @@ import tailwindcss from "@tailwindcss/vite";
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
-  // Load env variables from .env files based on mode
-  const env = loadEnv(mode, process.cwd(), "");
+  // Load env variables from .env files for app builds/dev only.
+  // Vitest runs in `test` mode and must not read local .env files: tests
+  // should stay hermetic and CI/sandbox-safe even when .env contains secrets.
+  const env = mode === "test" ? process.env : loadEnv(mode, process.cwd(), "");
 
   const host = env.TAURI_DEV_HOST;
   const apiBaseUrl = env.VITE_API_BASE_URL ?? "http://localhost:8080";
 
   return {
+    envFile: mode === "test" ? false : undefined,
     plugins: [react(), tailwindcss()],
     clearScreen: false,
     define: {

@@ -170,8 +170,7 @@ describe("MobileShell (PR2 — shell-redesign-v1)", () => {
     expect(lastPath).toBe("/");
   });
 
-  it("back chevron on non-note secondary routes still uses browser history", async () => {
-    const user = userEvent.setup();
+  it("main mobile routes render hamburger instead of back chevron", () => {
     let lastPath = "/search";
     function PathProbe() {
       const loc = useLocation();
@@ -190,8 +189,8 @@ describe("MobileShell (PR2 — shell-redesign-v1)", () => {
       </MemoryRouter>,
     );
     expect(lastPath).toBe("/search");
-    await user.click(screen.getByTestId("mobile-back-button"));
-    expect(lastPath).toBe("/");
+    expect(screen.getByTestId("mobile-menu-button")).toBeInTheDocument();
+    expect(screen.queryByTestId("mobile-back-button")).not.toBeInTheDocument();
   });
 
   it("overrides store-driven activeNoteId on non-home mobile routes (Outlet wins)", () => {
