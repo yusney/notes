@@ -103,7 +103,7 @@ authenticated deep-link cases.
 
 - Pros: Removes the initial MainLayout fan-out entirely from cold boot.
 - Cons: Adds branching to the router that diverges from REQ-LAY-01's
-  "desktop-pixel-identical" goal. Touches routing semantics.
+  "wide-viewport-pixel-identical" goal. Touches routing semantics.
 - Effort: Medium.
 
 ### 4. **Splash screen via `tauri.conf.json`**
@@ -159,14 +159,14 @@ Approach #4 is purely cosmetic and should not be the primary mitigation.
 ## Verification Steps
 
 1. **Sanity (does it still build?):**
-   - `cd desktop && pnpm tsc --noEmit` → no type errors.
-   - `cd desktop && pnpm test` → vitest still green; the bundle-size and
+   - `cd apps/client && pnpm tsc --noEmit` → no type errors.
+   - `cd apps/client && pnpm test` → vitest still green; the bundle-size and
      `vite.config.test.ts` (which asserts on `manualChunks`) must still pass.
 
 2. **Dev boot timing (the actual fix):**
    - Wipe Vite cache: `rm -rf apps/client/node_modules/.vite`.
    - Stop any running `pnpm tauri dev`.
-   - Start fresh: `cd desktop && pnpm tauri dev`.
+   - Start fresh: `cd apps/client && pnpm tauri dev`.
    - Stopwatch from process spawn until the **Tauri window first paints** the
      login form (not the empty dark window). Pass criterion: < 8 s on the same
      Windows machine that previously took ~60 s.
@@ -191,13 +191,13 @@ Approach #4 is purely cosmetic and should not be the primary mitigation.
      in lazy-loading).
    - Stronghold IPC still works: log in with "remember me", quit, reopen, the
      session restores (existing e2e covers this in
-     `apps/client/e2e/desktop-regression.spec.ts`).
+     `apps/client/e2e/client-regression.spec.ts`).
 
 5. **Memory verification:**
    - The two new Engram observations
-     (`tauri-dev-boot-hang`, `desktop-boot-architecture`) should be retrievable
+     (`tauri-dev-boot-hang`, `client-boot-architecture`) should be retrievable
      via `mem_search "Tauri WebView2 boot hang"` and
-     `mem_search "desktop cold-boot architecture"`.
+     `mem_search "client cold-boot architecture"`.
 
 ## Ready for Proposal
 

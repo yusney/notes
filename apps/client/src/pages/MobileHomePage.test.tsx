@@ -188,7 +188,7 @@ describe("MobileHomePage (PR3 hotfix — shell-redesign-v1)", () => {
   it("tapping a note row in the populated list calls setActiveNote (preserves mobile nav contract)", async () => {
     // The NoteList component already wires onNoteSelect → onClick on its
     // rows. MobileHomePage passes a handler that calls setActiveNote so
-    // the desktop store stays consistent with mobile selections.
+    // the wide-viewport store stays consistent with mobile selections.
     const setActiveNote = vi.fn();
     mockStore({
       notes: [NOTE],

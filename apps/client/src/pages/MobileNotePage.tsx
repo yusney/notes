@@ -22,11 +22,11 @@ const NoteViewer = lazy(() =>
  * resolves. Errors surface as an inline message.
  *
  * Local UI state (`isEditing`) gates between two surfaces that mirror
- * the desktop split:
+ * the wide-viewport split:
  *
  *   - `isEditing === false` → mount `<NoteViewer>` (read-only) with
  *     `Compartir` and `Editar` buttons. The button row in the viewer
- *     matches the desktop surface so the user gets the same affordances
+ *     matches the wide-viewport surface so the user gets the same affordances
  *     on a touch viewport.
  *   - `isEditing === true`  → mount `<NoteEditor variant="mobile">`
  *     with auto-save + the bottom formatting toolbar. Tapping the
@@ -44,7 +44,7 @@ const NoteViewer = lazy(() =>
  * `release/mobile-v1`) mounted `<NoteEditor variant="mobile">`
  * directly so the user landed in edit mode as soon as they tapped a
  * note. The user reverted that decision — they want the viewer's
- * share + edit affordances visible first, like on desktop.
+ * share + edit affordances visible first, like on wide viewports.
  */
 export function MobileNotePage() {
   const { id } = useParams<{ id: string }>();
@@ -52,7 +52,7 @@ export function MobileNotePage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   // Default surface is the read-only viewer (Compartir + Editar),
-  // matching the desktop split-view UX. The user explicitly chose
+  // matching the wide-viewport split-view UX. The user explicitly chose
   // view-first on mobile even for empty notes — the viewer's
   // centred empty-state layout (icon + CTA) covers the "spaces"
   // complaint without breaking the view→edit contract.

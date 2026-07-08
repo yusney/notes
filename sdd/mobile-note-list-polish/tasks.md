@@ -22,8 +22,8 @@ Chain strategy: size-exception
 
 | # | Commit | Tasks | LOC | Standalone because |
 |---|--------|-------|-----|--------------------|
-| A | `feat(mobile-list): wire pagination + tighten density` | T4, T5, T6, T7 | ~77 prod + ~50 test (~127) | Mobile pagination renders + density ≤56px; desktop 1280×800 byte-identical (REQ-LAY-01) |
-| B | `feat(mobile-list): add long-press delete with share-warning gate` | T1, T2, T3, T8 | ~145 prod + ~105 test (~250) | Long-press 500ms opens sheet; Eliminar dialog gates on `getShareWarning`; existing desktop delete flow untouched |
+| A | `feat(mobile-list): wire pagination + tighten density` | T4, T5, T6, T7 | ~77 prod + ~50 test (~127) | Mobile pagination renders + density ≤56px; wide viewport 1280×800 byte-identical (REQ-LAY-01) |
+| B | `feat(mobile-list): add long-press delete with share-warning gate` | T1, T2, T3, T8 | ~145 prod + ~105 test (~250) | Long-press 500ms opens sheet; Eliminar dialog gates on `getShareWarning`; existing wide-viewport delete flow untouched |
 
 Each commit independently builds + tests pass.
 
@@ -56,33 +56,33 @@ Each commit independently builds + tests pass.
 - **Tests**: existing `NoteList.test.tsx` extended with sheet open/close flow
 - **Deps**: T1, T2 | **Tag**: mobile-only
 
-## Phase 2 — Density (mobile-only variants, desktop-safe)
+## Phase 2 — Density (mobile-only variants, wide-viewport-safe)
 
-### T4 — Density tightening on `NoteRow` (desktop-safe) [~30 LOC]
+### T4 — Density tightening on `NoteRow` (wide-viewport-safe) [~30 LOC]
 - **Files**: `apps/client/src/components/notes/NoteList.tsx` (+15 on row classes), `NoteList.test.tsx` (+15)
 - **Steps**: 1. Row `<button>`: `px-3 py-2 md:px-4 md:py-3`. 2. Hide tab-eyebrow chip + tag-chip row on `md:hidden`. 3. Preview: `line-clamp-1 md:line-clamp-2`. 4. Tighten `mb-2` → `mb-1`. Test mocks `getBoundingClientRect` to return height 56 at viewport 375 (per `mobile-note-edit` precedent).
-- **Tests**: assert `data-testid={`note-row-${id}`}` height ≤56 at 375px; desktop assertion at 1280px keeps existing height
-- **Deps**: — (parallel to T1-T3) | **Tag**: desktop-safe
+- **Tests**: assert `data-testid={`note-row-${id}`}` height ≤56 at 375px; wide-viewport assertion at 1280px keeps existing height
+- **Deps**: — (parallel to T1-T3) | **Tag**: wide-viewport-safe
 
-## Phase 3 — Pagination wire-up (desktop-safe)
+## Phase 3 — Pagination wire-up (wide-viewport-safe)
 
-### T5 — Wire store pagination into `MobileHomePage` (desktop-safe) [~18 LOC]
+### T5 — Wire store pagination into `MobileHomePage` (wide-viewport-safe) [~18 LOC]
 - **Files**: `apps/client/src/pages/MobileHomePage.tsx` (+10), `MobileHomePage.test.tsx` (+8)
 - **Steps**: Read `{ page, pageSize, totalCount, setPage, totalPages }` from `useNoteStore`. Build `pagination` prop: `{ page, pageSize, totalCount, onPageChange: setPage }`. Pass to `<NoteList pagination={...} />`. Verify existing `setPage` already calls `fetchNotes` after (line 414).
 - **Tests**: RTL with mocked store → `NoteList` receives `pagination` with `onPageChange` matching `setPage`
-- **Deps**: — | **Tag**: desktop-safe
+- **Deps**: — | **Tag**: wide-viewport-safe
 
-### T6 — Hide pagination when `totalPages === 1` (desktop-safe) [~6 LOC]
+### T6 — Hide pagination when `totalPages === 1` (wide-viewport-safe) [~6 LOC]
 - **Files**: `apps/client/src/pages/MobileHomePage.tsx` (+3), `MobileHomePage.test.tsx` (+3)
 - **Steps**: Gate at `MobileHomePage`: `pagination={totalPages > 1 ? { ... } : undefined}`. Avoids `Pagination.tsx` change for this concern.
 - **Tests**: assert `pagination` prop is `undefined` when `totalPages === 1`; defined when `totalPages === 2`
-- **Deps**: T5 | **Tag**: desktop-safe
+- **Deps**: T5 | **Tag**: wide-viewport-safe
 
-### T7 — Vertical pagination layout via `mobileLayout` opt-in (desktop-safe) [~23 LOC]
+### T7 — Vertical pagination layout via `mobileLayout` opt-in (wide-viewport-safe) [~23 LOC]
 - **Files**: `apps/client/src/components/notes/Pagination.tsx` (+8), `Pagination.test.tsx` (+15)
-- **Steps**: 1. RED: assert buttons stack vertically when `mobileLayout=true` (class includes `flex-col`), horizontal when `false`/undefined. 2. GREEN: add `mobileLayout?: boolean` prop. Container: `flex-col gap-2 md:flex-row md:items-center md:justify-between md:gap-2`. Buttons: `w-full md:w-auto`. Info text: `w-full md:w-auto`. `mobileLayout` defaults to `false` → desktop byte-identical.
-- **Tests**: assert desktop (1280px) class hash unchanged when `mobileLayout=false`; class includes `flex-col md:flex-row` when `true`
-- **Deps**: — (parallel to T5/T6) | **Tag**: desktop-safe
+- **Steps**: 1. RED: assert buttons stack vertically when `mobileLayout=true` (class includes `flex-col`), horizontal when `false`/undefined. 2. GREEN: add `mobileLayout?: boolean` prop. Container: `flex-col gap-2 md:flex-row md:items-center md:justify-between md:gap-2`. Buttons: `w-full md:w-auto`. Info text: `w-full md:w-auto`. `mobileLayout` defaults to `false` → wide-viewport byte-identical.
+- **Tests**: assert wide viewport (1280px) class hash unchanged when `mobileLayout=false`; class includes `flex-col md:flex-row` when `true`
+- **Deps**: — (parallel to T5/T6) | **Tag**: wide-viewport-safe
 
 ## Phase 4 — Delete confirmation with share warning (TDD)
 
@@ -94,25 +94,25 @@ Each commit independently builds + tests pass.
 
 ## Phase 5 — Visual smoke + commit
 
-### T9 — Visual smoke + desktop byte-identical baseline (mobile-only) [0 LOC]
-- **Files**: `docs/screenshots/v1/mobile-note-list-polish-{mobile-375,mobile-360,desktop-baseline}.png` (new binaries)
-- **Steps**: chrome-devtools-mcp at 375×812 (12 notes → pagination + long-press + delete), 360×640 (no overflow), 1280×800 desktop. `cmp docs/screenshots/v1/mobile-note-list-polish-desktop-baseline.png docs/screenshots/v1/shell-redesign-v1-pr3-desktop-baseline.png` → exit 0 (REQ-LAY-01).
-- **Tests**: visual only; `cmp` returns 0 for desktop
+### T9 — Visual smoke + wide-viewport byte-identical baseline (mobile-only) [0 LOC]
+- **Files**: `docs/screenshots/v1/mobile-note-list-polish-{mobile-375,mobile-360,wide-baseline}.png` (new binaries)
+- **Steps**: chrome-devtools-mcp at 375×812 (12 notes → pagination + long-press + delete), 360×640 (no overflow), 1280×800 wide viewport. `cmp docs/screenshots/v1/mobile-note-list-polish-wide-baseline.png docs/screenshots/v1/shell-redesign-v1-pr3-wide-baseline.png` → exit 0 (REQ-LAY-01).
+- **Tests**: visual only; `cmp` returns 0 for the wide viewport
 - **Deps**: T1–T8 | **Tag**: mobile-only
 
 ### T10 — Commit work units + save apply-progress [0 LOC]
 - **Files**: git history only
 - **Steps**: Conventional commits, no AI trailer. Commit A: `feat(mobile-list): wire pagination + tighten density` (T4, T5, T6, T7). Commit B: `feat(mobile-list): add long-press delete with share-warning gate` (T1, T2, T3, T8). Then `mem_save` to `sdd/mobile-note-list-polish/apply-progress` with `capture_prompt: false`, `type: architecture`.
 - **Tests**: `pnpm typecheck && pnpm test` green from clean tree; `git log --oneline release/mobile-v1 -2` shows 2 commits
-- **Deps**: T9 | **Tag**: desktop-safe
+- **Deps**: T9 | **Tag**: wide-viewport-safe
 
 ## Acceptance for the whole change
 
 - REQ-LIST-01..05 + REQ-LAY-05 covered by tests (~551 prior + ~14 new ≈ 565).
 - TS clean, `pnpm typecheck && pnpm test && pnpm build` green.
 - Mobile 375×812 + 360×640 screenshots show pagination + long-press sheet + delete dialog.
-- Desktop 1280×800 byte-identical to PR3 baseline (`cmp` exit 0; REQ-LAY-01).
+- Wide viewport 1280×800 byte-identical to PR3 baseline (`cmp` exit 0; REQ-LAY-01).
 - Long-press correctly cancels on scroll (`touchMove > 10px`).
-- Share-warning gate calls `getShareWarning` before delete (mirrors desktop).
+- Share-warning gate calls `getShareWarning` before delete (mirrors the wide-viewport flow).
 - `useNoteStore.deleteNote` + `setPage` + `getShareWarning` confirmed present at lines 316, 414, 366.
 - TipTap parity invariant (#2227): editor/viewer untouched → invariant holds by construction.

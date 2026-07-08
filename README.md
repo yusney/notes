@@ -12,7 +12,7 @@ notes/
 │   │   ├── Notes.Application/  # Use cases (MediatR + CQRS)
 │   │   ├── Notes.Domain/       # Domain entities & interfaces
 │   │   └── Notes.Infrastructure/ # EF Core + PostgreSQL + services
-│   └── client/                 # Tauri + React client (desktop + Android)
+│   └── client/                 # Tauri + React client (Windows/macOS/Linux + Android)
 ├── tests/                   # Integration & E2E tests
 ├── Dockerfile               # Multi-stage Docker build for API
 ├── docker-compose.yml       # Local dev: PostgreSQL + API
@@ -26,7 +26,7 @@ notes/
 | .NET SDK | 10.0+ |
 | Node.js | 22+ |
 | pnpm | 10+ |
-| Rust | stable (for desktop build) |
+| Rust | stable (for client build) |
 | Docker & Docker Compose | 24+ |
 | PostgreSQL | 16 (via Docker) |
 | JDK 17+ + Android SDK API 34 + Android NDK r25c+ | (Android target only — see `apps/client/README.md#build-for-android`) |
@@ -204,7 +204,7 @@ Set production secrets in Dokploy environment panel (never in the repository).
 | GET | `/api/auth/oauth/google/callback` | No | Google callback (browser) |
 | GET | `/api/auth/oauth/github` | No | Redirect to GitHub login |
 | GET | `/api/auth/oauth/github/callback` | No | GitHub callback (browser) |
-| POST | `/api/auth/oauth/apps/client/exchange` | No | Exchange one-time code for JWT (desktop app) |
+| POST | `/api/auth/oauth/client/exchange` | No | Exchange one-time code for JWT (installed client) |
 
 ### Resources
 

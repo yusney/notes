@@ -19,7 +19,7 @@ import { MemoryRouter } from "react-router-dom";
  *     the MobileShell `<main>`.
  *   - Populated store + mobile viewport → NoteList in the
  *     MobileShell `<main>`. EmptyState is NOT visible.
- *   - Desktop viewport → REQ-LAY-01 desktop-pixel-identical holds
+ *   - Wide viewport → REQ-LAY-01 wide-viewport-pixel-identical holds
  *     (MobileShell subtree stays `md:hidden`, AppBar/BottomNav
  *     chrome still present in the DOM tree).
  *
@@ -276,7 +276,7 @@ describe("MainLayout mobile home integration (PR3 hotfix — shell-redesign-v1)"
     expect(mobileMain!.querySelector('[data-testid="empty-state"]')).toBeNull();
   });
 
-  it("on desktop, the MobileShell subtree stays `md:hidden` (REQ-LAY-01 desktop-pixel-identical)", () => {
+  it("on wide viewports, the MobileShell subtree stays `md:hidden` (REQ-LAY-01 wide-viewport-pixel-identical)", () => {
     mockMatchMedia(false);
 
     render(
@@ -292,7 +292,7 @@ describe("MainLayout mobile home integration (PR3 hotfix — shell-redesign-v1)"
     expect(mobileShell).not.toBeNull();
     expect(mobileShell!.className).toMatch(/\bmd:hidden\b/);
     // The wrapper carrying the MobileShell subtree is also `md:hidden`
-    // (REQ-LAY-01 — desktop pixel-identical).
+    // (REQ-LAY-01 — wide-viewport pixel-identical).
     const wrapper = mobileShell!.parentElement as HTMLElement;
     expect(wrapper.className).toMatch(/\bmd:hidden\b/);
   });

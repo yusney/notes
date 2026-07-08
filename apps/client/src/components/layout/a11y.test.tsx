@@ -24,7 +24,7 @@ import { BottomNav } from "./BottomNav";
  *           hide anything),
  *       (b) the active link still carries `aria-current="page"`.
  *
- * The visual effect of the CSS rules is verified by the desktop-1280
+ * The visual effect of the CSS rules is verified by the wide-1280
  * and mobile-375 screenshots in `docs/screenshots/v1/pr3-*.png` (T3.6).
  */
 describe("shell-redesign-v1 (PR3 — a11y)", () => {

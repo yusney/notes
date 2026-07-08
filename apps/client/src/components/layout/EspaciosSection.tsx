@@ -6,8 +6,8 @@ import { CreateTabDialog } from "../CreateTabDialog";
  * EspaciosSection — mobile drawer section listing the user's tabs
  * ("espacios") so they can switch the active tab from the SideSheet
  * without leaving the home view. Mounted inside MobileShell's
- * `md:hidden` subtree, so no extra mobile/desktop gate is needed
- * (REQ-LAY-03). Active-tab tokens are copied verbatim from the desktop
+ * `md:hidden` subtree, so no extra mobile/wide-viewport gate is needed
+ * (REQ-LAY-03). Active-tab tokens are copied verbatim from the wide viewport
  * `Sidebar` (Sidebar.tsx:117) — no new Tailwind utilities, no
  * theme-token namespace conflicts. The "+" button opens the existing
  * `CreateTabDialog`; on success the new tab becomes active and the

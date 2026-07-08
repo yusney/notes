@@ -40,7 +40,7 @@ export function useOAuthLogin() {
           throw new Error("OAuth callback code is missing");
         }
 
-        const response = await fetch(`${getApiBaseUrl()}/api/auth/oauth/desktop/exchange`, {
+        const response = await fetch(`${getApiBaseUrl()}/api/auth/oauth/client/exchange`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ code }),

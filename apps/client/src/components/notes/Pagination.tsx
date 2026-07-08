@@ -8,7 +8,7 @@ interface PaginationProps {
    * ≤767px and makes the nav buttons full-width so the control doesn't
    * overflow on 360px-class screens (REQ-LAY-05). At ≥768px both modes use
    * the same horizontal layout — opt-in is additive, never replacing the
-   * desktop contract. Default: false (byte-identical to pre-change).
+   * wide-viewport contract. Default: false (byte-identical to pre-change).
    */
   mobileLayout?: boolean;
 }
@@ -42,14 +42,14 @@ export function Pagination({
 
   // Container layout: when `mobileLayout` is on, stack vertically on mobile
   // and revert to horizontal at ≥768px. When off (default), the container
-  // uses the unchanged horizontal layout — keeping the desktop byte-identical
+  // uses the unchanged horizontal layout — keeping the wide-viewport byte-identical
   // invariant (REQ-LAY-01).
   const containerClass = mobileLayout
     ? "flex flex-col items-stretch gap-2 border-t border-border px-4 py-2 text-xs md:flex-row md:items-center md:justify-between"
     : "flex items-center justify-between gap-2 border-t border-border px-4 py-2 text-xs";
 
   // Buttons: full-width on mobile when mobileLayout is on, auto width on
-  // desktop in both modes (so the desktop contract is byte-identical).
+  // wide-viewport in both modes (so the wide-viewport contract is byte-identical).
   const buttonBaseClass = "rounded border border-border bg-surface-elevated px-2.5 py-1 font-semibold text-text-primary transition-colors hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:border-border disabled:bg-surface disabled:text-text-secondary disabled:hover:border-border disabled:hover:text-text-secondary";
   const buttonClass = mobileLayout
     ? `${buttonBaseClass} w-full md:w-auto`

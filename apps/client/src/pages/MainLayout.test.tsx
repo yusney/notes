@@ -11,9 +11,9 @@ import { useAuthStore } from "../stores/useAuthStore";
  * but the test asserts the SAME intent at the JS class level.
  *
  * The viewport itself is purely cosmetic for jsdom — what matters is
- * that the *rendered class list* reflects the mobile vs. desktop
+ * that the *rendered class list* reflects the mobile vs. wide viewport
  * intent. So we mock matchMedia to return matches:true for "(max-width: 767px)"
- * in the mobile case and matches:false in the desktop case. The actual
+ * in the mobile case and matches:false in the wide-viewport case. The actual
  * `window.innerWidth` is irrelevant.
  */
 function mockMatchMedia(matches: boolean) {
@@ -151,16 +151,16 @@ describe("MainLayout", () => {
   it("mounts MobileShell as a `md:hidden` sibling inside the flex tree", () => {
     // PR2 — MobileShell integration. The mobile shell renders an AppBar
     // (data-testid="app-bar") which is the easiest visible anchor.
-    mockMatchMedia(false); // desktop render context (md: classes resolve correctly)
+    mockMatchMedia(false); // wide-viewport render context (md: classes resolve correctly)
     render(<MemoryRouter><MainLayout /></MemoryRouter>);
     // MobileShell mounts an AppBar at top of its subtree. The shell itself
-    // is wrapped in a div with `md:hidden`, so at desktop the AppBar is
+    // is wrapped in a div with `md:hidden`, so at wide-viewport the AppBar is
     // visually hidden — but in the DOM tree it's still present.
     expect(screen.getByTestId("app-bar")).toBeInTheDocument();
   });
 
-  it("the MobileShell wrapper carries the `md:hidden` class (REQ-LAY-01 desktop-pixel-identical)", () => {
-    mockMatchMedia(false); // desktop
+  it("the MobileShell wrapper carries the `md:hidden` class (REQ-LAY-01 wide-viewport-pixel-identical)", () => {
+    mockMatchMedia(false); // wide viewport
     render(<MemoryRouter><MainLayout /></MemoryRouter>);
     // Find the wrapper div that holds MobileShell. It's the element
     // whose direct child renders an [data-testid="app-bar"].
@@ -176,7 +176,7 @@ describe("MainLayout", () => {
 // Mobile (<768px): the three columns stack vertically into a single column
 // (only one panel visible at a time). Tailwind: root has `flex-col`, panels
 // gated with `hidden md:flex`. PR2 adds a MobileShell subtree as a
-// `md:hidden` sibling — the desktop `md:flex-row` and panel gating stay
+// `md:hidden` sibling — the wide-viewport `md:flex-row` and panel gating stay
 // byte-identical to pre-PR2.
 //
 // Desktop (≥768px): the three columns sit side-by-side as today. Tailwind:
@@ -204,7 +204,7 @@ describe("MainLayout responsive (REQ-LAY-01)", () => {
     mockMatchMedia(true); // mobile
 
     const { container } = render(<MemoryRouter><MainLayout /></MemoryRouter>);
-    // The Sidebar is the first column of the 3-col desktop layout. On mobile
+    // The Sidebar is the first column of the 3-col wide-viewport layout. On mobile
     // it must be hidden (md:block, default hidden) so the list/viewer take
     // the full viewport width.
     const sidebar = container.querySelector('[data-testid="sidebar"]');
@@ -216,15 +216,15 @@ describe("MainLayout responsive (REQ-LAY-01)", () => {
     expect(sidebarWrapper.className).toMatch(/\bmd:flex\b/);
   });
 
-  it("uses flex-row (3-column) at 1280px viewport (desktop) — sidebar visible", () => {
-    mockMatchMedia(false); // desktop: (max-width: 767px) → no match
+  it("uses flex-row (3-column) at 1280px viewport (wide viewport) — sidebar visible", () => {
+    mockMatchMedia(false); // wide viewport: (max-width: 767px) → no match
 
     const { container } = render(<MemoryRouter><MainLayout /></MemoryRouter>);
     // All three columns visible.
     expect(container.querySelector('[data-testid="sidebar"]')).toBeInTheDocument();
     expect(container.querySelector('[data-testid="note-list"]')).toBeInTheDocument();
 
-    // Sidebar wrapper is visible on desktop (md:flex).
+    // Sidebar wrapper is visible on wide viewports (md:flex).
     const sidebar = container.querySelector('[data-testid="sidebar"]')!;
     const sidebarWrapper = sidebar.parentElement as HTMLElement;
     expect(sidebarWrapper.className).toMatch(/\bmd:flex\b/);
@@ -232,8 +232,8 @@ describe("MainLayout responsive (REQ-LAY-01)", () => {
     expect(sidebarWrapper.className).toMatch(/\bmd:flex\b/);
   });
 
-  it("keeps the 3-column desktop layout pixel-identical to pre-change (REQ-DESKTOP-01)", () => {
-    mockMatchMedia(false); // desktop
+  it("keeps the 3-column wide-viewport layout pixel-identical to pre-change (REQ-WIDE-01)", () => {
+    mockMatchMedia(false); // wide viewport
 
     const { container } = render(<MemoryRouter><MainLayout /></MemoryRouter>);
     const root = container.firstChild as HTMLElement;
@@ -242,7 +242,7 @@ describe("MainLayout responsive (REQ-LAY-01)", () => {
     expect(container.querySelector('[data-testid="sidebar"]')).toBeInTheDocument();
     expect(container.querySelector('[data-testid="note-list"]')).toBeInTheDocument();
 
-    // Root still wraps the panels in a row layout at desktop.
+    // Root still wraps the panels in a row layout at wide viewport.
     expect(root.className).toMatch(/\bmd:flex-row\b/);
   });
 

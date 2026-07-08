@@ -38,7 +38,7 @@ function renderSettingsPage(initialPath = "/") {
   );
 }
 
-/** Per-test matchMedia override (mobile vs desktop). */
+/** Per-test matchMedia override (mobile vs wide viewport). */
 function mockMatchMedia(mobile: boolean) {
   Object.defineProperty(window, "matchMedia", {
     writable: true,
@@ -157,7 +157,7 @@ describe("SettingsPage (PR3 — mobile wrapper)", () => {
     expect(screen.getByTestId("app-bar")).toHaveTextContent(/configuraci/i);
   });
 
-  it("on mobile: shows the hamburger menu (testid=mobile-menu-button) instead of the desktop text link", async () => {
+  it("on mobile: shows the hamburger menu (testid=mobile-menu-button) instead of the wide-viewport text link", async () => {
     mockMatchMedia(true);
     renderSettingsPage("/settings");
 
@@ -166,7 +166,7 @@ describe("SettingsPage (PR3 — mobile wrapper)", () => {
     });
     // MobileShell uses the hamburger on the shared app screens.
     expect(screen.getByTestId("mobile-menu-button")).toBeInTheDocument();
-    // The desktop-only text link must NOT render on mobile.
+    // The wide-viewport-only text link must NOT render on mobile.
     expect(screen.queryByRole("link", { name: /volver/i })).not.toBeInTheDocument();
   });
 
@@ -181,15 +181,15 @@ describe("SettingsPage (PR3 — mobile wrapper)", () => {
     expect(screen.getByTestId("settings-page-body").className).not.toMatch(/min-h-screen/);
   });
 
-  it("on desktop: keeps the desktop text '← Volver' Link and does NOT wrap in MobileShell", async () => {
+  it("on wide viewports: keeps the wide-viewport text '← Volver' Link and does NOT wrap in MobileShell", async () => {
     mockMatchMedia(false);
     renderSettingsPage();
 
     await waitFor(() => {
       expect(screen.getByRole("link", { name: /volver/i })).toBeInTheDocument();
     });
-    // The mobile AppBar + BottomNav must NOT be in the desktop tree
-    // (REQ-LAY-01 — desktop layout untouched).
+    // The mobile AppBar + BottomNav must NOT be in the wide-viewport tree
+    // (REQ-LAY-01 — wide-viewport layout untouched).
     expect(screen.queryByTestId("app-bar")).not.toBeInTheDocument();
     expect(screen.queryByRole("navigation")).not.toBeInTheDocument();
   });

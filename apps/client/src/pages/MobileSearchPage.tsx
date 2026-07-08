@@ -14,10 +14,10 @@ const SEARCH_PAGE_SIZE = 10;
  *
  * Behavior:
  *   - Local-only query state — typing here does NOT mutate the global
- *     `useNoteStore.searchQuery`. The desktop list filter lives in the
+ *     `useNoteStore.searchQuery`. The wide-viewport list filter lives in the
  *     global store; mobile search is a parallel concern. Keeping
  *     them decoupled means typing in mobile search doesn't reset the
- *     user's desktop-side query.
+ *     user's wide-viewport-side query.
  *   - Filters the store's `notes` list by case-insensitive substring
  *     match against title OR content (content stripped of HTML tags).
  *   - Pagination: only the first `SEARCH_PAGE_SIZE` notes are rendered

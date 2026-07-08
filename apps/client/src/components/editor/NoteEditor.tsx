@@ -182,11 +182,11 @@ interface NoteEditorProps {
   onSaveAndExit?: (data: { title: string; content: string; tagNames?: string[] }) => Promise<void>;
   onCancel?: () => void;
   /**
-   * Presentation variant. Defaults to `"desktop"` (the original
+   * Presentation variant. Defaults to `"wide"` (the original
    * behaviour, byte-identical to the pre-mobile-note-edit baseline so
    * all existing `MainLayout` callers are unaffected). The `"mobile"`
    * variant:
-   *   - replaces the desktop `Cancelar` / `Guardar` row with a
+   *   - replaces the wide `Cancelar` / `Guardar` row with a
    *     status-only header (auto-save handles persistence);
    *   - mounts `NoteEditorMobileToolbar` at the BOTTOM of the editor
    *     pane (sticky) with 44×44 px touch targets (REQ-EDIT-03);
@@ -197,7 +197,7 @@ interface NoteEditorProps {
    *     `document.visibilitychange` → "hidden" and on unmount
    *     (REQ-EDIT-08).
    */
-  variant?: "desktop" | "mobile";
+  variant?: "wide" | "mobile";
 }
 
 const EMPTY_TAGS: Tag[] = [];
@@ -222,7 +222,7 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
   }
 }
 
-export function NoteEditor({ note, availableTags = EMPTY_TAGS, onSave, onSaveAndExit, onCancel, variant = "desktop" }: NoteEditorProps) {
+export function NoteEditor({ note, availableTags = EMPTY_TAGS, onSave, onSaveAndExit, onCancel, variant = "wide" }: NoteEditorProps) {
   const isMobile = variant === "mobile";
   const [{ title, editorContent, tagNames }, dispatch] = useReducer(editorReducer, {
     title: note.title,

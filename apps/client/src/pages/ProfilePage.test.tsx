@@ -32,9 +32,9 @@ function renderProfilePage(initialPath = "/") {
 
 /**
  * Helper to mock `window.matchMedia` so the page renders as either
- * mobile (matches=true for the mobile query) or desktop (matches=false).
+ * mobile (matches=true for the mobile query) or wide-viewport (matches=false).
  * The default jsdom matchMedia polyfill in test-setup.ts always returns
- * matches=false, which is the desktop shape — we override per-test.
+ * matches=false, which is the wide-viewport shape — we override per-test.
  */
 function mockMatchMedia(mobile: boolean) {
   Object.defineProperty(window, "matchMedia", {
@@ -183,7 +183,7 @@ describe("ProfilePage (PR3 — mobile wrapper)", () => {
     expect(screen.getByTestId("app-bar")).toHaveTextContent(/perfil/i);
   });
 
-  it("on mobile: shows the hamburger menu (testid=mobile-menu-button) instead of the desktop text link", async () => {
+  it("on mobile: shows the hamburger menu (testid=mobile-menu-button) instead of the wide-viewport text link", async () => {
     mockMatchMedia(true);
     vi.mocked(apiClient.get).mockResolvedValueOnce({
       name: "Juan Pérez",
@@ -198,7 +198,7 @@ describe("ProfilePage (PR3 — mobile wrapper)", () => {
     });
     // MobileShell uses the hamburger on the shared app screens.
     expect(screen.getByTestId("mobile-menu-button")).toBeInTheDocument();
-    // The desktop-only text link must NOT render on mobile (the AppBar
+    // The wide-viewport-only text link must NOT render on mobile (the AppBar
     // chevron replaces it — a duplicate "← Volver" would be confusing).
     expect(screen.queryByRole("link", { name: /volver/i })).not.toBeInTheDocument();
   });
@@ -220,7 +220,7 @@ describe("ProfilePage (PR3 — mobile wrapper)", () => {
     expect(screen.getByTestId("profile-page-body").className).not.toMatch(/min-h-screen/);
   });
 
-  it("on desktop: keeps the desktop text '← Volver' Link and does NOT wrap in MobileShell", async () => {
+  it("on wide viewports: keeps the wide-viewport text '← Volver' Link and does NOT wrap in MobileShell", async () => {
     mockMatchMedia(false);
     vi.mocked(apiClient.get).mockResolvedValueOnce({
       name: "Juan Pérez",
@@ -231,11 +231,11 @@ describe("ProfilePage (PR3 — mobile wrapper)", () => {
     renderProfilePage();
 
     await waitFor(() => {
-      // The desktop back link is still the first interactive element.
+      // The wide-viewport back link is still the first interactive element.
       expect(screen.getByRole("link", { name: /volver/i })).toBeInTheDocument();
     });
-    // The mobile AppBar + BottomNav must NOT be in the desktop tree
-    // (REQ-LAY-01 — desktop layout untouched).
+    // The mobile AppBar + BottomNav must NOT be in the wide-viewport tree
+    // (REQ-LAY-01 — wide-viewport layout untouched).
     expect(screen.queryByTestId("app-bar")).not.toBeInTheDocument();
     expect(screen.queryByRole("navigation")).not.toBeInTheDocument();
   });

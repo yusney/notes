@@ -1,17 +1,17 @@
 /**
- * E2E — Desktop visual-regression baseline (S9 / REQ-DESKTOP-01)
+ * E2E — Wide viewport visual-regression baseline (S9 / REQ-WIDE-01)
  *
- * Guards the desktop 3-column layout against accidental drift from the
+ * Guards the wide viewport 3-column layout against accidental drift from the
  * mobile-responsive refactors in PR2 (MainLayout flex-col / md:flex-row,
  * NoteList drag-handle gate, FAB safe-area, viewport-fit=cover).
  *
  * The first run on a clean checkout generates the baseline screenshot
- * under apps/client/test-results/desktop-regression/...esktop-1280x800.png
+ * under apps/client/test-results/wide-regression/...wide-1280x800.png
  * (Playwright auto-creates this on the first `toHaveScreenshot` if
  * the file does not exist; the first run is the snapshot origin).
  *
  * Subsequent runs diff against the baseline. Any pixel drift fails the
- * spec. The threshold is 0 (REQ-DESKTOP-01 — pixel-identical).
+ * spec. The threshold is 0 (REQ-WIDE-01 — pixel-identical).
  *
  * Auth gate: every API the AuthProvider + useAuthStore.initialize()
  * touches is mocked so the app believes the session is valid without a
@@ -33,7 +33,7 @@
 
 import { test, expect } from "@playwright/test";
 
-test.describe("S9 — desktop visual regression baseline", () => {
+test.describe("S9 — wide viewport visual regression baseline", () => {
   test.use({ viewport: { width: 1280, height: 800 } });
 
   test.beforeEach(async ({ page }) => {
@@ -97,11 +97,11 @@ test.describe("S9 — desktop visual regression baseline", () => {
     });
   });
 
-  test("desktop 3-column layout at 1280x800 is pixel-identical to baseline", async ({ page }) => {
+  test("wide viewport 3-column layout at 1280x800 is pixel-identical to baseline", async ({ page }) => {
     await page.goto("/");
 
     // Wait for the auth-gated MainLayout to mount. The root container
-    // declares md:flex-row at this viewport (the desktop invariant).
+    // declares md:flex-row at this viewport (the wide viewport invariant).
     const root = page.locator(".relative.flex.h-screen").first();
 
     // Tauri-context probe — the spec only generates the baseline PNG
@@ -113,7 +113,7 @@ test.describe("S9 — desktop visual regression baseline", () => {
     if (!hasTauri) {
       test.skip(
         true,
-        "Desktop visual-regression baseline requires the Tauri WebView runtime (CloseDialog reads __TAURI_INTERNALS__). Run inside `pnpm tauri dev` or in the CI image that builds the APK."
+        "Wide viewport visual-regression baseline requires the Tauri WebView runtime (CloseDialog reads __TAURI_INTERNALS__). Run inside `pnpm tauri dev` or in the CI image that builds the APK."
       );
       return;
     }
@@ -124,10 +124,10 @@ test.describe("S9 — desktop visual regression baseline", () => {
     await page.waitForTimeout(500);
 
     // Snapshot. On the FIRST run, Playwright creates the baseline at
-    // apps/client/test-results/desktop-regression/...esktop-1280x800.png.
+    // apps/client/test-results/wide-regression/...wide-1280x800.png.
     // On subsequent runs, it diffs against the baseline with
-    // maxDiffPixels=0 (REQ-DESKTOP-01 — pixel-identical).
-    await expect(page).toHaveScreenshot("desktop-1280x800.png", {
+    // maxDiffPixels=0 (REQ-WIDE-01 — pixel-identical).
+    await expect(page).toHaveScreenshot("wide-1280x800.png", {
       fullPage: false,
       maxDiffPixels: 0,
     });

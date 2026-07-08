@@ -17,7 +17,7 @@
  *
  * Browser-mode caveat: the app's <CloseDialog> reads from the Tauri
  * runtime at mount and crashes outside a Tauri WebView. We skip the
- * body of the test in that environment (analogous to the desktop
+ * body of the test in that environment (analogous to the wide viewport
  * regression spec). The spec remains the contract for the next
  * Tauri-context run.
  */
@@ -35,7 +35,7 @@ test.use({
 
 test.describe("S7 — mobile back-nav preserves list scroll position", () => {
   test("tapping a note → back returns the list to the same scrollTop", async ({ page }) => {
-    // Tauri-context probe — same caveat as the desktop regression
+    // Tauri-context probe — same caveat as the wide viewport regression
     // spec. Outside a Tauri WebView the app's <CloseDialog> throws
     // and the layout never mounts.
     const hasTauri = await page.evaluate(
@@ -93,7 +93,7 @@ test.describe("S7 — mobile back-nav preserves list scroll position", () => {
     expect(scrollAfter).toBe(scrollBefore);
   });
 
-  test("back chevron is hidden on desktop viewport (>=768px)", async ({ page }) => {
+  test("back chevron is hidden on wide viewport viewport (>=768px)", async ({ page }) => {
     const hasTauri = await page.evaluate(
       () =>
         typeof (window as unknown as { __TAURI_INTERNALS__?: unknown })
@@ -114,7 +114,7 @@ test.describe("S7 — mobile back-nav preserves list scroll position", () => {
       await firstRow.click();
     }
 
-    // No back chevron should be in the DOM at desktop widths.
+    // No back chevron should be in the DOM at wide viewport widths.
     const backBtn = page.getByRole("button", { name: /volver|atrás|back/i });
     await expect(backBtn).toHaveCount(0);
   });

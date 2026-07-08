@@ -423,23 +423,23 @@ describe("ApiClient", () => {
   });
 });
 
-// REQ-PERF-H — Tauri desktop login regression guard (introduced by commit F).
+// REQ-PERF-H — Tauri installed client login regression guard (introduced by commit F).
 // Commit F (6bb39d2) migrated every URL call site to use getApiBaseUrl(),
 // which routes through loadRuntimeConfig() and reads apps/client/public/config.json.
 // That file shipped {"apiBaseUrl":"http://10.0.2.2:8080"} — the Android
-// emulator's loopback IP — which is unreachable from a real desktop binary.
+// emulator's loopback IP — which is unreachable from a real wide-viewport binary.
 // Result: Google OAuth exchange + startURL (useOAuth.ts:43,87) and the
 // apiClient-based regular login all routed to the unreachable host.
 //
-// Fix for desktop: stop shipping a runtime override — the build-time
-// __API_BASE_URL__ (from .env / .env.production) is correct for desktop.
+// Fix for wide viewport: stop shipping a runtime override — the build-time
+// __API_BASE_URL__ (from .env / .env.production) is correct for wide viewport.
 // Android builds need a separate mechanism (Tauri Android-side config or
 // platform-conditional copy) — out of this cycle.
 //
-// This test reads the bundled desktop public/config.json (if present) and
+// This test reads the bundled wide-viewport public/config.json (if present) and
 // asserts it does not override apiBaseUrl. Guards against re-introduction
-// of the Android emulator URL into the desktop bundle.
-describe("REQ-PERF-H: desktop public/config.json must not override apiBaseUrl", () => {
+// of the Android emulator URL into the wide-viewport bundle.
+describe("REQ-PERF-H: wide-viewport public/config.json must not override apiBaseUrl", () => {
   const configPath = resolve(__dirname, "../../public/config.json");
 
   it("either absent or with no apiBaseUrl key", () => {

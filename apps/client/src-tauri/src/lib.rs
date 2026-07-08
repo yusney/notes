@@ -8,7 +8,7 @@ use tauri_plugin_stronghold::stronghold::Stronghold;
 mod vault;
 
 // 32-byte key required by iota_stronghold's KeyProvider (NCKey::load).
-// Embedded in the binary — acceptable for v1.0 single-user desktop/mobile.
+// Embedded in the binary — acceptable for v1.0 single-user installed clients.
 // Machine-specific keying is a v1.1 hardening task.
 const VAULT_PASSWORD: [u8; 32] = [0xA5; 32];
 
@@ -189,7 +189,7 @@ pub fn run() {
                 // emit the React-side CloseDialog event. Android uses its own
                 // back-stack lifecycle and never receives this event, so
                 // guarding it out keeps the mobile binary small and avoids
-                // referencing the desktop-only "main" window contract.
+                // referencing the platform-specific "main" window contract.
                 #[cfg(desktop)]
                 {
                     if label == "main" && !should_exit_for_run.load(Ordering::SeqCst) {

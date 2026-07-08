@@ -580,26 +580,26 @@ describe("NoteEditor", () => {
   //
   // REQ-EDIT-01 / REQ-EDIT-02 / REQ-EDIT-05 / REQ-EDIT-08. The mobile
   // variant mounts the `NoteEditorMobileToolbar` at the bottom of the
-  // editor pane (sticky), drops the desktop `Cancelar` / `Guardar` row
+  // editor pane (sticky), drops the wide `Cancelar` / `Guardar` row
   // (status-only header), and applies `pb-[env(safe-area-inset-bottom)]`
   // on the content area so the soft keyboard never covers the last
   // line. It also flushes any pending auto-save on
   // `document.visibilitychange` → "hidden" and on unmount.
 
-  describe("variant prop (mobile vs desktop)", () => {
-    it("desktop variant (default) does NOT mount the mobile toolbar", () => {
+  describe("variant prop (mobile vs wide viewport)", () => {
+    it("wide variant (default) does NOT mount the mobile toolbar", () => {
       const { container } = render(<NoteEditor note={mockNote} onSave={vi.fn()} />);
       expect(container.querySelector('[data-testid="editor-toolbar"]')).toBeNull();
     });
 
-    it("desktop variant does NOT render the safe-area-inset-bottom padding class", () => {
+    it("wide variant does NOT render the safe-area-inset-bottom padding class", () => {
       const { container } = render(<NoteEditor note={mockNote} onSave={vi.fn()} />);
       const content = container.querySelector(".note-editor-content");
       expect(content).not.toBeNull();
       expect(content?.className).not.toMatch(/pb-\[env\(safe-area-inset-bottom\)\]/);
     });
 
-    it("desktop variant still renders the Guardar / Cancelar header buttons (regression guard)", () => {
+    it("wide variant still renders the Guardar / Cancelar header buttons (regression guard)", () => {
       render(
         <NoteEditor
           note={mockNote}
@@ -619,12 +619,12 @@ describe("NoteEditor", () => {
       expect(toolbar).not.toBeNull();
     });
 
-    it("mobile variant does NOT render the desktop Guardar button (auto-save handles persistence)", () => {
+    it("mobile variant does NOT render the wide Guardar button (auto-save handles persistence)", () => {
       render(<NoteEditor note={mockNote} onSave={vi.fn()} variant="mobile" />);
       expect(screen.queryByRole("button", { name: /guardar nota/i })).not.toBeInTheDocument();
     });
 
-    it("mobile variant does NOT render the desktop Cancelar button", () => {
+    it("mobile variant does NOT render the wide Cancelar button", () => {
       render(
         <NoteEditor note={mockNote} onSave={vi.fn()} onCancel={vi.fn()} variant="mobile" />
       );
@@ -647,7 +647,7 @@ describe("NoteEditor", () => {
       // The mobile editor used to render a SaveStatusIndicator bar above
       // the title — that ate ~40px of vertical space on small screens
       // before any content appeared. We dropped it: the status now lives
-      // only inside the desktop header (`role="status"` only when
+      // only inside the wide header (`role="status"` only when
       // `variant !== "mobile"`). Guard against re-introducing the bar.
       expect(container.querySelector("[role='status']")).not.toBeInTheDocument();
     });
@@ -706,7 +706,7 @@ describe("NoteEditor", () => {
       expect(onSave).toHaveBeenCalled();
     });
 
-    it("desktop variant does NOT register a document visibilitychange listener", () => {
+    it("wide variant does NOT register a document visibilitychange listener", () => {
       const addSpy = vi.spyOn(document, "addEventListener");
       const removeSpy = vi.spyOn(document, "removeEventListener");
       const { unmount } = render(<NoteEditor note={mockNote} onSave={vi.fn()} />);

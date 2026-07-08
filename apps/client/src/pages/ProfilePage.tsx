@@ -108,7 +108,7 @@ export function ProfilePage() {
 
   // PR3 — mobile wrapper. On mobile we mount the entire content inside
   // <MobileShell> so the user gets the AppBar (with back chevron) +
-  // BottomNav + SideSheet chrome. The desktop text "← Volver" link is
+  // BottomNav + SideSheet chrome. The wide-viewport text "← Volver" link is
   // omitted because the AppBar's back chevron already serves that
   // purpose — rendering both would be a duplicate affordance.
   const pageBody = (

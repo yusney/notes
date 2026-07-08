@@ -2,7 +2,7 @@
  * Tests for DeleteConfirmDialog — the mobile delete confirmation with
  * share-warning gate (REQ-LIST-04, REQ-LIST-05).
  *
- * Mirrors the desktop `MainLayout.handleDeleteNote` flow on mobile: when
+ * Mirrors the wide-viewport `MainLayout.handleDeleteNote` flow on mobile: when
  * `useNoteStore.getShareWarning(noteId).hasActiveShares === true`, the dialog
  * prepends the share-warning copy before the destructive button. When the
  * note has no active shares, the copy is omitted.

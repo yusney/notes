@@ -69,7 +69,7 @@ export function SettingsPage() {
 
   // PR3 — detect mobile viewport (same pattern as ProfilePage). Mobile
   // gets wrapped in <MobileShell> for AppBar+back-chevron+BottomNav
-  // chrome; desktop stays untouched (REQ-LAY-01).
+  // chrome; wide-viewport stays untouched (REQ-LAY-01).
   const isMobile = useIsMobileViewport();
 
   /* eslint-disable react-doctor/exhaustive-deps -- fetchPreferences is a stable Zustand action, adding it would cause infinite re-runs */
@@ -116,7 +116,7 @@ export function SettingsPage() {
 
   if (prefsLoading) return <div className="p-6 text-sm text-text-secondary">Cargando…</div>;
 
-  // PR3 — mobile wrapper: on mobile, the desktop "← Volver" text link
+  // PR3 — mobile wrapper: on mobile, the wide-viewport "← Volver" text link
   // is suppressed (the AppBar back chevron replaces it) and the entire
   // body is wrapped in <MobileShell> for full chrome.
   const pageBody = (

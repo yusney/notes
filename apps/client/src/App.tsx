@@ -111,9 +111,9 @@ export function AppRoutes() {
           the `<Outlet/>` resolved to nothing (no child route
           existed), leaving the mobile home body empty between
           AppBar and BottomNav. Adding this index route is the
-          minimal structural fix — the desktop branch is
+          minimal structural fix — the wide-viewport branch is
           unchanged because the MobileShell subtree stays
-          `md:hidden` (REQ-LAY-01 desktop-pixel-identical).
+          `md:hidden` (REQ-LAY-01 wide-viewport-pixel-identical).
         */}
         <Route index element={lazyRoute(<MobileHomePage />)} />
       </Route>

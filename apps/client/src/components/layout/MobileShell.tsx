@@ -22,9 +22,9 @@ import { useNoteStore } from "../../stores/useNoteStore";
  *   2. **Auto-close on route change** — any `pathname` change forces the
  *      SideSheet closed so navigation + drawer state never go out of
  *      sync.
- *   3. **Store override** — the desktop list↔main split-view is driven
+ *   3. **Store override** — the wide-viewport list↔main split-view is driven
  *      by `useNoteStore.activeNoteId`. On non-home mobile routes we
- *      clear that field so the desktop `<main>` block doesn't fight the
+ *      clear that field so the wide-viewport `<main>` block doesn't fight the
  *      mobile `<Outlet/>`. The reset happens via `useNoteStore.setState`
  *      inside an effect keyed on `pathname`, NOT on `activeNoteId` —
  *      that prevents an infinite loop where clearing triggers a
@@ -38,9 +38,9 @@ import { useNoteStore } from "../../stores/useNoteStore";
  *      keeps the shell mount-agnostic while still giving the user
  *      context about which screen they are on.
  *
- * REQ-LAY-01 (desktop-pixel-identical): this component is added as a
+ * REQ-LAY-01 (wide-viewport-pixel-identical): this component is added as a
  * `md:hidden` sibling of the existing flex tree in `MainLayout`; the
- * desktop markup (`md:flex-row`, `md:flex`, etc.) is untouched.
+ * wide-viewport markup (`md:flex-row`, `md:flex`, etc.) is untouched.
  */
 
 // Routes that should show the hamburger menu. Note detail routes keep
@@ -98,11 +98,11 @@ export function MobileShell({ children }: MobileShellProps = {}) {
     setSheetOpen(false);
   }, [location.pathname]);
 
-  // Mobile/desktop branch coexistence: the desktop split-view uses the
+  // Mobile/wide-viewport branch coexistence: the wide-viewport split-view uses the
   // store's `activeNoteId` to decide whether to render the list or the
   // viewer. On mobile we don't want that signal — the route IS the
   // source of truth. Resetting on every non-home route keeps the
-  // desktop <main> hidden so the mobile <Outlet> owns the viewport.
+  // wide-viewport <main> hidden so the mobile <Outlet> owns the viewport.
   // eslint-disable-next-line react-doctor/no-mutable-in-deps
   useEffect(() => {
     if (location.pathname !== "/") {

@@ -11,7 +11,7 @@ import { useNoteStore } from "../../stores/useNoteStore";
  * MobileShell is the `md:hidden` sibling inside `MainLayout`'s flex
  * tree. It composes the mobile-only chrome (AppBar + Outlet + BottomNav)
  * and orchestrates the SideSheet drawer via a hamburger trigger. PR2
- * wires the store-override behaviour that keeps the desktop
+ * wires the store-override behaviour that keeps the wide viewport
  * list↔main split-view from fighting the mobile single-column.
  */
 
@@ -197,7 +197,7 @@ describe("MobileShell (PR2 — shell-redesign-v1)", () => {
   it("overrides store-driven activeNoteId on non-home mobile routes (Outlet wins)", () => {
     // Seed the store with an activeNoteId BEFORE the shell mounts; PR2 must
     // call setState({ activeNoteId: null }) on mount of a non-home route so
-    // the desktop list↔main swap doesn't fight the mobile Outlet.
+    // the wide-viewport list↔main swap doesn't fight the mobile Outlet.
     const setStateSpy = vi.fn();
     (useNoteStore as unknown as { setState: typeof setStateSpy }).setState = setStateSpy;
 
@@ -225,7 +225,7 @@ describe("MobileShell (PR2 — shell-redesign-v1)", () => {
       renderShell("/");
     });
 
-    // On / we do NOT proactively clear — desktop layout may want to keep
+    // On / we do NOT proactively clear — wide-viewport layout may want to keep
     // its activeNoteId to render the empty state at the same place. (The
     // existing effect in MainLayout already does setActiveNote(null) on /.)
     const calls = setStateSpy.mock.calls;

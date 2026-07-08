@@ -53,7 +53,7 @@ pnpm install
 pnpm tauri android dev
 ```
 
-Launches the app on the first available Android device or emulator with Vite HMR wired to the apps/client/ frontend. The same `VITE_API_BASE_URL` env var the desktop build uses (see root [README.md](../README.md#environment-variables)) is respected.
+Launches the app on the first available Android device or emulator with Vite HMR wired to the apps/client/ frontend. The same `VITE_API_BASE_URL` env var the client build uses (see root [README.md](../README.md#environment-variables)) is respected.
 
 ### Build (signed APK / AAB)
 

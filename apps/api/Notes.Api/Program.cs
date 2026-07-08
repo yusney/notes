@@ -27,7 +27,7 @@ builder.Services.AddApplication();
 // ── Infrastructure layer (DbContext + repos + services) ──────────────────────
 builder.Services.AddInfrastructure(builder.Configuration);
 
-// ── Short-lived OAuth state and desktop exchange code storage ────────────────
+// ── Short-lived OAuth state and installed-client exchange code storage ───────
 builder.Services.AddMemoryCache();
 
 // ── JWT Bearer Authentication (Task 5.11) ────────────────────────────────────

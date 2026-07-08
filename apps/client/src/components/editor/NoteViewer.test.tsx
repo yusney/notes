@@ -193,20 +193,20 @@ describe("NoteViewer", () => {
   });
 });
 
-// ── Mobile Edit button (mirror desktop surface) ─────────────────────────────
+// ── Mobile Edit button (mirror wide-viewport surface) ─────────────────────────────
 //
 // The viewer used to hide the `Editar` button on mobile
 // (REQ-VIEW-01 read-only v1.0). The user reverted that decision so the
-// mobile surface mirrors the desktop one: Compartir + Editar visible on
+// mobile surface mirrors the wide-viewport one: Compartir + Editar visible on
 // both viewports. The parent's `onEdit` callback owns the transition
-// (MainLayout swaps to NoteEditor on desktop; MobileNotePage flips a
+// (MainLayout swaps to NoteEditor on wide viewports; MobileNotePage flips a
 // local `isEditing` flag on mobile).
 //
 // `Compartir` is always rendered — the ShareDialog handles its own
 // viewport sizing, and the mobile user needs the same share affordance
-// the desktop has.
+// the wide viewport has.
 
-describe("NoteViewer — mobile surface mirrors desktop (Compartir + Editar)", () => {
+describe("NoteViewer — mobile surface mirrors wide-viewport (Compartir + Editar)", () => {
   beforeEach(() => {
     // Reset matchMedia so each test controls the viewport independently.
     Object.defineProperty(window, "matchMedia", {
@@ -249,7 +249,7 @@ describe("NoteViewer — mobile surface mirrors desktop (Compartir + Editar)", (
     expect(screen.getByRole("button", { name: /editar/i })).toBeInTheDocument();
   });
 
-  it("renders BOTH Compartir and Editar buttons on desktop (≥768px)", () => {
+  it("renders BOTH Compartir and Editar buttons on wide viewports (≥768px)", () => {
     setMobileViewport(false);
 
     renderViewer();
@@ -323,8 +323,8 @@ describe("NoteViewer — mobile surface mirrors desktop (Compartir + Editar)", (
     });
   });
 
-  it("uses the split (title left, buttons right) layout on desktop (≥768px)", () => {
-    // REQ-DESKTOP-01 / S9: the desktop split-view surface must stay
+  it("uses the split (title left, buttons right) layout on wide viewports (≥768px)", () => {
+    // REQ-WIDE-01 / S9: the wide-viewport split-view surface must stay
     // byte-identical with the pre-mobile-v1 baseline. The mobile stack
     // is opt-in via Tailwind responsive classes — `md:` reverts the
     // header back to the row layout.
@@ -333,13 +333,13 @@ describe("NoteViewer — mobile surface mirrors desktop (Compartir + Editar)", (
     const { container } = renderViewer();
 
     const header = container.querySelector(".flex.shrink-0.flex-col");
-    // On desktop the flex-col class is overridden by md:flex-row.
+    // On wide viewports the flex-col class is overridden by md:flex-row.
     // Tailwind applies the responsive class, so the DOM keeps both
     // classes — we assert the responsive override is present.
     expect(header?.className).toMatch(/md:flex-row/);
     expect(header?.className).toMatch(/md:justify-between/);
 
-    // Title aligns left on desktop.
+    // Title aligns left on wide viewports.
     const title = container.querySelector("h1");
     expect(title?.className).toMatch(/md:text-left/);
   });
@@ -386,9 +386,9 @@ describe("NoteViewer — empty-state layout", () => {
 
     // The card covers the full content-area width on mobile (`w-full`,
     // no `max-w-xs` cap) so it doesn't leave whitespace on the right
-    // side of wider phones. The cap is opt-in for desktop only via
+    // side of wider phones. The cap is opt-in for wide-viewport only via
     // `md:max-w-xs` so the card stays a narrow readable strip in the
-    // desktop split-view right pane.
+    // wide-viewport split-view right pane.
     expect(card?.className).toMatch(/w-full/);
     expect(card?.className).not.toMatch(/^\S*max-w-xs/); // no bare `max-w-xs`
     expect(card?.className).toMatch(/md:max-w-xs/);

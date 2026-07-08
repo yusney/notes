@@ -48,7 +48,7 @@ import { useNoteStore } from "../stores/useNoteStore";
  * MobileSearchPage — full-screen mobile search route (PR2, decision #2).
  *
  * Renders a SearchBar at the top (controlled by local state, NOT the
- * global store — the global store is shared with the desktop list
+ * global store — the global store is shared with the wide-viewport list
  * filter and we don't want a typing-in-search to mutate that yet).
  * Below the SearchBar, a filterable NoteList shows matching notes.
  *

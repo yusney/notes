@@ -102,7 +102,7 @@ describe("Pagination", () => {
   // horizontal layout is preserved byte-identically. The `mobileLayout` prop
   // is opt-in: undefined / false → byte-identical to baseline.
 
-  it("default (mobileLayout=false) is byte-identical: container uses flex-row desktop layout", () => {
+  it("default (mobileLayout=false) is byte-identical: container uses flex-row wide-viewport layout", () => {
     const { container } = render(
       <Pagination page={2} pageSize={10} totalCount={25} onPageChange={vi.fn()} />,
     );
@@ -122,7 +122,7 @@ describe("Pagination", () => {
     expect(root.className).toMatch(/\bflex-col\b/);
     // Desktop ≥768px reverts to horizontal.
     expect(root.className).toMatch(/\bmd:flex-row\b/);
-    // Items stretch full-width on mobile (overrides the desktop `items-center`).
+    // Items stretch full-width on mobile (overrides the wide-viewport `items-center`).
     expect(root.className).toMatch(/\bitems-stretch\b/);
     expect(root.className).toMatch(/\bmd:items-center\b/);
   });

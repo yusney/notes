@@ -123,7 +123,7 @@ test.describe("S4 — mobile login round-trip (Pixel-class viewport)", () => {
   });
 
   test("login form renders at 360x640 with no horizontal overflow", async ({ page }) => {
-    // Tauri-context probe — same caveat as the desktop regression /
+    // Tauri-context probe — same caveat as the wide viewport regression /
     // scroll-preservation specs. Outside a Tauri WebView the app's
     // <CloseDialog> throws and the layout never mounts. We skip the
     // body of the test in that environment. The spec remains the
@@ -170,7 +170,7 @@ test.describe("S4 — mobile login round-trip (Pixel-class viewport)", () => {
 
     await page.goto("/login");
 
-    // Fill the form (mobile flow is identical to desktop: same form).
+    // Fill the form (mobile flow is identical to wide viewport: same form).
     await page.locator("#email").fill("smoke@example.com");
     await page.locator("#password").fill("hunter2-strong-password");
 

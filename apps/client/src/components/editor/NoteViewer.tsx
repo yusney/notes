@@ -25,7 +25,7 @@ interface NoteViewerProps {
    * On a touch viewport (max-width: 767px) we ALWAYS force read-only
    * regardless of this prop, because the v1.0 mobile UX is read-only.
    * Desktop callers can opt-in to editable if needed (currently no
-   * caller does — the desktop editor uses the separate NoteEditor).
+   * caller does — the wide-viewport editor uses the separate NoteEditor).
    */
   readOnly?: boolean;
 }
@@ -92,24 +92,24 @@ export function NoteViewer({ note, onEdit, readOnly = true }: NoteViewerProps) {
   return (
     <div className="flex h-full w-full flex-1 flex-col overflow-hidden bg-surface">
       {/*
-        Header layout — mobile and desktop diverge intentionally:
+        Header layout — mobile and wide-viewport diverge intentionally:
         - Mobile (<768px): stack the title and action buttons vertically
-          and centre the whole block. The desktop split layout (title
+          and centre the whole block. The wide-viewport split layout (title
           left, buttons right) wastes the middle of the bar on a narrow
           viewport, leaves Compartir / Editar as small right-aligned
           buttons, and forces the empty-state card below into a tall
           blank scroll area. The stacked centred version gives the bar
           visual weight and the buttons a touch-friendly width.
         - Desktop (≥768px): mirror the original split layout so the
-          desktop split-view UX stays byte-identical with the previous
-          surface (REQ-DESKTOP-01 / S9 visual-regression baseline).
+          wide-viewport split-view UX stays byte-identical with the previous
+          surface (REQ-WIDE-01 / S9 visual-regression baseline).
       */}
       <div className="flex shrink-0 flex-col items-center gap-3 border-b border-border bg-surface-elevated px-4 py-4 md:flex-row md:justify-between md:gap-2 md:px-6 md:py-4">
         <h1 className="text-center text-lg font-semibold text-text-primary truncate md:text-left md:text-xl md:min-w-0 md:flex-1">
           {note.title}
         </h1>
         {/*
-          Action row — mobile and desktop diverge:
+          Action row — mobile and wide-viewport diverge:
           - Mobile (<768px): `w-full` so the row covers the full
             header width (minus the parent's `px-4`). The buttons
             share the row evenly via `flex-1`, so Compartir and Editar
@@ -119,7 +119,7 @@ export function NoteViewer({ note, onEdit, readOnly = true }: NoteViewerProps) {
             user reported as "no cubre todo el ancho de la pantalla".
           - Desktop (≥768px): `md:w-auto md:max-w-none md:justify-end`
             reverts to the natural-width row aligned to the right of
-            the header (split layout per REQ-DESKTOP-01).
+            the header (split layout per REQ-WIDE-01).
         */}
         <div className="flex w-full shrink-0 gap-2 md:w-auto md:max-w-none md:justify-end">
           <button
@@ -157,7 +157,7 @@ export function NoteViewer({ note, onEdit, readOnly = true }: NoteViewerProps) {
           //   - Outer flex column is `h-full` so the card can be
           //     vertically centred in the note-viewer scroll area.
           //   - The card itself uses `max-w-xs` so it never stretches
-          //     edge-to-edge on a wider screen (desktop) and stays
+          //     edge-to-edge on a wider screen (wide viewport) and stays
           //     thumb-friendly on mobile.
           //   - The CTA reuses the same `onEdit` prop the header's
           //     `Editar` button calls, so the parent's transition
@@ -170,9 +170,9 @@ export function NoteViewer({ note, onEdit, readOnly = true }: NoteViewerProps) {
             {/*
               The card fills the content area width on mobile so it
               covers the full screen width minus the content area's
-              `px-4` padding. On desktop it's capped via `md:max-w-xs`
+              `px-4` padding. On wide viewports it's capped via `md:max-w-xs`
               so the card stays a readable narrow strip in the right
-              pane of the split-view layout (REQ-DESKTOP-01).
+              pane of the split-view layout (REQ-WIDE-01).
             */}
             <div className="flex w-full md:max-w-xs flex-col items-center gap-5 rounded-2xl border border-dashed border-border bg-surface-elevated/40 px-6 py-10">
               <div aria-hidden="true" className="text-6xl leading-none">

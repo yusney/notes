@@ -19,8 +19,8 @@ f7ad19e feat(mobile-list): add long-press delete with share-warning gate
 ## QA verification matrix (375x812 viewport)
 
 ### Baseline (must stay byte-identical)
-- [ ] **Desktop >=768px**: layout 3-columnas (sidebar notas | editor | sidebar tabs) — NO cambios
-- [ ] **Editor TipTap**: sin cambios en mobile ni desktop
+- [ ] **Wide viewport >=768px**: layout 3-columnas (sidebar notas | editor | sidebar tabs) — NO cambios
+- [ ] **Editor TipTap**: sin cambios en mobile ni cliente de pantalla amplia
 - [ ] **Espacios section** (SideSheet): sin cambios
 
 ### Visual (mobile home `/`)
@@ -50,8 +50,8 @@ f7ad19e feat(mobile-list): add long-press delete with share-warning gate
 ### Smoke
 - [ ] No hay console errors al cargar `/` o al scrollear
 - [ ] No hay memory leaks (long-press timer cleanup)
-- [ ] TypeScript clean: `cd desktop && npx tsc --noEmit`
-- [ ] Tests: `cd desktop && pnpm test` → **597/597 pasando**
+- [ ] TypeScript clean: `cd apps/client && npx tsc --noEmit`
+- [ ] Tests: `cd apps/client && pnpm test` → **597/597 pasando**
 
 ## Known WARNINGs (no bloquean QA, son para revisar)
 
@@ -62,7 +62,7 @@ f7ad19e feat(mobile-list): add long-press delete with share-warning gate
 | W3 | `getShareWarning` fail-soft — si el endpoint falla, asume `hasActiveShares=false` | Decisión aceptada, mejor UX offline que fail-hard |
 | W4 | Diff size +1394/-16 (~3.5x budget de 400 líneas) | Single-PR strategy pre-aprobada; split natural disponible en `660f50b` / `f7ad19e` boundary si el reviewer lo pide |
 
-## Perf verification — desktop-boot-perf (REQ-PERF-09)
+## Perf verification — client-boot-perf (REQ-PERF-09)
 
 Lote de perf separado, branch `release/mobile-v1`. Acceptance es **relative**
 (no hard ms target por Q3): medido contra el baseline `03523f9` (HEAD
@@ -71,7 +71,7 @@ pre-perf).
 | # | Verificación | Acceptance | Cómo medirlo | Estado |
 |---|--------------|------------|--------------|--------|
 | P1 | Cold-boot TTI | ≥40% relative cut vs baseline | Manual DevTools Performance trace (mid-tier laptop, cold cache) — comparar Performance trace antes/después | ⏳ pendiente DevTools trace del reviewer |
-| P2 | Main JS bundle gzip | ≤400 KB | `cd desktop && pnpm build && gzip -c dist/assets/index-*.js \| wc -c` (automatizado via `tests/perf/bundle-assertions.test.ts`) | ✅ **9 KB gzip** (target era 400 KB; ~44x mejor) |
+| P2 | Main JS bundle gzip | ≤400 KB | `cd apps/client && pnpm build && gzip -c dist/assets/index-*.js \| wc -c` (automatizado via `tests/perf/bundle-assertions.test.ts`) | ✅ **9 KB gzip** (target era 400 KB; ~44x mejor) |
 | P3 | Login route JS gzip | ≤250 KB | `gzip -c dist/assets/LoginPage-*.js \| wc -c` | ✅ **2.4 KB gzip** |
 | P4 | Lazy-route smoke (chunk-level) | Cada chunk se carga UNA vez en navegación `/login → / → /notes/:id → /share/:token` | Manual DevTools Network tab — buscar chunks duplicados | ⏳ pendiente smoke del reviewer |
 
@@ -111,10 +111,10 @@ pre-perf).
 
 ```bash
 # Re-correr assertions de bundle
-cd desktop && npx vitest run tests/perf/bundle-assertions.test.ts
+cd apps/client && npx vitest run tests/perf/bundle-assertions.test.ts
 
 # Build + medición
-cd desktop && pnpm build
+cd apps/client && pnpm build
 ls -la dist/assets/*.js
 echo "main gzip: $(gzip -c dist/assets/index-*.js | wc -c)"
 echo "login gzip: $(gzip -c dist/assets/LoginPage-*.js | wc -c)"
@@ -142,10 +142,10 @@ git -C /home/yusney/app/notes diff main...release/mobile-v1 --stat
 pnpm tauri dev
 
 # Tests
-cd desktop && pnpm test
+cd apps/client && pnpm test
 
 # Tipocheck
-cd desktop && npx tsc --noEmit
+cd apps/client && npx tsc --noEmit
 
 # Diff vs main
 git diff main...release/mobile-v1 --stat

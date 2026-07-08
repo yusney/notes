@@ -198,15 +198,15 @@ public class AuthController : ControllerBase
         return await HandleOAuthCallback(provider, code, state, error, AuthProvider.GitHub, ct);
     }
 
-    // POST /api/auth/oauth/desktop/exchange
+    // POST /api/auth/oauth/client/exchange
     [AllowAnonymous]
-    [HttpPost("oauth/desktop/exchange")]
-    public IActionResult ExchangeDesktopOAuthCode([FromBody] OAuthDesktopExchangeRequest request)
+    [HttpPost("oauth/client/exchange")]
+    public IActionResult ExchangeClientOAuthCode([FromBody] OAuthClientExchangeRequest request)
     {
         if (string.IsNullOrWhiteSpace(request.Code))
             return BadRequest(new { errors = new[] { "Code is required." } });
 
-        var cacheKey = BuildOAuthDesktopCodeCacheKey(request.Code);
+        var cacheKey = BuildOAuthClientCodeCacheKey(request.Code);
         if (!_cache.TryGetValue<TokenPairDto>(cacheKey, out var tokenPair) || tokenPair is null)
             return Unauthorized(new { errors = new[] { "Invalid or expired OAuth code." } });
 
@@ -230,7 +230,7 @@ public class AuthController : ControllerBase
     {
         if (!string.IsNullOrEmpty(error) || string.IsNullOrEmpty(code))
         {
-            // For desktop apps, redirect with error to custom protocol
+            // For installed clients, redirect with error to custom protocol
             var errorUrl = BuildOAuthRedirectUrl(null, error ?? "Authorization code missing.");
             return Redirect(errorUrl);
         }
@@ -269,16 +269,16 @@ public class AuthController : ControllerBase
             return Redirect(errorUrl);
         }
 
-        // Never put bearer tokens in a custom protocol URL. The desktop app
+        // Never put bearer tokens in a custom protocol URL. The installed client
         // receives a short-lived one-time code and exchanges it over HTTPS.
-        var desktopCode = CreateOAuthDesktopCode(result.Value!);
-        var successUrl = BuildOAuthRedirectUrl(desktopCode, null);
+        var clientCode = CreateOAuthClientCode(result.Value!);
+        var successUrl = BuildOAuthRedirectUrl(clientCode, null);
         return Redirect(successUrl);
     }
 
     private string BuildOAuthRedirectUrl(string? code, string? error)
     {
-        // Custom protocol for Tauri desktop app
+        // Custom protocol for the installed Tauri client
         var protocol = "notes";
         var path = "auth/callback";
 
@@ -312,10 +312,10 @@ public class AuthController : ControllerBase
         return true;
     }
 
-    private string CreateOAuthDesktopCode(TokenPairDto tokenPair)
+    private string CreateOAuthClientCode(TokenPairDto tokenPair)
     {
         var code = CreateSecureToken();
-        _cache.Set(BuildOAuthDesktopCodeCacheKey(code), tokenPair, TimeSpan.FromMinutes(2));
+        _cache.Set(BuildOAuthClientCodeCacheKey(code), tokenPair, TimeSpan.FromMinutes(2));
         return code;
     }
 
@@ -328,7 +328,7 @@ public class AuthController : ControllerBase
 
     private static string BuildOAuthStateCacheKey(string state) => $"oauth-state:{state}";
 
-    private static string BuildOAuthDesktopCodeCacheKey(string code) => $"oauth-desktop-code:{code}";
+    private static string BuildOAuthClientCodeCacheKey(string code) => $"oauth-client-code:{code}";
 
     private string BuildCallbackUri(string providerName)
     {
@@ -352,6 +352,6 @@ public class AuthController : ControllerBase
 public record RegisterRequest(string Email, string Password, string DisplayName);
 public record LoginRequest(string Email, string Password);
 public record RefreshRequest(string Token);
-public record OAuthDesktopExchangeRequest(string Code);
+public record OAuthClientExchangeRequest(string Code);
 public record ForgotPasswordRequest(string Email);
 public record ResetPasswordRequest(string Token, string NewPassword);

@@ -22,7 +22,7 @@ interface DeleteConfirmDialogProps {
  *
  * On open, calls `useNoteStore.getShareWarning(noteId)` so the dialog can
  * prepend the warning copy ("Esta nota tiene N enlace(s) compartido(s)…")
- * exactly like the desktop `MainLayout.handleDeleteNote` flow. The dialog
+ * exactly like the wide-viewport `MainLayout.handleDeleteNote` flow. The dialog
  * stays mounted while the warning is being fetched; the Eliminar button is
  * disabled during that window to avoid double-fire (user can't tap a
  * half-loaded destructive control).

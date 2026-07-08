@@ -269,22 +269,22 @@ export function MainLayout() {
     <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
       {/*
         Responsive root (REQ-LAY-01):
-        - Mobile (<768px): flex-col → the desktop branch's three panels
+        - Mobile (<768px): flex-col → the wide-viewport branch's three panels
           collapse (Sidebar is `hidden md:flex`, list/main swap to hidden
           on mobile). The new MobileShell subtree (last sibling) carries
-          `md:hidden` so it's invisible at desktop and the only visible
+          `md:hidden` so it's invisible at wide-viewport and the only visible
           surface at <768px. MobileShell contains the AppBar + Outlet
           (rendering MobileNotePage / NewNotePage / MobileSearchPage) +
           BottomNav + SideSheet.
         - Desktop (≥768px): md:flex-row → identical 3-column layout to
-          pre-PR2 (REQ-DESKTOP-01 / S9 visual-regression baseline).
+          pre-PR2 (REQ-WIDE-01 / S9 visual-regression baseline).
           MobileShell subtree is `md:hidden` and contributes zero pixels
-          to the desktop viewport.
+          to the wide viewport.
 
         PR2 wiring: PR2 also DROPS the FAB (`<FloatingActionButton />`)
         per REQ-LAY-02. The "+" action moves to the BottomNav "Nueva"
         tab inside MobileShell (also reaches the same thumb zone on
-        mobile). On desktop, the existing "+" inside the list panel
+        mobile). On wide viewports, the existing "+" inside the list panel
         header stays.
       */}
       <div className="relative flex h-screen flex-col md:flex-row overflow-hidden bg-surface text-text-primary pt-[env(safe-area-inset-top)] md:pt-0">
@@ -306,9 +306,9 @@ export function MainLayout() {
           Desktop-only list panel — PR2 removes the activeNote-conditional
           visibility swap. Pre-PR2 the list was `hidden` on mobile when a
           note was active; in PR2 the mobile surface is owned by
-          MobileShell (added as a `md:hidden` sibling below). The desktop
+          MobileShell (added as a `md:hidden` sibling below). The wide viewport
           list is hidden on mobile via `hidden md:flex` and the panel
-          takes its full desktop width via `md:w-80`.
+          takes its full wide-viewport width via `md:w-80`.
         */}
         <div className="hidden md:flex w-full min-w-0 shrink-0 flex-col border-b md:border-b-0 md:border-r border-border bg-surface overflow-hidden md:h-full md:w-80 md:min-w-[200px]">
           <div className="border-b border-border p-4 pb-3">
@@ -425,10 +425,10 @@ export function MainLayout() {
         {/*
           PR2 — Mobile shell subtree (REQ-LAY-01 / shell-redesign-v1).
           Wrapped in `md:hidden` so it contributes zero pixels at
-          desktop viewports. Inside, MobileShell owns the AppBar,
+          wide viewports. Inside, MobileShell owns the AppBar,
           Outlet (mobile drill-down routes), BottomNav, and SideSheet.
           The MobileShell itself also calls `useNoteStore.setState({ activeNoteId: null })`
-          on non-home mobile routes so the desktop store-driven
+          on non-home mobile routes so the wide-viewport store-driven
           list↔main swap doesn't fight the mobile single-column.
         */}
         <div className="md:hidden h-full w-full">

@@ -62,7 +62,7 @@ interface NoteListProps {
    * sibling-button activation) fires this with the note id so the caller
    * can open an action sheet. The click after a fired long-press is
    * suppressed so the sheet doesn't double as a tap-to-open and a tap-to-
-   * navigate. No-op on desktop (no touch events fire).
+   * navigate. No-op on wide viewports (no touch events fire).
    */
   onLongPress?: (noteId: string) => void;
   searchQuery?: string;
@@ -418,7 +418,7 @@ function NoteRow({
   const draggable = useDraggable({ id: note.id, disabled: !enableDrag });
   const [isMoveMenuOpen, setIsMoveMenuOpen] = useState(false);
 
-  // Long-press recogniser (mobile-only — desktop lacks `touchstart`).
+  // Long-press recogniser (mobile-only — wide-viewport lacks `touchstart`).
   //   - `touchStart` records the start position + arms a 500ms timer.
   //   - `touchMove` cancels if the finger drifts >10px (covers scroll).
   //   - `touchEnd` cancels if the timer hasn't fired yet (covers tap).
@@ -564,9 +564,9 @@ function NoteRow({
         }`}
       >
         {tabName && (
-          // Eyebrow chip: visible on mobile AND desktop. Compact size keeps
+          // Eyebrow chip: visible on mobile AND wide viewport. Compact size keeps
           // the mobile row near 72px (chip + title + preview). At ≥768px the
-          // desktop padding lifts the row, but the chip stays the same.
+          // wide-viewport padding lifts the row, but the chip stays the same.
           // Mobile: tighter chip (smaller py, no leading margin) to densify
           // the list per viewport. Desktop keeps the original vertical air.
           <div
@@ -583,7 +583,7 @@ function NoteRow({
           </div>
         )}
         <p className={`min-w-0 truncate text-sm font-semibold text-text-primary ${onToggleFavorite ? "pr-7" : ""}`}>{note.title}</p>
-        {/* Preview: 1-line clamp on mobile (≤80px row budget), 2-line on desktop. */}
+        {/* Preview: 1-line clamp on mobile (≤80px row budget), 2-line on wide viewports. */}
         <p className="mt-1 line-clamp-1 md:line-clamp-2 text-xs leading-4 md:leading-5 text-text-secondary">
           {note.content.replace(/<[^>]*>/g, " ").slice(0, 90) || "Sin contenido todavía"}
         </p>

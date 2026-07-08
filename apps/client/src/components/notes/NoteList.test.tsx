@@ -826,7 +826,7 @@ describe("NoteList — drag handle touch affordance (REQ-LAY-03)", () => {
     // This is the inverse of the touch-gate test. We don't mock matchMedia
     // here — jsdom's default matchMedia mock from test-setup.ts already
     // returns matches:false for any query, which is the (hover: hover)
-    // desktop case. The handle must still render and carry .drag-handle.
+    // wide-viewport case. The handle must still render and carry .drag-handle.
     render(
       <NoteList
         notes={mockNotes}
@@ -849,10 +849,10 @@ describe("NoteList — drag handle touch affordance (REQ-LAY-03)", () => {
 // ── Long-press → NoteActionSheet (REQ-LIST-03) ─────────────────────────────
 //
 // Closes the gap that mobile had no discoverable way to delete a note: the
-// desktop delete button uses `group-hover:flex` only and is invisible on
+// wide-viewport delete button uses `group-hover:flex` only and is invisible on
 // touch devices. Long-press (500ms hold, cancel on move >10px) opens a
 // `<NoteActionSheet>` (TDD-rendered above) with "Eliminar" + share-warning
-// delete dialog (mirrors desktop MainLayout.handleDeleteNote).
+// delete dialog (mirrors wide-viewport MainLayout.handleDeleteNote).
 //
 // We assert the contract directly on NoteList via the `onLongPress` callback
 // — wiring the sheet into the list state is T3; here we verify the gesture
@@ -1040,7 +1040,7 @@ describe("NoteList — long-press (REQ-LIST-03)", () => {
 
   it("does not render any long-press wiring when onLongPress is omitted", () => {
     // Sans onLongPress prop the row should still tap-open the note via
-    // onNoteSelect — no regressions on desktop.
+    // onNoteSelect — no regressions on wide viewports.
     const onNoteSelect = vi.fn();
     render(
       <NoteList
@@ -1197,13 +1197,13 @@ describe("NoteList — NoteActionSheet wiring (REQ-LIST-03)", () => {
 // ── Mobile row density (REQ-LIST-02) ────────────────────────────────────────
 //
 // Spec: at ≤767px, each note row MUST render ≤56px of vertical space. The
-// tail `md:` variants are the gate — desktop at ≥768px reads the `md:*`
+// tail `md:` variants are the gate — wide-viewport at ≥768px reads the `md:*`
 // overrides, mobile only sees the bare tokens. We assert the className
 // tokens directly (jsdom doesn't compute media queries, but Tailwind 4
 // emits the right CSS at build time; the contract is the source).
 
 describe("NoteList — mobile row density (REQ-LIST-02)", () => {
-  it("row button uses mobile-tight padding with md: desktop revert (px-3 py-1.5 md:px-4 md:py-3)", () => {
+  it("row button uses mobile-tight padding with md: wide-viewport revert (px-3 py-1.5 md:px-4 md:py-3)", () => {
     render(
       <NoteList
         notes={mockNotes}
@@ -1224,7 +1224,7 @@ describe("NoteList — mobile row density (REQ-LIST-02)", () => {
     expect(classes).toMatch(/\bmd:py-3\b/);
   });
 
-  it("preview line is 1-line clamp on mobile and 2-line clamp on desktop", () => {
+  it("preview line is 1-line clamp on mobile and 2-line clamp on wide viewports", () => {
     render(
       <NoteList notes={mockNotes} activeNoteId={null} onNoteSelect={vi.fn()} onCreateNote={vi.fn()} />,
     );
@@ -1242,7 +1242,7 @@ describe("NoteList — mobile row density (REQ-LIST-02)", () => {
     expect(classes).toMatch(/\bmd:line-clamp-2\b/);
   });
 
-  it("tab eyebrow chip is visible on mobile AND desktop (no responsive gate)", () => {
+  it("tab eyebrow chip is visible on mobile AND wide-viewport (no responsive gate)", () => {
     render(
       <NoteList
         notes={mockNotes}
@@ -1256,13 +1256,13 @@ describe("NoteList — mobile row density (REQ-LIST-02)", () => {
     // After the v2 spec amendment, the tab chip is rendered on both
     // viewports so the user can see which Espacio a note belongs to.
     // The wrapper <div> has no `hidden` class — only the tag chip row
-    // remains desktop-only.
+    // remains wide-viewport-only.
     const eyebrowWrap = screen.getByTestId("note-tab-eyebrow-wrap-n1");
     expect(eyebrowWrap.className).not.toMatch(/\bhidden\b/);
     expect(eyebrowWrap.className).toMatch(/\bflex\b/);
   });
 
-  it("tag chip row is hidden on mobile, visible on desktop (md:hidden)", () => {
+  it("tag chip row is hidden on mobile, visible on wide viewports (md:hidden)", () => {
     const notesWithTags: Note[] = [
       {
         ...mockNotes[0],
@@ -1360,10 +1360,10 @@ describe("NoteList — mobile row density (REQ-LIST-02)", () => {
 
   // Regression coverage for the w-80 → w-full md:w-80 change. The container
   // MUST be full-width on mobile (where MobileHomePage mounts it as the
-  // entire body) and fixed at md:w-80 only on desktop (where MainLayout
+  // entire body) and fixed at md:w-80 only on wide viewports (where MainLayout
   // still uses the 3-column sidebar layout). See git blame NoteList.tsx:152
   // for the original report.
-  it("uses w-full on mobile and md:w-80 on desktop (regression: 320px hardcoded sidebar)", () => {
+  it("uses w-full on mobile and md:w-80 on wide viewports (regression: 320px hardcoded sidebar)", () => {
     render(
       <NoteList notes={mockNotes} activeNoteId={null} onNoteSelect={vi.fn()} onCreateNote={vi.fn()} />,
     );

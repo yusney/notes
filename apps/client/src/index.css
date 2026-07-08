@@ -496,7 +496,7 @@ dialog::backdrop {
  * rule guarantees no input/button/anchor sneaks below the threshold even if
  * a developer forgets.
  *
- * Scoped to `(hover: none)` so desktop mouse usage is not affected
+ * Scoped to `(hover: none)` so wide-viewport mouse usage is not affected
  * (no resize of e.g. tightly-sized icon buttons).
  */
 @media (hover: none) {
@@ -514,7 +514,7 @@ dialog::backdrop {
  * Keyboard focus must be visible without being noisy for mouse users. The
  * `:focus-visible` pseudo-class (vs. `:focus`) only applies when the
  * browser thinks focus came from the keyboard — so we don't ring every
- * click target on desktop, but a Tab user always sees where they are.
+ * click target on wide viewports, but a Tab user always sees where they are.
  *
  * Tokens: we use `var(--color-accent)` so the ring matches the brand
  * (orange in dark, ember in light) and `var(--space-xs)` (4px) for a

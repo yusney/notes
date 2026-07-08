@@ -148,7 +148,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const user = await fetchProfile(data.accessToken);
       if (!user) throw new Error("No se pudo obtener el perfil del usuario");
 
-      // Token persistence is a desktop/mobile-only feature (Tauri stronghold
+      // Token persistence is a wide viewport/mobile-only feature (Tauri stronghold
       // vault). On plain browser dev the invoke() throws — we swallow it so
       // login still succeeds in memory; the session won't survive a reload
       // in browser, which is acceptable for dev.

@@ -15,10 +15,10 @@ import { useNoteStore } from "../stores/useNoteStore";
  *
  * This component is the routed content for `/` on mobile — mounted
  * by React Router via `<Outlet/>` from inside `MobileShell`'s
- * `<main>` slot. On desktop the same `<MobileShell/>` subtree is
+ * `<main>` slot. On wide viewports the same `<MobileShell/>` subtree is
  * present in the React tree but `md:hidden` makes it visually
  * invisible, so this component does not contribute pixels to the
- * desktop layout (REQ-LAY-01 desktop-pixel-identical invariant).
+ * wide-viewport layout (REQ-LAY-01 wide-viewport-pixel-identical invariant).
  *
  * Behaviour (matches `MobileSearchPage` / `MobileNotePage` patterns):
  *   - Empty store (`notes.length === 0`) → render `<EmptyState>`
@@ -28,7 +28,7 @@ import { useNoteStore } from "../stores/useNoteStore";
  *   - Tapping a note row → `navigate('/notes/:id')` to open the
  *     read-only mobile viewer (the URL is the source of truth on
  *     mobile; we also keep `activeNoteId` in the store in sync so
- *     the desktop branch, if later visible, doesn't fight the
+ *     the wide-viewport branch, if later visible, doesn't fight the
  *     mobile URL).
  *   - Tapping the empty-state CTA → `createNote` with a default
  *     title/content in the active tab (or in a freshly-created
@@ -61,7 +61,7 @@ export function MobileHomePage() {
   } = useNoteStore();
 
   async function handleCreateNote() {
-    // Same logic as the desktop MainLayout.handleCreateNote —
+    // Same logic as the wide-viewport MainLayout.handleCreateNote —
     // pick the active tab, or the first tab, or create "General".
     let tabId = activeTabId ?? tabs[0]?.id ?? null;
     if (!tabId) {
@@ -75,8 +75,8 @@ export function MobileHomePage() {
   }
 
   function handleSelectNote(noteId: string) {
-    // Mirror the URL into the store so the desktop branch (if
-    // visible at >= md, e.g. window resize / Tauri desktop) sees
+    // Mirror the URL into the store so the wide-viewport branch (if
+    // visible at >= md, e.g. window resize / Tauri installed client) sees
     // the same active note. On mobile this just keeps state
     // consistent across layout switches.
     setActiveNote(noteId);
@@ -99,7 +99,7 @@ export function MobileHomePage() {
   const isLoadingMore = isLoading && page > 1;
 
   // Loading state: brief inline message (the same copy as the
-  // desktop list panel).
+  // wide-viewport list panel).
   if (isLoading) {
     return (
       <div
@@ -111,7 +111,7 @@ export function MobileHomePage() {
     );
   }
 
-  // Error state: inline alert — mirrors the desktop banner copy.
+  // Error state: inline alert — mirrors the wide-viewport banner copy.
   if (error) {
     return (
       <div
@@ -130,14 +130,14 @@ export function MobileHomePage() {
   }
 
   // Populated: render the note list. enableDrag is disabled on
-  // mobile (DnD is a desktop affordance — see design #2214 and
+  // mobile (DnD is a wide-viewport affordance — see design #2214 and
   // REQ-LAY-03 in the spec). onToggleFavorite / onMoveToTab /
   // pagination are wired through so the same component is
   // rendered; the user just doesn't see them on the narrow
   // viewport (the row buttons are gated on visibility in
   // `NoteList.tsx`). The long-press → action-sheet → delete-dialog
   // flow is owned internally by `NoteList` (REQs REQ-LIST-03..
-  // REQ-LIST-05); on mobile the desktop delete button (`group-hover`
+  // REQ-LIST-05); on mobile the wide-viewport delete button (`group-hover`
   // only) is intentionally not wired — the action sheet is the
   // discoverable path.
   return (

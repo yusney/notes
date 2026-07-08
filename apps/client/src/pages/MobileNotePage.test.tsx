@@ -27,7 +27,7 @@ import { useNoteStore } from "../stores/useNoteStore";
  * resolves the `:id` route param to a note from the store.
  *
  * Default surface: read-only `<NoteViewer>` with `Compartir` + `Editar`
- * buttons (mirrors the desktop split-view UX — same affordances on
+ * buttons (mirrors the wide-viewport split-view UX — same affordances on
  * both viewports). Tapping `Editar` flips a local `isEditing` flag and
  * swaps to `<NoteEditor variant="mobile">` with auto-save and the
  * bottom formatting toolbar.
@@ -93,7 +93,7 @@ describe("MobileNotePage — viewer-first surface (Compartir + Editar)", () => {
         </Routes>
       </MemoryRouter>,
     );
-    // The viewer's button row mirrors the desktop split-view surface
+    // The viewer's button row mirrors the wide-viewport split-view surface
     // so the mobile user gets the same affordances.
     await waitFor(() => {
       expect(screen.getByRole("button", { name: /compartir/i })).toBeInTheDocument();
@@ -206,7 +206,7 @@ describe("MobileNotePage — viewer-first surface (Compartir + Editar)", () => {
 //
 //   B) `.note-viewer` used `px-8` (32px each side) at all viewports,
 //      wasting 64px on a 375px mobile screen. Fix: `px-4 md:px-8` for
-//      responsive padding (preserves REQ-LAY-01 desktop-pixel-identical
+//      responsive padding (preserves REQ-LAY-01 wide-viewport-pixel-identical
 //      at >=768).
 //
 // The earlier `Editar`-button-hidden-on-mobile assertion was reverted
@@ -410,7 +410,7 @@ describe("MobileNotePage — viewer→editor flow (REQ-EDIT-01..08)", () => {
     );
   });
 
-  it("after tapping Editar, does NOT render desktop Guardar / Cancelar buttons (mobile variant status-only)", async () => {
+  it("after tapping Editar, does NOT render wide-viewport Guardar / Cancelar buttons (mobile variant status-only)", async () => {
     const user = userEvent.setup();
     vi.mocked(useNoteStore).mockReturnValue({
       notes: [SAMPLE_NOTE],

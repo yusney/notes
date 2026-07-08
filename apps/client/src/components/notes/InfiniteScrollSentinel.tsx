@@ -10,7 +10,7 @@ interface InfiniteScrollSentinelProps {
   /**
    * Disables the observer entirely. Use when the parent has no more data,
    * while loading (to avoid double-fetches), or when the feature is off
-   * (e.g. desktop renders explicit pagination instead).
+   * (e.g. wide-viewport renders explicit pagination instead).
    */
   enabled: boolean;
   /**
@@ -37,7 +37,7 @@ interface InfiniteScrollSentinelProps {
 /**
  * Invisible sentinel mounted as the last <li> in the note list. When the
  * sentinel enters the root scroll container, the parent's onIntersect
- * fires. Mobile only — desktop uses the explicit <Pagination> control.
+ * fires. Mobile only — wide-viewport uses the explicit <Pagination> control.
  *
  * The root MUST be the scrollable container (the <ul> with overflow-y-auto),
  * not the browser viewport. See `rootRef` for the rationale.

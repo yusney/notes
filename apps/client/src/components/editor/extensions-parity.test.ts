@@ -4,9 +4,9 @@ import { editorExtensions, viewerExtensions } from "./extensions";
 /**
  * Bugfix #2227 invariant — TipTap extensions parity.
  *
- * `NoteEditor` (used on desktop editing + mobile editing after
+ * `NoteEditor` (used on wide-viewport editing + mobile editing after
  * mobile-note-edit) and `NoteViewer` (used on mobile read-only +
- * desktop read-only) both consume `note.content` from Notes.Api,
+ * wide-viewport read-only) both consume `note.content` from Notes.Api,
  * which is stored as MARKDOWN. If the editor and viewer diverge on
  * the markdown parser stack, the rendered output of the SAME note
  * diverges — e.g. the viewer would render the ```` ``` ```` fence
