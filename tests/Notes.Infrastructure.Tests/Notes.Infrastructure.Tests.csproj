@@ -26,9 +26,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Notes.Infrastructure\Notes.Infrastructure.csproj" />
-    <ProjectReference Include="..\..\src\Notes.Domain\Notes.Domain.csproj" />
-    <ProjectReference Include="..\..\src\Notes.Application\Notes.Application.csproj" />
+    <ProjectReference Include="..\..\apps\api\Notes.Infrastructure\Notes.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\apps\api\Notes.Domain\Notes.Domain.csproj" />
+    <ProjectReference Include="..\..\apps\api\Notes.Application\Notes.Application.csproj" />
   </ItemGroup>
 
 </Project>

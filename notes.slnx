@@ -1,9 +1,9 @@
 <Solution>
-  <Folder Name="/src/">
-    <Project Path="src/Notes.Api/Notes.Api.csproj" />
-    <Project Path="src/Notes.Application/Notes.Application.csproj" />
-    <Project Path="src/Notes.Domain/Notes.Domain.csproj" />
-    <Project Path="src/Notes.Infrastructure/Notes.Infrastructure.csproj" />
+  <Folder Name="/apps/api/">
+    <Project Path="apps/api/Notes.Api/Notes.Api.csproj" />
+    <Project Path="apps/api/Notes.Application/Notes.Application.csproj" />
+    <Project Path="apps/api/Notes.Domain/Notes.Domain.csproj" />
+    <Project Path="apps/api/Notes.Infrastructure/Notes.Infrastructure.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Notes.Api.Tests/Notes.Api.Tests.csproj" />
