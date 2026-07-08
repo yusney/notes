@@ -304,3 +304,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   clearError: () => set({ error: null }),
 }));
+
+// Dev-only escape hatch so QA can mock the authenticated state in
+// plain browsers (no Tauri → no `load_token` → no session restore).
+// Stripped from production builds because `import.meta.env.DEV` is
+// statically false at build time.
+if (typeof window !== "undefined" && (import.meta as any).env?.DEV) {
+  (window as unknown as { __authStore?: typeof useAuthStore }).__authStore = useAuthStore;
+}

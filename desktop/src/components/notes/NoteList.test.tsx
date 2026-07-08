@@ -1203,7 +1203,7 @@ describe("NoteList — NoteActionSheet wiring (REQ-LIST-03)", () => {
 // emits the right CSS at build time; the contract is the source).
 
 describe("NoteList — mobile row density (REQ-LIST-02)", () => {
-  it("row button uses mobile-tight padding with md: desktop revert (px-3 py-2 md:px-4 md:py-3)", () => {
+  it("row button uses mobile-tight padding with md: desktop revert (px-3 py-1.5 md:px-4 md:py-3)", () => {
     render(
       <NoteList
         notes={mockNotes}
@@ -1215,9 +1215,10 @@ describe("NoteList — mobile row density (REQ-LIST-02)", () => {
 
     const row = screen.getByTestId("note-row-n1");
     const classes = row.className;
-    // Mobile default is tighter (py-2 = 8px vs py-3 = 12px).
+    // Mobile default is tighter (py-1.5 = 6px vs py-3 = 12px) — densifies
+    // the list per viewport on small screens.
     expect(classes).toMatch(/\bpx-3\b/);
-    expect(classes).toMatch(/\bpy-2\b/);
+    expect(classes).toMatch(/\bpy-1\.5\b/);
     // Desktop ≥768px reverts to the original spacing via md: overrides.
     expect(classes).toMatch(/\bmd:px-4\b/);
     expect(classes).toMatch(/\bmd:py-3\b/);

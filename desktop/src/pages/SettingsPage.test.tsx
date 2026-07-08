@@ -170,6 +170,17 @@ describe("SettingsPage (PR3 — mobile wrapper)", () => {
     expect(screen.queryByRole("link", { name: /volver/i })).not.toBeInTheDocument();
   });
 
+  it("on mobile: page body owns vertical scroll inside MobileShell", async () => {
+    mockMatchMedia(true);
+    renderSettingsPage("/settings");
+
+    await waitFor(() => {
+      expect(screen.getByTestId("settings-page-body")).toBeInTheDocument();
+    });
+    expect(screen.getByTestId("settings-page-body").className).toMatch(/overflow-y-auto/);
+    expect(screen.getByTestId("settings-page-body").className).not.toMatch(/min-h-screen/);
+  });
+
   it("on desktop: keeps the desktop text '← Volver' Link and does NOT wrap in MobileShell", async () => {
     mockMatchMedia(false);
     renderSettingsPage();

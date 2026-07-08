@@ -21,15 +21,15 @@ export function EmptyState({ onCreate }: EmptyStateProps) {
       <div>
         <p className="text-base font-semibold text-text-primary">Aún no tienes notas</p>
         <p className="mt-1 text-sm text-text-secondary">
-          Creá tu primera nota desde el escritorio para empezar.
+          Tocá el botón para crear tu primera nota.
         </p>
       </div>
       <button
         type="button"
         onClick={onCreate}
-        className="rounded-full bg-accent px-5 py-2 text-sm font-semibold text-accent-text transition-colors hover:bg-accent-hover"
+        className="rounded-full bg-accent px-5 py-2 text-sm font-semibold text-accent-text transition-colors hover:bg-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
       >
-        Crear desde desktop
+        Crear nota
       </button>
     </div>
   );

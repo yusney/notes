@@ -21,6 +21,39 @@ export default defineConfig(({ mode }) => {
     // heavy libraries (TipTap, dnd-kit, lowlight, etc.) out of the main
     // entry. Names follow the [name]-[hash].js pattern so Vite hashes
     // enable long-term browser cache hits per vendor group.
+    optimizeDeps: {
+      // Dev-mode Tauri WebView2 cold-boot mitigation. Without pre-bundling
+      // these heavy packages, Vite serves every source file as a separate
+      // ES module request; WebView2's connection limits can't keep up and
+      // the renderer stays black until the fan-out resolves (~60 s).
+      include: [
+        "react",
+        "react-dom",
+        "react-dom/client",
+        "react-router-dom",
+        "zustand",
+        "@dnd-kit/core",
+        "@dnd-kit/sortable",
+        "@dnd-kit/utilities",
+        "@tiptap/react",
+        "@tiptap/starter-kit",
+        "@tiptap/extension-task-list",
+        "@tiptap/extension-task-item",
+        "@tiptap/extension-highlight",
+        "@tiptap/extension-link",
+        "@tiptap/extension-underline",
+        "@tiptap/extension-table",
+        "@tiptap/extension-table-row",
+        "@tiptap/extension-table-cell",
+        "@tiptap/extension-table-header",
+        "lowlight",
+        "highlight.js",
+        "tiptap-markdown",
+        "zundo",
+        "@fontsource-variable/inter",
+        "@fontsource-variable/jetbrains-mono",
+      ],
+    },
     build: {
       target: "esnext",
       // REQ-PERF-G — Tauri WebView2 hang mitigation. Vite's default with

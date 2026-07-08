@@ -30,9 +30,13 @@ import { useNoteStore } from "../../stores/useNoteStore";
  *      that prevents an infinite loop where clearing triggers a
  *      re-render that re-clears.
  *   4. **Title derivation** — AppBar shows a route-aware title (Notas,
- *      Buscar, Nueva nota, Perfil, Configuración, Nota). This keeps
- *      the shell mount-agnostic while still giving the user context
- *      about which screen they are on.
+ *      Buscar, Nueva nota, Perfil, Configuración). The `/notes/:id`
+ *      route intentionally returns an empty title because the
+ *      NoteViewer header below the AppBar already displays the
+ *      actual note title — duplicating it as a generic "Nota" was
+ *      redundant vertical space on a thumb-driven viewport. This
+ *      keeps the shell mount-agnostic while still giving the user
+ *      context about which screen they are on.
  *
  * REQ-LAY-01 (desktop-pixel-identical): this component is added as a
  * `md:hidden` sibling of the existing flex tree in `MainLayout`; the
@@ -45,13 +49,20 @@ function isHomeRoute(pathname: string): boolean {
 }
 
 // Route → AppBar title. Kept as a pure helper for easy unit-testing.
+//
+// `/notes/:id` deliberately returns "" — the NoteViewer header below
+// the AppBar already shows the actual note title, so duplicating it as
+// a generic "Nota" in the AppBar is redundant vertical space that
+// pushes the empty / content area down on a thumb-driven viewport.
+// The AppBar still renders the leading slot (back chevron) so the
+// user has a clear way out.
 function getMobileTitle(pathname: string): string {
   if (pathname === "/") return "Notas";
   if (pathname === "/new") return "Nueva nota";
   if (pathname === "/search") return "Buscar";
   if (pathname === "/profile") return "Perfil";
   if (pathname === "/settings") return "Configuración";
-  if (pathname.startsWith("/notes/")) return "Nota";
+  if (pathname.startsWith("/notes/")) return "";
   return "";
 }
 
@@ -93,25 +104,33 @@ export function MobileShell({ children }: MobileShellProps = {}) {
   const onHome = isHomeRoute(location.pathname);
   const title = getMobileTitle(location.pathname);
 
+  function handleBack() {
+    if (location.pathname.startsWith("/notes/")) {
+      navigate("/", { replace: true });
+      return;
+    }
+    navigate(-1);
+  }
+
   const leading = onHome ? (
     <button
       type="button"
       data-testid="mobile-menu-button"
       aria-label="Menú"
       onClick={() => setSheetOpen(true)}
-      className="grid size-9 place-items-center rounded text-text-secondary transition-colors hover:bg-surface hover:text-text-primary"
+      className="grid size-11 place-items-center rounded text-text-secondary transition-colors hover:bg-surface hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
     >
-      <span aria-hidden="true" className="text-xl leading-none">≡</span>
+      <span aria-hidden="true" className="text-2xl leading-none">≡</span>
     </button>
   ) : (
     <button
       type="button"
       data-testid="mobile-back-button"
       aria-label="Volver"
-      onClick={() => navigate(-1)}
-      className="grid size-9 place-items-center rounded text-text-secondary transition-colors hover:bg-surface hover:text-text-primary"
+      onClick={handleBack}
+      className="grid size-11 place-items-center rounded text-text-secondary transition-colors hover:bg-surface hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
     >
-      <span aria-hidden="true" className="text-lg leading-none">←</span>
+      <span aria-hidden="true" className="text-2xl leading-none">←</span>
     </button>
   );
 

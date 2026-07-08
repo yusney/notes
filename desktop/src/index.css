@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@import "@fontsource-variable/inter";
+@import "@fontsource-variable/jetbrains-mono";
 
 /* ─── Semantic theme tokens ─────────────────────────────────────────────── */
 
@@ -100,11 +102,23 @@
   --color-code-bg: #0c0a09;
   --color-code-text: #f5f5f4;
   --color-code-inline: #f472b6;
-  /* shell-redesign-v1 (PR1) — safe-area aliases (mobile notch / gesture bar) */
-  --safe-top: env(safe-area-inset-top);
-  --safe-bottom: env(safe-area-inset-bottom);
-  --safe-left: env(safe-area-inset-left);
-  --safe-right: env(safe-area-inset-right);
+  /* shell-redesign-v1 (PR1) — safe-area aliases (mobile notch / gesture bar)
+   *
+   * `--safe-top` is the status-bar inset capped at 48px. The Pixel 10
+   * AVD reports a 142px displayCutout via `env(safe-area-inset-top)`
+   * even on Tauri Android's non-overlay WebView, which previously
+   * stretched the AppBar into a 210px+ dead band. Capping at 48px
+   * clears the typical status bar (~24-32px) while still respecting
+   * notched devices without bloating the chrome.
+   *
+   * If Tauri ever switches to edge-to-edge on Android
+   * (`windowDrawsSystemBarBackgrounds` + translucent status bar),
+   * raise the cap and audit AppBar height again.
+   */
+  --safe-top: max(min(env(safe-area-inset-top, 0px), 48px), 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
 
   color-scheme: dark;
   font-family: 'Inter', sans-serif;
@@ -130,11 +144,23 @@
   --color-code-bg: #0c0a09;
   --color-code-text: #f5f5f4;
   --color-code-inline: #f472b6;
-  /* shell-redesign-v1 (PR1) — safe-area aliases (mobile notch / gesture bar) */
-  --safe-top: env(safe-area-inset-top);
-  --safe-bottom: env(safe-area-inset-bottom);
-  --safe-left: env(safe-area-inset-left);
-  --safe-right: env(safe-area-inset-right);
+  /* shell-redesign-v1 (PR1) — safe-area aliases (mobile notch / gesture bar)
+   *
+   * `--safe-top` is the status-bar inset capped at 48px. The Pixel 10
+   * AVD reports a 142px displayCutout via `env(safe-area-inset-top)`
+   * even on Tauri Android's non-overlay WebView, which previously
+   * stretched the AppBar into a 210px+ dead band. Capping at 48px
+   * clears the typical status bar (~24-32px) while still respecting
+   * notched devices without bloating the chrome.
+   *
+   * If Tauri ever switches to edge-to-edge on Android
+   * (`windowDrawsSystemBarBackgrounds` + translucent status bar),
+   * raise the cap and audit AppBar height again.
+   */
+  --safe-top: max(min(env(safe-area-inset-top, 0px), 48px), 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
 
   /* Tell the browser to render native form controls in dark mode */
   color-scheme: dark;
@@ -160,11 +186,23 @@ html.light {
   --color-code-bg: #f5f5f4;
   --color-code-text: #1c1917;
   --color-code-inline: #c2410c;
-  /* shell-redesign-v1 (PR1) — safe-area aliases (mobile notch / gesture bar) */
-  --safe-top: env(safe-area-inset-top);
-  --safe-bottom: env(safe-area-inset-bottom);
-  --safe-left: env(safe-area-inset-left);
-  --safe-right: env(safe-area-inset-right);
+  /* shell-redesign-v1 (PR1) — safe-area aliases (mobile notch / gesture bar)
+   *
+   * `--safe-top` is the status-bar inset capped at 48px. The Pixel 10
+   * AVD reports a 142px displayCutout via `env(safe-area-inset-top)`
+   * even on Tauri Android's non-overlay WebView, which previously
+   * stretched the AppBar into a 210px+ dead band. Capping at 48px
+   * clears the typical status bar (~24-32px) while still respecting
+   * notched devices without bloating the chrome.
+   *
+   * If Tauri ever switches to edge-to-edge on Android
+   * (`windowDrawsSystemBarBackgrounds` + translucent status bar),
+   * raise the cap and audit AppBar height again.
+   */
+  --safe-top: max(min(env(safe-area-inset-top, 0px), 48px), 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
 
   color-scheme: light;
 

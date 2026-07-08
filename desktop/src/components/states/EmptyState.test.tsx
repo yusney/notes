@@ -9,15 +9,23 @@ describe("EmptyState (S1)", () => {
     expect(screen.getByText(/aún no tienes notas/i)).toBeInTheDocument();
   });
 
-  it("renders a CTA 'Crear desde desktop' that calls onCreate on click", () => {
+  it("renders a CTA 'Crear nota' that calls onCreate on click", () => {
     const onCreate = vi.fn();
     render(<EmptyState onCreate={onCreate} />);
 
-    const cta = screen.getByRole("button", { name: /crear desde desktop/i });
+    const cta = screen.getByRole("button", { name: /crear nota/i });
     expect(cta).toBeInTheDocument();
 
     fireEvent.click(cta);
     expect(onCreate).toHaveBeenCalledTimes(1);
+  });
+
+  it("CTA has a visible keyboard focus style", () => {
+    render(<EmptyState onCreate={vi.fn()} />);
+
+    const cta = screen.getByRole("button", { name: /crear nota/i });
+    expect(cta.className).toMatch(/focus-visible:ring-2/);
+    expect(cta.className).toMatch(/focus-visible:ring-accent/);
   });
 
   it("renders an illustration glyph or placeholder (non-text aria-hidden span)", () => {

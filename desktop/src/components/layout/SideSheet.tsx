@@ -120,7 +120,7 @@ export function SideSheet({ open, onClose, header, children }: SideSheetProps) {
     >
       <div
         data-testid="side-sheet-inner"
-        className="flex h-full flex-col gap-2 overflow-y-auto py-4 pl-[var(--safe-left)] pr-2"
+        className="flex h-full flex-col gap-2 overflow-y-auto pb-4 pl-[var(--safe-left)] pr-2"
       >
         <h2 className="px-4 text-[length:var(--type-caption)] font-semibold uppercase tracking-[0.22em] text-text-secondary">
           Menú

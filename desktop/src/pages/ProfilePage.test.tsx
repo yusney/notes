@@ -203,6 +203,23 @@ describe("ProfilePage (PR3 — mobile wrapper)", () => {
     expect(screen.queryByRole("link", { name: /volver/i })).not.toBeInTheDocument();
   });
 
+  it("on mobile: page body owns vertical scroll inside MobileShell", async () => {
+    mockMatchMedia(true);
+    vi.mocked(apiClient.get).mockResolvedValueOnce({
+      name: "Juan Pérez",
+      email: "juan@test.com",
+      provider: "local",
+    });
+
+    renderProfilePage("/profile");
+
+    await waitFor(() => {
+      expect(screen.getByTestId("profile-page-body")).toBeInTheDocument();
+    });
+    expect(screen.getByTestId("profile-page-body").className).toMatch(/overflow-y-auto/);
+    expect(screen.getByTestId("profile-page-body").className).not.toMatch(/min-h-screen/);
+  });
+
   it("on desktop: keeps the desktop text '← Volver' Link and does NOT wrap in MobileShell", async () => {
     mockMatchMedia(false);
     vi.mocked(apiClient.get).mockResolvedValueOnce({

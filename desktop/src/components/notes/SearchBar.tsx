@@ -44,20 +44,22 @@ export function SearchBar({
         <span className="absolute left-3 text-text-secondary" aria-hidden="true">
           🔍
         </span>
-        <input
-          type="search"
-          aria-label="Buscar notas"
+          <input
+            type="search"
+            name="note-search"
+            autoComplete="off"
+            aria-label="Buscar notas"
           value={value}
           onChange={onQueryChange}
           placeholder="Buscar en título y contenido…"
-          className="w-full border-b-2 border-input-border bg-surface py-2.5 pl-9 pr-8 text-sm text-text-primary placeholder:text-text-secondary focus:border-accent focus:bg-surface-elevated focus:outline-none"
+            className="w-full border-b-2 border-input-border bg-surface py-2.5 pl-9 pr-8 text-sm text-text-primary placeholder:text-text-secondary focus:border-accent focus:bg-surface-elevated focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
         />
         {value && (
           <button
             type="button"
             onClick={handleClear}
             aria-label="Limpiar búsqueda"
-            className="absolute right-2 text-text-secondary hover:text-text-primary"
+            className="absolute right-2 text-text-secondary hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             ✕
           </button>

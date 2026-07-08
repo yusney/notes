@@ -126,7 +126,7 @@ export function ProfilePage() {
   // omitted because the AppBar's back chevron already serves that
   // purpose — rendering both would be a duplicate affordance.
   const pageBody = (
-    <div className="min-h-screen bg-surface">
+    <div data-testid="profile-page-body" className="min-h-full overflow-y-auto bg-surface">
       <div className="max-w-lg mx-auto p-6 space-y-8">
         {!isMobile && (
           <Link
@@ -162,7 +162,7 @@ export function ProfilePage() {
                 type="text"
                 value={name}
                 onChange={(e) => dispatch({ type: "set-name", value: e.target.value })}
-                className="w-full border-b-2 border-input-border px-1 py-2 text-sm bg-surface-elevated text-text-primary focus:border-accent focus:outline-none"
+                className="w-full border-b-2 border-input-border px-1 py-2 text-sm bg-surface-elevated text-text-primary focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               />
               {nameError && <p className="text-xs text-danger">{nameError}</p>}
               {nameSuccess && <p className="text-xs text-accent">Nombre guardado</p>}
@@ -170,7 +170,7 @@ export function ProfilePage() {
                 type="button"
                 onClick={handleSaveName}
                 aria-label="Guardar nombre"
-                className="text-sm px-4 py-2 bg-accent text-accent-text hover:bg-accent-hover transition-colors"
+                className="text-sm px-4 py-2 bg-accent text-accent-text hover:bg-accent-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               >
                 Guardar nombre
               </button>
@@ -207,7 +207,7 @@ export function ProfilePage() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="text-sm px-4 py-2 bg-accent text-accent-text hover:bg-accent-hover disabled:opacity-50 transition-colors"
+                className="text-sm px-4 py-2 bg-accent text-accent-text hover:bg-accent-hover disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               >
                 {isLoading ? "Guardando…" : "Cambiar contraseña"}
               </button>

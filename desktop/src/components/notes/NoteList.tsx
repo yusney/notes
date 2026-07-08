@@ -184,7 +184,7 @@ export function NoteList({
       data-testid="note-list"
       className="flex min-h-0 flex-1 w-full flex-col overflow-hidden border-r border-border bg-surface md:w-80"
     >
-      <div className="border-b border-border p-4">
+      <div className="border-b border-border px-4 py-2 md:p-4">
         <div className="flex items-center justify-between">
           <div>
             <span className="text-xs font-semibold uppercase tracking-[0.22em] text-text-secondary">Notas</span>
@@ -199,7 +199,7 @@ export function NoteList({
               onClick={onFavoriteFilterToggle}
               aria-label="Solo favoritos"
               aria-pressed={isFavoriteOnly}
-              className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+              className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                 isFavoriteOnly
                   ? "border-accent bg-accent-subtle text-text-primary"
                   : "border-border bg-surface-elevated text-text-secondary hover:border-accent hover:text-accent"
@@ -212,7 +212,7 @@ export function NoteList({
             type="button"
             onClick={onCreateNote}
             aria-label="Nueva nota"
-            className="grid size-9 place-items-center rounded-full bg-accent text-lg leading-none text-accent-text transition-colors hover:bg-accent-hover"
+            className="hidden size-9 place-items-center rounded-full bg-accent text-lg leading-none text-accent-text transition-colors hover:bg-accent-hover md:grid"
           >
             +
           </button>
@@ -243,11 +243,11 @@ export function NoteList({
                 No se encontraron notas para{" "}
                 <span className="font-medium text-text-primary">"{searchQuery}"</span>
                 <p className="mt-2">
-                  <button
-                    type="button"
-                    onClick={onCreateNote}
-                    className="font-medium text-accent hover:text-accent-hover"
-                  >
+	                  <button
+	                    type="button"
+	                    onClick={onCreateNote}
+	                    className="font-medium text-accent hover:text-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+	                  >
                     Crear una nota nueva
                   </button>
                 </p>
@@ -258,7 +258,7 @@ export function NoteList({
                 <button
                   type="button"
                   onClick={onCreateNote}
-                  className="mt-3 rounded-full bg-accent px-4 py-2 text-xs font-semibold text-accent-text transition-colors hover:bg-accent-hover"
+                  className="mt-3 rounded-full bg-accent px-4 py-2 text-xs font-semibold text-accent-text transition-colors hover:bg-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                 >
                   Nueva nota
                 </button>
@@ -302,7 +302,7 @@ export function NoteList({
                   onClick={onLoadMore}
                   disabled={isLoadingMore}
                   data-testid="load-more"
-                  className="w-full rounded border border-border bg-surface-elevated px-3 py-2 text-xs font-semibold text-text-primary transition-colors hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-50"
+                  className="w-full rounded border border-border bg-surface-elevated px-3 py-2 text-xs font-semibold text-text-primary transition-colors hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                 >
                   {isLoadingMore ? "Cargando…" : "Cargar más"}
                 </button>
@@ -555,7 +555,7 @@ function NoteRow({
         onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onNoteSelect(note.id); } }}
         aria-current={activeNoteId === note.id ? "true" : undefined}
         data-testid={`note-row-${note.id}`}
-        className={`min-w-0 flex-1 border px-3 py-2 md:px-4 md:py-3 text-left transition-colors cursor-pointer ${
+        className={`min-w-0 flex-1 border px-3 py-1.5 md:px-4 md:py-3 text-left transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
           activeNoteId === note.id
             ? "border-accent border-2 bg-surface-elevated"
             : "border-border bg-surface-elevated/75 hover:border-accent hover:bg-surface-elevated"
@@ -565,9 +565,11 @@ function NoteRow({
           // Eyebrow chip: visible on mobile AND desktop. Compact size keeps
           // the mobile row near 72px (chip + title + preview). At ≥768px the
           // desktop padding lifts the row, but the chip stays the same.
+          // Mobile: tighter chip (smaller py, no leading margin) to densify
+          // the list per viewport. Desktop keeps the original vertical air.
           <div
             data-testid={`note-tab-eyebrow-wrap-${note.id}`}
-            className="mb-1 flex"
+            className="mb-0.5 md:mb-1 flex"
           >
             <span
               data-testid={`note-tab-eyebrow-${note.id}`}
@@ -611,7 +613,7 @@ function NoteRow({
           onClick={(e) => { e.stopPropagation(); onToggleFavorite(note.id); }}
           aria-label="Favorito"
           aria-pressed={note.isFavorite ?? false}
-          className={`absolute top-2 right-2 z-10 size-6 grid place-items-center text-base leading-none transition-colors ${
+          className={`absolute top-2 right-2 z-10 size-6 grid place-items-center text-base leading-none transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
             note.isFavorite ? "text-accent" : "text-border hover:text-accent"
           }`}
         >
@@ -624,7 +626,7 @@ function NoteRow({
           type="button"
           onClick={(e) => { e.stopPropagation(); onDeleteNote(note.id); }}
           aria-label="eliminar nota"
-          className="absolute bottom-2 right-2 hidden rounded-full px-2 py-1 text-xs font-semibold text-danger transition-colors hover:bg-danger/10 hover:text-danger-hover group-hover:flex"
+          className="absolute bottom-2 right-2 hidden rounded-full px-2 py-1 text-xs font-semibold text-danger transition-colors hover:bg-danger/10 hover:text-danger-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger group-hover:flex"
         >
           ✕
         </button>

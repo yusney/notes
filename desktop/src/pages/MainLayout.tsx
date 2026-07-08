@@ -88,6 +88,25 @@ export function MainLayout() {
   useEffect(() => {
     if (!isAuthenticated) return;
     async function init() {
+      // ⚠️ Clear stale data from previous users BEFORE fetching new data.
+      // useNoteStore.fetchNotes() MERGES existing `notes` with the
+      // server response (line ~283 of useNoteStore.ts) — without this
+      // reset, notes from a previous user session bleed into the new
+      // user's view (e.g. user A had 55 + user B has 48 = 103 visible).
+      useNoteStore.setState({
+        notes: [],
+        visibleNoteIds: [],
+        tabs: [],
+        activeTabId: null,
+        activeNoteId: null,
+        page: 1,
+        totalPages: 1,
+        totalCount: 0,
+        searchQuery: "",
+        selectedTagIds: [],
+        isFavoriteOnly: false,
+      });
+      useTagStore.setState({ tags: [] });
       await usePreferencesStore.getState().fetchPreferences();
       const prefs = usePreferencesStore.getState();
       useNoteStore.setState({

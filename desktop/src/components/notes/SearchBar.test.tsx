@@ -13,7 +13,10 @@ describe("SearchBar", () => {
 
   it("renders a search input with placeholder", () => {
     render(<SearchBar onSearch={vi.fn()} />);
-    expect(screen.getByRole("searchbox")).toBeInTheDocument();
+    const input = screen.getByRole("searchbox");
+    expect(input).toBeInTheDocument();
+    expect(input).toHaveAttribute("name", "note-search");
+    expect(input).toHaveAttribute("autocomplete", "off");
     expect(screen.getByPlaceholderText(/buscar/i)).toBeInTheDocument();
   });
 
