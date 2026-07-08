@@ -48,11 +48,11 @@ To allow users to paste markdown and have it converted into rich nodes, we will 
 | File | Action | Description |
 |------|--------|-------------|
 | `package.json` | Modify | Add `tiptap-markdown`, `@tiptap/extension-link`, `@tiptap/extension-task-list`, `@tiptap/extension-task-item`. |
-| `desktop/src/components/editor/NoteEditor.tsx` | Modify | Add Link, TaskList, TaskItem (nested: false), and Markdown extensions after StarterKit. |
-| `desktop/src/components/editor/NoteViewer.tsx` | Modify | Add matching extensions. TaskItem editable: false. Link target: _blank. |
-| `desktop/src/components/editor/NoteEditor.test.tsx` | Modify | Add tests simulating markdown paste. |
-| `desktop/src/components/editor/NoteViewer.test.tsx` | Create | Add tests ensuring HTML containing tasks and links renders correctly. |
-| `desktop/src/index.css` | Modify | Add pointer-events/cursor styling for tasks and links. |
+| `apps/client/src/components/editor/NoteEditor.tsx` | Modify | Add Link, TaskList, TaskItem (nested: false), and Markdown extensions after StarterKit. |
+| `apps/client/src/components/editor/NoteViewer.tsx` | Modify | Add matching extensions. TaskItem editable: false. Link target: _blank. |
+| `apps/client/src/components/editor/NoteEditor.test.tsx` | Modify | Add tests simulating markdown paste. |
+| `apps/client/src/components/editor/NoteViewer.test.tsx` | Create | Add tests ensuring HTML containing tasks and links renders correctly. |
+| `apps/client/src/index.css` | Modify | Add pointer-events/cursor styling for tasks and links. |
 
 ## Interfaces / Contracts
 

@@ -98,13 +98,13 @@ pre-perf).
 
 ### TipTap parity
 
-- `desktop/src/components/editor/NoteEditor.tsx`: source body UNCHANGED
+- `apps/client/src/components/editor/NoteEditor.tsx`: source body UNCHANGED
   (solo +1 import `lowlight.css` line).
-- `desktop/src/components/editor/NoteViewer.tsx`: source body UNCHANGED
+- `apps/client/src/components/editor/NoteViewer.tsx`: source body UNCHANGED
   (solo +1 import `lowlight.css` line).
 - Verificación automática: `git diff main...release/mobile-v1 --
-  'desktop/src/components/editor/NoteEditor.tsx'
-  'desktop/src/components/editor/NoteViewer.tsx'` debe mostrar SOLO
+  'apps/client/src/components/editor/NoteEditor.tsx'
+  'apps/client/src/components/editor/NoteViewer.tsx'` debe mostrar SOLO
   las líneas del `import "../styles/lowlight.css";`.
 
 ### Comandos útiles (perf)

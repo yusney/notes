@@ -9,7 +9,7 @@ the dependency graph is transformed and served individually on demand.
 
 The frontend entry sequence is:
 
-1. `desktop/src/main.tsx` imports `@fontsource-variable/inter` + `...jetbrains-mono`
+1. `apps/client/src/main.tsx` imports `@fontsource-variable/inter` + `...jetbrains-mono`
    (7 + 6 = **13 `@font-face` URLs**), then `./index.css`, then `App`.
 2. `App.tsx` renders `<BrowserRouter>` → `<ThemeWatcher>` → `<CloseDialog>` →
    `<AuthProvider>` → `<AppRoutes>`.
@@ -27,22 +27,22 @@ non-blocking, and the login route is supposed to paint immediately on cold-boot.
 
 ## Affected Areas
 
-- `desktop/vite.config.ts` — **no `optimizeDeps.include`**. Vite does not
+- `apps/client/vite.config.ts` — **no `optimizeDeps.include`**. Vite does not
   pre-bundle any dependency, so dev mode = hundreds of on-demand transforms.
-- `desktop/src/App.tsx` — `MainLayout` is `React.lazy()`, so navigating to `/`
+- `apps/client/src/App.tsx` — `MainLayout` is `React.lazy()`, so navigating to `/`
   triggers loading its full dep graph (TipTap ~620 KB raw, dnd-kit, lowlight,
   zundo, react-router, all stores) before any UI paints.
-- `desktop/src/main.tsx` — `@fontsource-variable/inter` and
+- `apps/client/src/main.tsx` — `@fontsource-variable/inter` and
   `.../jetbrains-mono` are imported on the **critical path** before
   `createRoot().render()`. Each one carries 6–7 `@font-face` declarations whose
   `woff2` URLs WebView2 starts fetching immediately (~1.2 MB Inter + ~200 KB
   JetBrains Mono).
-- `desktop/src/index.css` — `@import "tailwindcss"` compiles all utilities at
+- `apps/client/src/index.css` — `@import "tailwindcss"` compiles all utilities at
   request time; the served CSS includes the Tailwind output plus the theme
   tokens. The first paint is empty `<div id="root">` because the body inherits
   `--color-surface: #131313` (near-black) from `:root`, so an unresponsive
   renderer reads as **"black screen"**.
-- `desktop/src-tauri/tauri.conf.json` — window has `"visible": true`, so the
+- `apps/client/src-tauri/tauri.conf.json` — window has `"visible": true`, so the
   native window paints immediately, exposing the empty WebView2 surface.
 
 ## Approaches
@@ -142,7 +142,7 @@ Approach #4 is purely cosmetic and should not be the primary mitigation.
   from Vite. If any dep fails to pre-bundle, move it to `optimizeDeps.exclude`
   and accept that it will be transformed per-request.
 - **Stale Vite cache.** After editing `optimizeDeps.include`, delete
-  `desktop/node_modules/.vite/deps_temp_*` and `desktop/node_modules/.vite/deps`
+  `apps/client/node_modules/.vite/deps_temp_*` and `apps/client/node_modules/.vite/deps`
   once so the next `pnpm dev` re-bundles everything. Otherwise HMR may serve
   stale chunks and the symptom will look "fixed but weird".
 - **`@fontsource-variable/*` pre-bundling.** Including CSS-only packages in
@@ -164,7 +164,7 @@ Approach #4 is purely cosmetic and should not be the primary mitigation.
      `vite.config.test.ts` (which asserts on `manualChunks`) must still pass.
 
 2. **Dev boot timing (the actual fix):**
-   - Wipe Vite cache: `rm -rf desktop/node_modules/.vite`.
+   - Wipe Vite cache: `rm -rf apps/client/node_modules/.vite`.
    - Stop any running `pnpm tauri dev`.
    - Start fresh: `cd desktop && pnpm tauri dev`.
    - Stopwatch from process spawn until the **Tauri window first paints** the
@@ -183,15 +183,15 @@ Approach #4 is purely cosmetic and should not be the primary mitigation.
    - `pnpm build` succeeds (production bundle still ~620 KB TipTap chunk in its
      own lazy file).
    - `pnpm test` passes — specifically
-     `desktop/tests/perf/vite.config.test.ts` and
-     `desktop/src/api/client.test.ts` (the latter asserts on
+     `apps/client/tests/perf/vite.config.test.ts` and
+     `apps/client/src/api/client.test.ts` (the latter asserts on
      `loadRuntimeConfig`/`getApiBaseUrl` ordering).
    - Manual: navigate `/` → `/login` → `/` → `/login` and confirm the
      `RouteSuspenseFallback` shows briefly on each deep route (no regression
      in lazy-loading).
    - Stronghold IPC still works: log in with "remember me", quit, reopen, the
      session restores (existing e2e covers this in
-     `desktop/e2e/desktop-regression.spec.ts`).
+     `apps/client/e2e/desktop-regression.spec.ts`).
 
 5. **Memory verification:**
    - The two new Engram observations

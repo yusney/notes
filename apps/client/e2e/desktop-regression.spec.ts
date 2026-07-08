@@ -6,7 +6,7 @@
  * NoteList drag-handle gate, FAB safe-area, viewport-fit=cover).
  *
  * The first run on a clean checkout generates the baseline screenshot
- * under desktop/test-results/desktop-regression/...esktop-1280x800.png
+ * under apps/client/test-results/desktop-regression/...esktop-1280x800.png
  * (Playwright auto-creates this on the first `toHaveScreenshot` if
  * the file does not exist; the first run is the snapshot origin).
  *
@@ -124,7 +124,7 @@ test.describe("S9 — desktop visual regression baseline", () => {
     await page.waitForTimeout(500);
 
     // Snapshot. On the FIRST run, Playwright creates the baseline at
-    // desktop/test-results/desktop-regression/...esktop-1280x800.png.
+    // apps/client/test-results/desktop-regression/...esktop-1280x800.png.
     // On subsequent runs, it diffs against the baseline with
     // maxDiffPixels=0 (REQ-DESKTOP-01 — pixel-identical).
     await expect(page).toHaveScreenshot("desktop-1280x800.png", {

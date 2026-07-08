@@ -39,19 +39,19 @@ Each commit independently builds + tests pass.
 ## Phase 1 — Action sheet (TDD)
 
 ### T1 — `NoteActionSheet` new component (TDD, mobile-only) [~125 LOC]
-- **Files**: `desktop/src/components/notes/NoteActionSheet.tsx` (new +55), `NoteActionSheet.test.tsx` (new +70)
+- **Files**: `apps/client/src/components/notes/NoteActionSheet.tsx` (new +55), `NoteActionSheet.test.tsx` (new +70)
 - **Steps**: 1. RED: assert title rendered + each action button present. 2. GREEN: wrap `<Modal>` (native `<dialog>`); `props: { noteTitle, actions: {kind, label, icon}[], onAction(kind), open, onClose }`; buttons `min-h-11 min-w-11`. 3. REFACTOR: `const ACTION_KIND = { Delete: "delete" } as const` per TS skill.
 - **Tests**: `pnpm test NoteActionSheet` (render + onAction spy + backdrop close)
 - **Deps**: — | **Tag**: mobile-only
 
 ### T2 — Long-press handler on `NoteRow` (TDD, mobile-only) [~40 LOC]
-- **Files**: `desktop/src/components/notes/NoteList.tsx` (+25 in NoteRow), `NoteList.test.tsx` (+15)
+- **Files**: `apps/client/src/components/notes/NoteList.tsx` (+25 in NoteRow), `NoteList.test.tsx` (+15)
 - **Steps**: 1. RED: `fireEvent.touchStart`/`touchEnd` with 500ms fake timer → assert `NoteActionSheet` mounted. Cancel cases: <500ms hold OR `touchMove` >10px displacement. 2. GREEN: `onTouchStart` records `{t0, x0, y0}`; `onTouchMove` cancels if `hypot > 10`; `onTouchEnd` cancels if `now - t0 < 500`; else fire `onLongPress(noteId)`. 3. Add `longPressFiredRef` per-row; `onClick` short-circuits if ref is true (reset on `touchStart`). Use `vi.useFakeTimers()` per `mobile-note-edit` pattern.
 - **Tests**: `pnpm test NoteList` (long-press opens, cancel-on-move, cancel-on-release, no double-fire of onNoteSelect after long-press)
 - **Deps**: T1 | **Tag**: mobile-only
 
 ### T3 — Wire `NoteActionSheet` into `NoteList` (mobile-only) [~20 LOC]
-- **Files**: `desktop/src/components/notes/NoteList.tsx` (+10 in `NoteList` body, not `NoteRow`), `NoteList.test.tsx` (+10)
+- **Files**: `apps/client/src/components/notes/NoteList.tsx` (+10 in `NoteList` body, not `NoteRow`), `NoteList.test.tsx` (+10)
 - **Steps**: Add `useState` `{noteId: string|null, open: boolean}` for sheet. Pass `onLongPress` from row → opens sheet with `noteTitle + actions=[{kind:"delete", label:"Eliminar", icon:"🗑"}]`. `onAction("delete")` closes sheet then opens `DeleteConfirmDialog`. Sheet is sibling of `<ul>` (mirrors `MoveToTabMenu` mount pattern).
 - **Tests**: existing `NoteList.test.tsx` extended with sheet open/close flow
 - **Deps**: T1, T2 | **Tag**: mobile-only
@@ -59,7 +59,7 @@ Each commit independently builds + tests pass.
 ## Phase 2 — Density (mobile-only variants, desktop-safe)
 
 ### T4 — Density tightening on `NoteRow` (desktop-safe) [~30 LOC]
-- **Files**: `desktop/src/components/notes/NoteList.tsx` (+15 on row classes), `NoteList.test.tsx` (+15)
+- **Files**: `apps/client/src/components/notes/NoteList.tsx` (+15 on row classes), `NoteList.test.tsx` (+15)
 - **Steps**: 1. Row `<button>`: `px-3 py-2 md:px-4 md:py-3`. 2. Hide tab-eyebrow chip + tag-chip row on `md:hidden`. 3. Preview: `line-clamp-1 md:line-clamp-2`. 4. Tighten `mb-2` → `mb-1`. Test mocks `getBoundingClientRect` to return height 56 at viewport 375 (per `mobile-note-edit` precedent).
 - **Tests**: assert `data-testid={`note-row-${id}`}` height ≤56 at 375px; desktop assertion at 1280px keeps existing height
 - **Deps**: — (parallel to T1-T3) | **Tag**: desktop-safe
@@ -67,19 +67,19 @@ Each commit independently builds + tests pass.
 ## Phase 3 — Pagination wire-up (desktop-safe)
 
 ### T5 — Wire store pagination into `MobileHomePage` (desktop-safe) [~18 LOC]
-- **Files**: `desktop/src/pages/MobileHomePage.tsx` (+10), `MobileHomePage.test.tsx` (+8)
+- **Files**: `apps/client/src/pages/MobileHomePage.tsx` (+10), `MobileHomePage.test.tsx` (+8)
 - **Steps**: Read `{ page, pageSize, totalCount, setPage, totalPages }` from `useNoteStore`. Build `pagination` prop: `{ page, pageSize, totalCount, onPageChange: setPage }`. Pass to `<NoteList pagination={...} />`. Verify existing `setPage` already calls `fetchNotes` after (line 414).
 - **Tests**: RTL with mocked store → `NoteList` receives `pagination` with `onPageChange` matching `setPage`
 - **Deps**: — | **Tag**: desktop-safe
 
 ### T6 — Hide pagination when `totalPages === 1` (desktop-safe) [~6 LOC]
-- **Files**: `desktop/src/pages/MobileHomePage.tsx` (+3), `MobileHomePage.test.tsx` (+3)
+- **Files**: `apps/client/src/pages/MobileHomePage.tsx` (+3), `MobileHomePage.test.tsx` (+3)
 - **Steps**: Gate at `MobileHomePage`: `pagination={totalPages > 1 ? { ... } : undefined}`. Avoids `Pagination.tsx` change for this concern.
 - **Tests**: assert `pagination` prop is `undefined` when `totalPages === 1`; defined when `totalPages === 2`
 - **Deps**: T5 | **Tag**: desktop-safe
 
 ### T7 — Vertical pagination layout via `mobileLayout` opt-in (desktop-safe) [~23 LOC]
-- **Files**: `desktop/src/components/notes/Pagination.tsx` (+8), `Pagination.test.tsx` (+15)
+- **Files**: `apps/client/src/components/notes/Pagination.tsx` (+8), `Pagination.test.tsx` (+15)
 - **Steps**: 1. RED: assert buttons stack vertically when `mobileLayout=true` (class includes `flex-col`), horizontal when `false`/undefined. 2. GREEN: add `mobileLayout?: boolean` prop. Container: `flex-col gap-2 md:flex-row md:items-center md:justify-between md:gap-2`. Buttons: `w-full md:w-auto`. Info text: `w-full md:w-auto`. `mobileLayout` defaults to `false` → desktop byte-identical.
 - **Tests**: assert desktop (1280px) class hash unchanged when `mobileLayout=false`; class includes `flex-col md:flex-row` when `true`
 - **Deps**: — (parallel to T5/T6) | **Tag**: desktop-safe
@@ -87,7 +87,7 @@ Each commit independently builds + tests pass.
 ## Phase 4 — Delete confirmation with share warning (TDD)
 
 ### T8 — `DeleteConfirmDialog` + share-warning gate (TDD, mobile-only) [~125 LOC]
-- **Files**: `desktop/src/components/notes/DeleteConfirmDialog.tsx` (new +55), `DeleteConfirmDialog.test.tsx` (new +70)
+- **Files**: `apps/client/src/components/notes/DeleteConfirmDialog.tsx` (new +55), `DeleteConfirmDialog.test.tsx` (new +70)
 - **Steps**: 1. RED: render with `noteTitle` shows title + warning copy + Cancelar/Eliminar buttons. 2. GREEN: wrap `<Modal>`; on mount call `useNoteStore.getShareWarning(noteId)`; if `hasActiveShares`, prepend `Esta nota tiene ${count} enlace(s) compartido(s). Al eliminarla, los enlaces dejarán de funcionar.` 3. Eliminar button: `onClick={() => useNoteStore.deleteNote(noteId).then(onClose).catch(...) }`. 4. Cancelar: just `onClose()`. `await` for `getShareWarning`; show loading state while pending to keep UI responsive (per design §Risks).
 - **Tests**: `pnpm test DeleteConfirmDialog` (no-shares: omit warning; shares=2: show warning with count; confirm calls deleteNote; cancel closes; Escape closes)
 - **Deps**: T1 (Modal wrapping pattern), T3 (invoked from sheet flow) | **Tag**: mobile-only
