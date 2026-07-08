@@ -546,7 +546,7 @@ notes/
 │   ├── Notes.Application/          # Use cases, DTOs, interfaces
 │   ├── Notes.Domain/                # Entities, Value Objects, Enums
 │   └── Notes.Infrastructure/        # EF Core, repositories, external services
-├── desktop/                        # Tauri + React app
+├── apps/client/                        # Tauri + React app
 │   ├── src/                        # React components, hooks, state
 │   ├── src-tauri/                  # Rust shell (config, commands, native)
 │   │   ├── src/

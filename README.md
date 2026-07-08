@@ -65,7 +65,7 @@ dotnet run --launch-profile http
 dotnet test notes.slnx
 ```
 
-### 4. Run desktop app (development)
+### 4. Run client app (development)
 
 ```bash
 cd apps/client
@@ -152,7 +152,7 @@ curl http://localhost:8080/health
 ### Linux (.AppImage, .deb)
 
 ```bash
-cd desktop
+cd apps/client
 pnpm install
 VITE_API_BASE_URL=https://api.your-domain.com pnpm tauri build
 ```
@@ -204,7 +204,7 @@ Set production secrets in Dokploy environment panel (never in the repository).
 | GET | `/api/auth/oauth/google/callback` | No | Google callback (browser) |
 | GET | `/api/auth/oauth/github` | No | Redirect to GitHub login |
 | GET | `/api/auth/oauth/github/callback` | No | GitHub callback (browser) |
-| POST | `/api/auth/oauth/desktop/exchange` | No | Exchange one-time code for JWT (desktop app) |
+| POST | `/api/auth/oauth/apps/client/exchange` | No | Exchange one-time code for JWT (desktop app) |
 
 ### Resources
 
