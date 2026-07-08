@@ -1,8 +1,10 @@
-import { useReducer, useEffect, useState } from "react";
+import { useReducer, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { apiClient } from "../api/client";
 import { PasswordInput } from "../components/ui/PasswordInput";
 import { MobileShell } from "../components/layout/MobileShell";
+import { MobilePageFrame } from "../components/layout/MobilePageFrame";
+import { useIsMobileViewport } from "../hooks/useIsMobileViewport";
 
 interface UserProfile {
   name: string;
@@ -69,23 +71,7 @@ export function ProfilePage() {
   // the layout responds to viewport changes (e.g. dev-tools resize,
   // foldables, browser zoom toggle) instead of being a one-shot
   // measurement at mount.
-  const [isMobile, setIsMobile] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false;
-    return window.matchMedia("(max-width: 767px)").matches;
-  });
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const mql = window.matchMedia("(max-width: 767px)");
-    const onChange = (e: MediaQueryListEvent) => setIsMobile(e.matches);
-    // Safari < 14 uses addListener; modern browsers use addEventListener.
-    if (mql.addEventListener) {
-      mql.addEventListener("change", onChange);
-      return () => mql.removeEventListener("change", onChange);
-    }
-    mql.addListener(onChange);
-    return () => mql.removeListener(onChange);
-  }, []);
+  const isMobile = useIsMobileViewport();
 
   useEffect(() => {
     apiClient
@@ -126,8 +112,8 @@ export function ProfilePage() {
   // omitted because the AppBar's back chevron already serves that
   // purpose — rendering both would be a duplicate affordance.
   const pageBody = (
-    <div data-testid="profile-page-body" className="min-h-full overflow-y-auto bg-surface">
-      <div className="max-w-lg mx-auto p-6 space-y-8">
+    <MobilePageFrame testId="profile-page-body">
+      <div className="space-y-8">
         {!isMobile && (
           <Link
             to="/"
@@ -215,7 +201,7 @@ export function ProfilePage() {
           </section>
         )}
       </div>
-    </div>
+    </MobilePageFrame>
   );
 
   return isMobile ? <MobileShell>{pageBody}</MobileShell> : pageBody;

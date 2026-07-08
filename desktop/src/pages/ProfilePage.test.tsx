@@ -183,7 +183,7 @@ describe("ProfilePage (PR3 — mobile wrapper)", () => {
     expect(screen.getByTestId("app-bar")).toHaveTextContent(/perfil/i);
   });
 
-  it("on mobile: shows a back chevron (testid=mobile-back-button) instead of the desktop text link", async () => {
+  it("on mobile: shows the hamburger menu (testid=mobile-menu-button) instead of the desktop text link", async () => {
     mockMatchMedia(true);
     vi.mocked(apiClient.get).mockResolvedValueOnce({
       name: "Juan Pérez",
@@ -196,8 +196,8 @@ describe("ProfilePage (PR3 — mobile wrapper)", () => {
     await waitFor(() => {
       expect(screen.getByTestId("app-bar")).toBeInTheDocument();
     });
-    // Back chevron is provided by MobileShell on non-home routes.
-    expect(screen.getByTestId("mobile-back-button")).toBeInTheDocument();
+    // MobileShell uses the hamburger on the shared app screens.
+    expect(screen.getByTestId("mobile-menu-button")).toBeInTheDocument();
     // The desktop-only text link must NOT render on mobile (the AppBar
     // chevron replaces it — a duplicate "← Volver" would be confusing).
     expect(screen.queryByRole("link", { name: /volver/i })).not.toBeInTheDocument();

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { SearchBar } from "../components/notes/SearchBar";
 import { NoteList } from "../components/notes/NoteList";
+import { MobilePageFrame } from "../components/layout/MobilePageFrame";
 import { useNoteStore } from "../stores/useNoteStore";
 import type { Note } from "../types";
 
@@ -55,12 +56,14 @@ export function MobileSearchPage() {
   const hasMore = visible.length < filtered.length;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col bg-surface">
+    <MobilePageFrame testId="mobile-search-page" className="flex flex-1 flex-col">
       <SearchBar onSearch={(q) => setQuery(q)} debounceMs={0} />
       {filtered.length === 0 ? (
-        <div className="flex flex-1 flex-col items-center justify-center px-6 text-center text-text-secondary">
+        <div className="flex flex-1 flex-col items-center justify-center px-2 text-center text-text-secondary">
           <p className="text-sm">Sin resultados para &quot;{query}&quot;.</p>
-          <p className="mt-1 text-xs">Probá con otra palabra o creá una nota nueva desde la pestaña Nueva.</p>
+          <p className="mt-1 text-xs">
+            Probá con otra palabra o creá una nota nueva desde la pestaña Nueva.
+          </p>
         </div>
       ) : (
         <NoteList
@@ -78,6 +81,6 @@ export function MobileSearchPage() {
           onLoadMore={() => setVisibleCount((c) => c + SEARCH_PAGE_SIZE)}
         />
       )}
-    </div>
+    </MobilePageFrame>
   );
 }

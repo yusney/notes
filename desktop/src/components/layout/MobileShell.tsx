@@ -43,9 +43,11 @@ import { useNoteStore } from "../../stores/useNoteStore";
  * desktop markup (`md:flex-row`, `md:flex`, etc.) is untouched.
  */
 
-// Routes that show a back chevron. Anything else (only `/`) shows a hamburger.
-function isHomeRoute(pathname: string): boolean {
-  return pathname === "/";
+// Routes that should show the hamburger menu. Note detail routes keep
+// the back chevron because they are a drill-down surface; the rest of
+// the mobile app stays on the menu-first navigation pattern.
+function shouldShowMenu(pathname: string): boolean {
+  return pathname === "/" || pathname === "/search" || pathname === "/new" || pathname === "/profile" || pathname === "/settings";
 }
 
 // Route → AppBar title. Kept as a pure helper for easy unit-testing.
@@ -108,7 +110,7 @@ export function MobileShell({ children }: MobileShellProps = {}) {
     }
   }, [location.pathname]);
 
-  const onHome = isHomeRoute(location.pathname);
+  const showMenu = shouldShowMenu(location.pathname);
   const title = getMobileTitle(location.pathname);
 
   function handleBack() {
@@ -119,7 +121,7 @@ export function MobileShell({ children }: MobileShellProps = {}) {
     navigate(-1);
   }
 
-  const leading = onHome ? (
+  const leading = showMenu ? (
     <button
       type="button"
       data-testid="mobile-menu-button"

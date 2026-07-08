@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { MobilePageFrame } from "../components/layout/MobilePageFrame";
 import { useNoteStore } from "../stores/useNoteStore";
 import { withTimeout, TimeoutError } from "../lib/withTimeout";
 
@@ -92,26 +93,30 @@ export function NewNotePage() {
 
   if (error) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center text-text-secondary">
-        <p className="text-sm">No se pudo crear la nota.</p>
-        <button
-          type="button"
-          onClick={() => navigate("/", { replace: true })}
-          className="rounded-full bg-accent px-5 py-2 text-sm font-semibold text-accent-text transition-colors hover:bg-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-        >
-          Volver
-        </button>
-      </div>
+      <MobilePageFrame testId="new-note-error" className="flex flex-1 items-center justify-center">
+        <div className="flex flex-col items-center gap-3 px-6 text-center text-text-secondary">
+          <p className="text-sm">No se pudo crear la nota.</p>
+          <button
+            type="button"
+            onClick={() => navigate("/", { replace: true })}
+            className="rounded-full bg-accent px-5 py-2 text-sm font-semibold text-accent-text transition-colors hover:bg-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          >
+            Volver
+          </button>
+        </div>
+      </MobilePageFrame>
     );
   }
 
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center text-text-secondary">
-      <div
-        aria-hidden="true"
-        className="size-10 animate-spin rounded-full border-2 border-border border-t-accent"
-      />
-      <p className="text-sm">Creando nota…</p>
-    </div>
+    <MobilePageFrame testId="new-note-loading" className="flex flex-1 items-center justify-center">
+      <div className="flex flex-col items-center gap-3 px-6 text-center text-text-secondary">
+        <div
+          aria-hidden="true"
+          className="size-10 animate-spin rounded-full border-2 border-border border-t-accent"
+        />
+        <p className="text-sm">Creando nota…</p>
+      </div>
+    </MobilePageFrame>
   );
 }

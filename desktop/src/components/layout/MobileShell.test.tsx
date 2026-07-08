@@ -108,14 +108,14 @@ describe("MobileShell (PR2 — shell-redesign-v1)", () => {
     expect(screen.getByTestId("mobile-back-button")).toBeInTheDocument();
   });
 
-  it("renders a back chevron on /search", () => {
+  it("renders the hamburger on /search", () => {
     renderShell("/search");
-    expect(screen.getByTestId("mobile-back-button")).toBeInTheDocument();
+    expect(screen.getByTestId("mobile-menu-button")).toBeInTheDocument();
   });
 
-  it("renders a back chevron on /new", () => {
+  it("renders the hamburger on /new", () => {
     renderShell("/new");
-    expect(screen.getByTestId("mobile-back-button")).toBeInTheDocument();
+    expect(screen.getByTestId("mobile-menu-button")).toBeInTheDocument();
   });
 
   it("clicking the hamburger opens the SideSheet (dialog visible)", async () => {

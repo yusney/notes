@@ -26,7 +26,7 @@ tauri-build = { version = "2", features = [] }
 # builds (audit #2317): `devtools` enables the WebView inspector in
 # production APK/AAB, and `tray-icon` is compiled on mobile where there
 # is no system tray.
-tauri = { version = "2", features = [] }
+tauri = { version = "2", features = ["tray-icon"] }
 tauri-plugin-stronghold = "2"
 tauri-plugin-opener = "2"
 tauri-plugin-deep-link = "2"

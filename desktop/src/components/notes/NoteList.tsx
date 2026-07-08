@@ -185,38 +185,40 @@ export function NoteList({
       className="flex min-h-0 flex-1 w-full flex-col overflow-hidden border-r border-border bg-surface md:w-80"
     >
       <div className="border-b border-border px-4 py-2 md:p-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <span className="text-xs font-semibold uppercase tracking-[0.22em] text-text-secondary">Notas</span>
-            <p className="mt-1 text-sm text-text-secondary">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <span className="text-xs font-semibold uppercase tracking-[0.22em] text-text-secondary">
+              Notas
+            </span>
+            <p className="mt-1 hidden text-sm text-text-secondary md:block">
               {notes.length} {notes.length === 1 ? "nota" : "notas"} · {totalTags} tags
             </p>
           </div>
-        <div className="flex items-center gap-2">
-          {onFavoriteFilterToggle && (
+          <div className="flex shrink-0 items-center gap-2">
+            {onFavoriteFilterToggle && (
+              <button
+                type="button"
+                onClick={onFavoriteFilterToggle}
+                aria-label="Solo favoritos"
+                aria-pressed={isFavoriteOnly}
+                className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                  isFavoriteOnly
+                    ? "border-accent bg-accent-subtle text-text-primary"
+                    : "border-border bg-surface-elevated text-text-secondary hover:border-accent hover:text-accent"
+                }`}
+              >
+                ★
+              </button>
+            )}
             <button
               type="button"
-              onClick={onFavoriteFilterToggle}
-              aria-label="Solo favoritos"
-              aria-pressed={isFavoriteOnly}
-              className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
-                isFavoriteOnly
-                  ? "border-accent bg-accent-subtle text-text-primary"
-                  : "border-border bg-surface-elevated text-text-secondary hover:border-accent hover:text-accent"
-              }`}
+              onClick={onCreateNote}
+              aria-label="Nueva nota"
+              className="hidden size-9 place-items-center rounded-full bg-accent text-lg leading-none text-accent-text transition-colors hover:bg-accent-hover md:grid"
             >
-              ★
+              +
             </button>
-          )}
-          <button
-            type="button"
-            onClick={onCreateNote}
-            aria-label="Nueva nota"
-            className="hidden size-9 place-items-center rounded-full bg-accent text-lg leading-none text-accent-text transition-colors hover:bg-accent-hover md:grid"
-          >
-            +
-          </button>
-        </div>
+          </div>
         </div>
       </div>
 

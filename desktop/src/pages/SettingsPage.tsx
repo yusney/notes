@@ -1,11 +1,13 @@
-import { useReducer, useEffect, useState } from "react";
+import { useReducer, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useTheme } from "../hooks/useTheme";
 import type { Theme } from "../hooks/useTheme";
 import { usePreferencesStore, type SortBy, type SortOrder } from "../stores/usePreferencesStore";
 import { Select } from "../components/ui/Select";
 import { MobileShell } from "../components/layout/MobileShell";
+import { MobilePageFrame } from "../components/layout/MobilePageFrame";
 import { withTimeout, TimeoutError } from "../lib/withTimeout";
+import { useIsMobileViewport } from "../hooks/useIsMobileViewport";
 
 const THEME_OPTIONS = [
   { value: "system", label: "Sistema" },
@@ -68,22 +70,7 @@ export function SettingsPage() {
   // PR3 — detect mobile viewport (same pattern as ProfilePage). Mobile
   // gets wrapped in <MobileShell> for AppBar+back-chevron+BottomNav
   // chrome; desktop stays untouched (REQ-LAY-01).
-  const [isMobile, setIsMobile] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false;
-    return window.matchMedia("(max-width: 767px)").matches;
-  });
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const mql = window.matchMedia("(max-width: 767px)");
-    const onChange = (e: MediaQueryListEvent) => setIsMobile(e.matches);
-    if (mql.addEventListener) {
-      mql.addEventListener("change", onChange);
-      return () => mql.removeEventListener("change", onChange);
-    }
-    mql.addListener(onChange);
-    return () => mql.removeListener(onChange);
-  }, []);
+  const isMobile = useIsMobileViewport();
 
   /* eslint-disable react-doctor/exhaustive-deps -- fetchPreferences is a stable Zustand action, adding it would cause infinite re-runs */
   useEffect(() => {
@@ -133,8 +120,8 @@ export function SettingsPage() {
   // is suppressed (the AppBar back chevron replaces it) and the entire
   // body is wrapped in <MobileShell> for full chrome.
   const pageBody = (
-    <div data-testid="settings-page-body" className="min-h-full overflow-y-auto bg-surface">
-      <div className="max-w-lg mx-auto p-6 space-y-8">
+    <MobilePageFrame testId="settings-page-body">
+      <div className="space-y-8">
         {!isMobile && (
           <Link
             to="/"
@@ -193,7 +180,7 @@ export function SettingsPage() {
           </button>
         </section>
       </div>
-    </div>
+    </MobilePageFrame>
   );
 
   return isMobile ? <MobileShell>{pageBody}</MobileShell> : pageBody;
