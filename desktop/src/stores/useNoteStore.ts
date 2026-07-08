@@ -18,6 +18,16 @@ export type SortOrder = (typeof SORT_ORDER)[keyof typeof SORT_ORDER];
 
 const PAGE_SIZE_DEFAULT = 10;
 
+/**
+ * Monotonic fetch sequence token — protects against stale-response
+ * races. Every `fetchNotes` call captures `++fetchSeq` before the API
+ * round-trip; if a newer fetch has started by the time the response
+ * arrives, the older one bails out before writing state. This prevents
+ * rapid tab switches / page changes from letting an older fetch
+ * overwrite the current tab's notes (audit #2308).
+ */
+let fetchSeq = 0;
+
 interface EntityCreatedResponse {
   id: string;
 }
@@ -244,6 +254,10 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
 
   fetchNotes: async (tabId) => {
     set({ isLoading: true, error: null });
+    // Capture this fetch's sequence. If a newer fetch starts while the
+    // API call is in flight, our response is stale and we bail out
+    // before committing state (audit #2308).
+    const mySeq = ++fetchSeq;
     try {
       const params = new URLSearchParams();
       if (tabId) params.set("tabId", tabId);
@@ -257,12 +271,24 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
       params.set("pageSize", String(pageSize));
       const query = params.toString();
       const url = query ? `/api/notes?${query}` : "/api/notes";
+      // The react-doctor `async-defer-await` rule (false positive) suggests
+      // moving the await AFTER the `if (mySeq !== fetchSeq) return` guard.
+      // We cannot: the guard's whole purpose is to detect OTHER fetches
+      // that started WHILE we awaited this one — moving the await first
+      // would defeat the stale-response protection (audit #2308).
+      // eslint-disable-next-line react-doctor/async-defer-await
       const response = await apiClient.get<ApiNoteDto[] | ApiPagedNotesResponse>(url);
       const paged = normalizePagedResponse(response, pageSize);
       const fetchedNotes = normalizeNotesResponse(paged, notes);
       const fetchedIds = fetchedNotes.map((note) => note.id);
       const fetchedById = new Map(fetchedNotes.map((note) => [note.id, note]));
       const totalPages = Math.max(1, Math.ceil(paged.totalCount / paged.pageSize));
+
+      // Stale-response guard (audit #2308): if a newer fetch started
+      // while we were awaiting, discard this response entirely. Writing
+      // a stale fetch's notes/visibleNoteIds would overwrite the current
+      // tab/page with the old tab's data.
+      if (mySeq !== fetchSeq) return;
 
       // Infinite-scroll accumulation:
       //   - When the new page's ids don't overlap with visibleNoteIds AND
@@ -316,6 +342,10 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
         : [...s.notes, note],
       visibleNoteIds: [note.id, ...s.visibleNoteIds.filter((existingId) => existingId !== note.id)],
       activeNoteId: note.id,
+      // Keep pagination totals in sync so setPage/totalPages next/prev
+      // checks use accurate counts (audit #2310).
+      totalCount: s.totalCount + 1,
+      totalPages: Math.max(1, Math.ceil((s.totalCount + 1) / s.pageSize)),
     }));
     return note;
   },
@@ -349,6 +379,10 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
       notes: s.notes.filter((n) => n.id !== id),
       visibleNoteIds: s.visibleNoteIds.filter((visibleId) => visibleId !== id),
       activeNoteId: s.activeNoteId === id ? null : s.activeNoteId,
+      // Keep pagination totals in sync so setPage/totalPages next/prev
+      // checks use accurate counts (audit #2310).
+      totalCount: Math.max(0, s.totalCount - 1),
+      totalPages: Math.max(1, Math.ceil(Math.max(0, s.totalCount - 1) / s.pageSize)),
     }));
   },
 
@@ -390,6 +424,13 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
           ? { ...n, isFavorite: updated.isFavorite, favoritedAt: updated.favoritedAt }
           : n
       ),
+      // If the favorite-only filter is active and the note was just
+      // unfavorited, drop it from the visible list so it disappears
+      // immediately instead of lingering as a stale row (audit #2309).
+      visibleNoteIds:
+        s.isFavoriteOnly && !updated.isFavorite
+          ? s.visibleNoteIds.filter((id) => id !== noteId)
+          : s.visibleNoteIds,
     }));
   },
 
@@ -443,10 +484,12 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
   setFavoriteFilter: (isFavoriteOnly) => set({ isFavoriteOnly, page: 1, visibleNoteIds: [] }),
 
   setPage: async (page) => {
-    const { totalPages, page: currentPage } = get();
+    const { totalPages, page: currentPage, activeTabId } = get();
     if (page < 1 || page > totalPages || page === currentPage) return;
     set({ page });
-    await get().fetchNotes();
+    // Forward activeTabId so the server fetch is tab-scoped, not a
+    // global fetch that the client then wrongly filters (audit #2307).
+    await get().fetchNotes(activeTabId ?? undefined);
   },
 
   nextPage: async () => {

@@ -3,51 +3,60 @@ import { render, screen, act, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { NewNotePage } from "./NewNotePage";
 
-// Mock the note store: createNote returns a fake note and we observe the call.
+/**
+ * Mock the note store as a Zustand-like hook with getState().
+ *
+ * NewNotePage reads `activeTabId`/`tabs` via `useNoteStore.getState()`
+ * (a snapshot — NOT reactive) to avoid the self-cancel bug (#2314):
+ * the mutation re-renders the component before the post-create
+ * `navigate()` runs. The selector form (`useNoteStore(s => s.x)`) is
+ * used for `createNote` / `createTab` which are stable action refs.
+ *
+ * Each test sets up `_state` with the store contents before rendering.
+ * The hook either resolves a selector or returns the whole state.
+ */
+let _state: Record<string, unknown> = {};
 vi.mock("../stores/useNoteStore", () => {
-  const mockState = {
-    createNote: vi.fn(),
-    createTab: vi.fn(),
-    activeTabId: "tab-1",
-    tabs: [{ id: "tab-1", name: "General" }],
-  };
-  const hook = vi.fn(() => mockState);
-  return { useNoteStore: hook };
+  const hook = vi.fn((selector?: (s: Record<string, unknown>) => unknown) =>
+    selector ? selector(_state) : _state,
+  ) as never as ReturnType<typeof vi.fn> & { getState: () => Record<string, unknown> };
+  hook.getState = () => _state;
+  return { useNoteStore: hook as never };
 });
 
 import { useNoteStore } from "../stores/useNoteStore";
 
-/**
- * NewNotePage — PR2 stub that satisfies the locked decision
- * (`/new` is redirect-only — NO TipTap editor on mobile in v1).
- * On mount the page calls `createNote({title:"Nueva nota", content:"", tabId})`
- * and then `navigate('/notes/:id', {replace:true})`. The `replace:true` purges the
- * `/new` entry from the history stack so the Android system back button
- * does NOT return to a stale `/new` view.
- */
+function setStore(overrides: Record<string, unknown>) {
+  _state = {
+    createNote: vi.fn().mockResolvedValue({ id: "new-1" }),
+    createTab: vi.fn().mockResolvedValue({ id: "tab-1", name: "General" }),
+    activeTabId: "tab-1",
+    tabs: [{ id: "tab-1", name: "General" }],
+    ...overrides,
+  };
+  // Refresh the hook implementation to read the current `_state`.
+  vi.mocked(useNoteStore).mockImplementation(
+    ((selector?: (s: Record<string, unknown>) => unknown) =>
+      selector ? selector(_state) : _state) as never,
+  );
+}
+
 describe("NewNotePage (PR2 — shell-redesign-v1)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(useNoteStore).mockReturnValue({
-      createNote: vi.fn().mockResolvedValue({ id: "new-1" }),
-      createTab: vi.fn().mockResolvedValue({ id: "tab-1", name: "General" }),
-      activeTabId: "tab-1",
-      tabs: [{ id: "tab-1", name: "General" }],
-    } as never);
+    setStore({});
   });
 
   it("renders a transient 'Creando nota…' flash while the create call resolves", async () => {
     let resolveCreate: (value: unknown) => void = () => {};
-    vi.mocked(useNoteStore).mockReturnValue({
+    setStore({
       createNote: vi.fn(
-        () => new Promise((resolve) => {
-          resolveCreate = resolve;
-        }),
+        () =>
+          new Promise((resolve) => {
+            resolveCreate = resolve;
+          }),
       ),
-      createTab: vi.fn().mockResolvedValue({ id: "tab-1", name: "General" }),
-      activeTabId: "tab-1",
-      tabs: [{ id: "tab-1", name: "General" }],
-    } as never);
+    });
 
     render(
       <MemoryRouter initialEntries={["/new"]}>
@@ -70,12 +79,7 @@ describe("NewNotePage (PR2 — shell-redesign-v1)", () => {
 
   it("calls createNote on mount with a fresh empty note in the active tab", async () => {
     const createNote = vi.fn().mockResolvedValue({ id: "new-2" });
-    vi.mocked(useNoteStore).mockReturnValue({
-      createNote,
-      createTab: vi.fn().mockResolvedValue({ id: "tab-1", name: "General" }),
-      activeTabId: "tab-1",
-      tabs: [{ id: "tab-1", name: "General" }],
-    } as never);
+    setStore({ createNote });
 
     render(
       <MemoryRouter initialEntries={["/new"]}>
@@ -98,12 +102,7 @@ describe("NewNotePage (PR2 — shell-redesign-v1)", () => {
 
   it("navigates to the created note with replace:true after creation", async () => {
     const createNote = vi.fn().mockResolvedValue({ id: "new-3" });
-    vi.mocked(useNoteStore).mockReturnValue({
-      createNote,
-      createTab: vi.fn().mockResolvedValue({ id: "tab-1", name: "General" }),
-      activeTabId: "tab-1",
-      tabs: [{ id: "tab-1", name: "General" }],
-    } as never);
+    setStore({ createNote });
 
     render(
       <MemoryRouter initialEntries={["/new"]}>
@@ -122,12 +121,7 @@ describe("NewNotePage (PR2 — shell-redesign-v1)", () => {
   it("creates the default General tab first when the account has no tabs", async () => {
     const createTab = vi.fn().mockResolvedValue({ id: "tab-general", name: "General" });
     const createNote = vi.fn().mockResolvedValue({ id: "new-first" });
-    vi.mocked(useNoteStore).mockReturnValue({
-      createNote,
-      createTab,
-      activeTabId: null,
-      tabs: [],
-    } as never);
+    setStore({ createNote, createTab, activeTabId: null, tabs: [] });
 
     render(
       <MemoryRouter initialEntries={["/new"]}>

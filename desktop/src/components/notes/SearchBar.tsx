@@ -20,9 +20,19 @@ export function SearchBar({
   }
 
   useEffect(() => {
-    const timer = timerRef.current;
     return () => {
-      if (timer) clearTimeout(timer);
+      // Read timerRef.current at UNMOUNT time, not at mount time.
+      // The old code captured `timerRef.current` into a const at mount
+      // (always null on first effect run) and cleared that stale
+      // snapshot — so a pending debounce scheduled after mount fired
+      // `onSearch(query)` after the component was gone.
+      //
+      // The react-doctor `exhaustive-deps` rule (false positive) suggests
+      // the old "copy ref to const" antipattern. Refs are intentionally
+      // read at use-time, not captured in the closure, so we ignore it
+      // here on purpose.
+      // eslint-disable-next-line react-doctor/exhaustive-deps
+      if (timerRef.current) clearTimeout(timerRef.current);
     };
   }, []);
 
