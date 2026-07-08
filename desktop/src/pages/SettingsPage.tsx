@@ -5,6 +5,7 @@ import type { Theme } from "../hooks/useTheme";
 import { usePreferencesStore, type SortBy, type SortOrder } from "../stores/usePreferencesStore";
 import { Select } from "../components/ui/Select";
 import { MobileShell } from "../components/layout/MobileShell";
+import { withTimeout, TimeoutError } from "../lib/withTimeout";
 
 const THEME_OPTIONS = [
   { value: "system", label: "Sistema" },
@@ -86,10 +87,33 @@ export function SettingsPage() {
 
   /* eslint-disable react-doctor/exhaustive-deps -- fetchPreferences is a stable Zustand action, adding it would cause infinite re-runs */
   useEffect(() => {
-    fetchPreferences().then(() => {
-      const prefs = usePreferencesStore.getState();
-      dispatch({ type: "set-prefs", sortBy: prefs.sortBy, sortOrder: prefs.sortOrder });
-    });
+    // 5s cutoff: without this the "Cargando…" stays forever when the
+    // backend is unreachable or returns a 401 that isn't handled by the
+    // store's internal logic.
+    withTimeout(fetchPreferences(), 5000)
+      .then(() => {
+        const prefs = usePreferencesStore.getState();
+        dispatch({
+          type: "set-prefs",
+          sortBy: prefs.sortBy,
+          sortOrder: prefs.sortOrder,
+        });
+      })
+      .catch((err) => {
+        // Surface as a fatal-init error so the user can see something
+        // went wrong and try again, instead of staring at "Cargando…".
+        if (err instanceof TimeoutError) {
+          dispatch({
+            type: "save-error",
+            value: "La carga de preferencias tardó demasiado. Probá reintentando.",
+          });
+        } else {
+          dispatch({
+            type: "save-error",
+            value: err instanceof Error ? err.message : "Error al cargar preferencias",
+          });
+        }
+      });
   }, []);
   /* eslint-enable react-doctor/exhaustive-deps */
 
@@ -109,7 +133,7 @@ export function SettingsPage() {
   // is suppressed (the AppBar back chevron replaces it) and the entire
   // body is wrapped in <MobileShell> for full chrome.
   const pageBody = (
-    <div className="min-h-screen bg-surface">
+    <div data-testid="settings-page-body" className="min-h-full overflow-y-auto bg-surface">
       <div className="max-w-lg mx-auto p-6 space-y-8">
         {!isMobile && (
           <Link
@@ -163,7 +187,7 @@ export function SettingsPage() {
             onClick={handleSave}
             disabled={isSaving}
             aria-label="Guardar configuración"
-            className="text-sm px-4 py-2 bg-accent text-accent-text hover:bg-accent-hover disabled:opacity-50 transition-colors"
+            className="text-sm px-4 py-2 bg-accent text-accent-text hover:bg-accent-hover disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             {isSaving ? "Guardando…" : "Guardar configuración"}
           </button>

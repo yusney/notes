@@ -1,16 +1,17 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { MemoryRouter, useLocation, useNavigate } from "react-router-dom";
+import { MemoryRouter } from "react-router-dom";
 import userEvent from "@testing-library/user-event";
 import { NoteViewer } from "./NoteViewer";
 import type { Note } from "../../types";
 import { useEditor } from "@tiptap/react";
 
 /**
- * Helper: render NoteViewer inside MemoryRouter so that any back-nav
- * hook (`useNavigate`, `useLocation`) finds a router context. Default
- * initialEntries to a route that includes state (mimics the
- * `/notes/:id` navigation the list performs with `state.scrollY`).
+ * Helper: render NoteViewer inside MemoryRouter so any future router
+ * hook (`useNavigate`, `useLocation`, etc.) finds a router context.
+ * Default initialEntries to a route that includes state — keeps the
+ * helper robust to future route-state interactions without locking
+ * the test contract to today's state shape.
  */
 function renderViewer(props: { note?: Note; onEdit?: () => void } = {}) {
   const note = props.note ?? mockNote;
@@ -80,9 +81,8 @@ describe("NoteViewer", () => {
     vi.clearAllMocks();
   });
 
-  // NoteViewer now uses useNavigate() for the mobile back button
-  // (REQ-VIEW-01). Wrap every render in a MemoryRouter via the wrapper
-  // option — keeps each test inline without nesting MemoryRouter in JSX.
+  // Wrap every render in a MemoryRouter via the wrapper option —
+  // keeps each test inline without nesting MemoryRouter in JSX.
   const routerWrapper = ({ children }: { children: React.ReactNode }) => (
     <MemoryRouter>{children}</MemoryRouter>
   );
@@ -189,19 +189,22 @@ describe("NoteViewer", () => {
   });
 });
 
-// ── Mobile back button (REQ-VIEW-01) + scroll preservation (S7) ────────────
+// ── Mobile Edit button (mirror desktop surface) ─────────────────────────────
 //
-// REQ-VIEW-01 — Tapping a note on mobile opens a single-column read-only
-// viewer with a back chevron visible only at (max-width: 767px); tap
-// returns to the list at the prior scroll position.
+// The viewer used to hide the `Editar` button on mobile
+// (REQ-VIEW-01 read-only v1.0). The user reverted that decision so the
+// mobile surface mirrors the desktop one: Compartir + Editar visible on
+// both viewports. The parent's `onEdit` callback owns the transition
+// (MainLayout swaps to NoteEditor on desktop; MobileNotePage flips a
+// local `isEditing` flag on mobile).
 //
-// S7 scroll preservation — the list stores scrollY in route state when
-// navigating to /notes/:id, and NoteViewer reads it via useLocation so
-// the back-nav can reapply it on the list route.
+// `Compartir` is always rendered — the ShareDialog handles its own
+// viewport sizing, and the mobile user needs the same share affordance
+// the desktop has.
 
-describe("NoteViewer — mobile back button + scroll preservation (REQ-VIEW-01 / S7)", () => {
+describe("NoteViewer — mobile surface mirrors desktop (Compartir + Editar)", () => {
   beforeEach(() => {
-    // Reset matchMedia to a no-match baseline; individual tests override it.
+    // Reset matchMedia so each test controls the viewport independently.
     Object.defineProperty(window, "matchMedia", {
       writable: true,
       value: vi.fn().mockImplementation((query: string) => ({
@@ -221,7 +224,6 @@ describe("NoteViewer — mobile back button + scroll preservation (REQ-VIEW-01 /
     Object.defineProperty(window, "matchMedia", {
       writable: true,
       value: vi.fn().mockImplementation((query: string) => ({
-        // We only care about the (max-width: 767px) query for the back button gate.
         matches: query.includes("767") ? matches : false,
         media: query,
         onchange: null,
@@ -234,92 +236,186 @@ describe("NoteViewer — mobile back button + scroll preservation (REQ-VIEW-01 /
     });
   }
 
-  it("renders a back button at viewport <768px (mobile)", () => {
-    setMobileViewport(true); // (max-width: 767px) → matches on mobile
+  it("renders BOTH Compartir and Editar buttons on mobile (≤767px)", () => {
+    setMobileViewport(true);
 
     renderViewer();
 
-    expect(
-      screen.getByRole("button", { name: /volver|atrás|back/i })
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /compartir/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /editar/i })).toBeInTheDocument();
   });
 
-  it("does NOT render a back button at viewport >=768px (desktop)", () => {
-    setMobileViewport(false); // desktop
+  it("renders BOTH Compartir and Editar buttons on desktop (≥768px)", () => {
+    setMobileViewport(false);
 
     renderViewer();
 
+    expect(screen.getByRole("button", { name: /compartir/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /editar/i })).toBeInTheDocument();
+  });
+
+  it("does NOT render an internal back chevron on mobile (MobileShell AppBar owns it)", () => {
+    // NoteViewer's old contract was to render its own `← Volver` button
+    // on mobile. After the MobileShell refactor, the AppBar already
+    // provides one — a second chevron would compete for the same thumb
+    // zone and confuse the user about which one navigates where.
+    setMobileViewport(true);
+
+    const { container } = renderViewer();
+
+    // No element with `aria-label` containing volver/atrás/back.
     expect(
-      screen.queryByRole("button", { name: /volver|atrás|back/i })
+      container.querySelector('[aria-label*="volver" i], [aria-label*="atrás" i], [aria-label*="back" i]')
     ).not.toBeInTheDocument();
   });
 
-  it("clicking the back button on mobile calls navigate(-1) to return to list", async () => {
+  it("clicking Editar on mobile invokes onEdit (parent decides the transition)", async () => {
     setMobileViewport(true);
+    const onEdit = vi.fn();
     const user = userEvent.setup();
 
-    // Track the navigation target via a small probe component.
-    function NavProbe() {
-      const location = useLocation();
-      const nav = useNavigate();
-      // Render a sentinel that the test can observe.
-      return (
-        <div
-          data-testid="nav-probe"
-          data-pathname={location.pathname}
-          data-state={JSON.stringify(location.state)}
-          onClick={() => nav(-1)}
-        />
-      );
-    }
-
     render(
-      <MemoryRouter initialEntries={["/notes", { pathname: "/notes/n1", state: { scrollY: 47 } }]}>
-        <NoteViewer note={mockNote} onEdit={vi.fn()} />
-        <NavProbe />
+      <MemoryRouter>
+        <NoteViewer note={mockNote} onEdit={onEdit} />
       </MemoryRouter>
     );
 
-    // We're on /notes/n1 first.
-    expect(screen.getByTestId("nav-probe")).toHaveAttribute("data-pathname", "/notes/n1");
-
-    const backBtn = screen.getByRole("button", { name: /volver|atrás|back/i });
-    await user.click(backBtn);
-
-    // After clicking back, navigation should have happened. We probe by
-    // clicking the probe which calls nav(-1) too — but the simpler check
-    // is that NoteViewer's back button is wired to navigate, not that
-    // navigation succeeds in jsdom (react-router needs real history).
-    // Instead we verify the click handler invokes navigate by mocking.
-    expect(backBtn).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /editar/i }));
+    expect(onEdit).toHaveBeenCalledTimes(1);
   });
 
-  it("back button uses useNavigate and the navigation carries no state by default", () => {
-    // The list restoration of scrollTop happens on the LIST side
-    // (NoteList reads location.state.scrollY in a useLayoutEffect). On
-    // the viewer side, the back button calls navigate(-1) with no
-    // explicit state, so the receiving route keeps the prior state
-    // attached (react-router preserves location.state across -1).
-    //
-    // We assert the viewer's useLocation exposes the scrollY it received
-    // from the list when the route was entered.
+  it("stacks the header vertically + centres title + buttons on mobile (≤767px)", () => {
+    // Regression guard for the "no está centrado / no cubre todo"
+    // report. The previous split layout (title left, buttons right)
+    // wasted the middle of the bar on a narrow viewport. The mobile
+    // header now stacks vertically and centres the title + the
+    // buttons-row. The action row is `w-full` (no `max-w` cap) so
+    // Compartir + Editar together cover the full header width on
+    // wider phones instead of leaving whitespace on the right.
     setMobileViewport(true);
 
-    function Probe() {
-      const location = useLocation();
-      return (
-        <div data-testid="probe" data-state-y={(location.state as { scrollY?: number } | null)?.scrollY ?? "none"} />
-      );
-    }
+    const { container } = renderViewer();
 
-    render(
-      <MemoryRouter initialEntries={[{ pathname: "/notes/n1", state: { scrollY: 47 } }]}>
-        <NoteViewer note={mockNote} onEdit={vi.fn()} />
-        <Probe />
+    // The header root is the first flex container inside the viewer's
+    // outer wrapper. We assert by its stacking + centring classes.
+    const header = container.querySelector(".flex.shrink-0.flex-col");
+    expect(header).toBeInTheDocument();
+    expect(header?.className).toMatch(/items-center/);
+
+    // The title is centred on mobile.
+    const title = container.querySelector("h1");
+    expect(title?.className).toMatch(/text-center/);
+
+    // The buttons row covers the full header width on mobile — no
+    // `max-w-xs` cap that would leave whitespace on the sides.
+    const buttonRow = header?.querySelector("div.flex.w-full");
+    expect(buttonRow).toBeInTheDocument();
+    expect(buttonRow?.className).not.toMatch(/max-w-xs/);
+
+    // Each button takes flex-1 so they share the row evenly.
+    const buttons = buttonRow?.querySelectorAll("button");
+    buttons?.forEach((btn) => {
+      expect(btn.className).toMatch(/flex-1/);
+    });
+  });
+
+  it("uses the split (title left, buttons right) layout on desktop (≥768px)", () => {
+    // REQ-DESKTOP-01 / S9: the desktop split-view surface must stay
+    // byte-identical with the pre-mobile-v1 baseline. The mobile stack
+    // is opt-in via Tailwind responsive classes — `md:` reverts the
+    // header back to the row layout.
+    setMobileViewport(false);
+
+    const { container } = renderViewer();
+
+    const header = container.querySelector(".flex.shrink-0.flex-col");
+    // On desktop the flex-col class is overridden by md:flex-row.
+    // Tailwind applies the responsive class, so the DOM keeps both
+    // classes — we assert the responsive override is present.
+    expect(header?.className).toMatch(/md:flex-row/);
+    expect(header?.className).toMatch(/md:justify-between/);
+
+    // Title aligns left on desktop.
+    const title = container.querySelector("h1");
+    expect(title?.className).toMatch(/md:text-left/);
+  });
+});
+
+// ── Empty-state layout (covers the available space, not just a paragraph) ──
+//
+// Regression guard for the mobile "no cubre bien los espacios" report.
+// When the note has empty content the viewer used to render a small
+// "Sin contenido." paragraph at the TOP of a large empty scroll area
+// — the empty space dominated the viewport and looked broken. The
+// fix renders a centred empty state with an icon, prompt, and CTA
+// that calls `onEdit` so the user lands directly in the editor.
+
+describe("NoteViewer — empty-state layout", () => {
+  it("renders a centred empty state with 'Empezar a escribir' CTA when note.content is empty", () => {
+    const emptyNote: Note = { ...mockNote, content: "" };
+    const onEdit = vi.fn();
+
+    const { container } = render(
+      <MemoryRouter>
+        <NoteViewer note={emptyNote} onEdit={onEdit} />
       </MemoryRouter>
     );
 
-    // The viewer was entered with scrollY=47 in location.state.
-    expect(screen.getByTestId("probe")).toHaveAttribute("data-state-y", "47");
+    // The empty-state container is identified by data-testid so
+    // tests don't depend on Tailwind class strings.
+    const emptyState = container.querySelector('[data-testid="viewer-empty-state"]');
+    expect(emptyState).toBeInTheDocument();
+
+    // Centred layout — flex items-center + justify-center cover the
+    // available scroll area instead of leaving the empty paragraph
+    // pinned to the top of a tall blank column.
+    expect(emptyState?.className).toMatch(/items-center/);
+    expect(emptyState?.className).toMatch(/justify-center/);
+    expect(emptyState?.className).toMatch(/h-full/);
+
+    // The empty-state now wraps its contents in a dashed-border card
+    // so the affordance has visual weight on a phone screen instead
+    // of looking like a lonely paragraph in a big blank area.
+    const card = emptyState?.querySelector("div");
+    expect(card?.className).toMatch(/rounded-2xl/);
+    expect(card?.className).toMatch(/border-dashed/);
+
+    // The card covers the full content-area width on mobile (`w-full`,
+    // no `max-w-xs` cap) so it doesn't leave whitespace on the right
+    // side of wider phones. The cap is opt-in for desktop only via
+    // `md:max-w-xs` so the card stays a narrow readable strip in the
+    // desktop split-view right pane.
+    expect(card?.className).toMatch(/w-full/);
+    expect(card?.className).not.toMatch(/^\S*max-w-xs/); // no bare `max-w-xs`
+    expect(card?.className).toMatch(/md:max-w-xs/);
+
+    // CTA button — text content + onEdit wire-up.
+    const cta = screen.getByRole("button", { name: /empezar a escribir/i });
+    expect(cta).toBeInTheDocument();
+  });
+
+  it("clicking the 'Empezar a escribir' CTA invokes onEdit", async () => {
+    const emptyNote: Note = { ...mockNote, content: "" };
+    const onEdit = vi.fn();
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter>
+        <NoteViewer note={emptyNote} onEdit={onEdit} />
+      </MemoryRouter>
+    );
+
+    await user.click(screen.getByRole("button", { name: /empezar a escribir/i }));
+    expect(onEdit).toHaveBeenCalledTimes(1);
+  });
+
+  it("does NOT render the empty state when note has content", () => {
+    const { container } = render(
+      <MemoryRouter>
+        <NoteViewer note={mockNote} onEdit={vi.fn()} />
+      </MemoryRouter>
+    );
+
+    expect(container.querySelector('[data-testid="viewer-empty-state"]')).not.toBeInTheDocument();
   });
 });

@@ -30,7 +30,15 @@ interface AppBarProps {
  * coupling to ARIA semantics.
  */
 export function AppBar({ title, leading, trailing }: AppBarProps) {
-  const ariaLabel = leading ? undefined : title;
+  // When the title is empty (e.g. /notes/:id, where the NoteViewer
+  // header below shows the actual note title), skip the <h1> entirely
+  // so the AppBar doesn't render an invisible-but-spaced heading that
+  // pushes the rest of the screen down. The aria-label falls back to
+  // the title string only when there's no leading slot — since the
+  // current caller (MobileShell) always passes a leading slot for the
+  // empty-title routes, the header's accessible name comes from the
+  // content region below the bar.
+  const ariaLabel = leading ? undefined : title || undefined;
   return (
     <header
       data-testid="app-bar"
@@ -42,7 +50,14 @@ export function AppBar({ title, leading, trailing }: AppBarProps) {
           {leading}
         </div>
       )}
-      <h1 className="flex-1 truncate text-[length:var(--type-body-sm)] font-semibold">{title}</h1>
+      {title && (
+        <h1 className="flex-1 truncate text-[length:var(--type-body-sm)] font-semibold">{title}</h1>
+      )}
+      {!title && leading !== undefined && (
+        // Spacer so the trailing slot (if any) stays right-aligned
+        // when the title is absent.
+        <div className="flex-1" />
+      )}
       {trailing !== undefined && (
         <div data-testid="app-bar-trailing" className="flex items-center">
           {trailing}

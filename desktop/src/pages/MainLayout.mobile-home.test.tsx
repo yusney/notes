@@ -122,6 +122,7 @@ vi.mock("../stores/useTagStore", () => {
   };
   const hook = vi.fn(() => mockState);
   (hook as unknown as { getState: () => typeof mockState }).getState = () => mockState;
+  (hook as unknown as { setState: (partial: Partial<typeof mockState>) => void }).setState = (partial: Partial<typeof mockState>) => Object.assign(mockState, partial);
   return { useTagStore: hook };
 });
 

@@ -69,7 +69,9 @@ export function MobileHomePage() {
       tabId = tab.id;
     }
     if (!tabId) return;
-    await createNote({ title: "Nueva nota", content: "", tabId });
+    const note = await createNote({ title: "Nueva nota", content: "", tabId });
+    setActiveNote(note.id);
+    navigate(`/notes/${note.id}`);
   }
 
   function handleSelectNote(noteId: string) {

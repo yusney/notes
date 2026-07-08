@@ -1,25 +1,28 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useNoteStore } from "../stores/useNoteStore";
+import { withTimeout, TimeoutError } from "../lib/withTimeout";
 
 /**
  * NewNotePage — PR2 stub for the `/new` mobile route.
  *
  * Satisfies the locked decision #3 (`/new` is redirect-only on
  * mobile v1.0 — NO TipTap editor). On mount:
- *   1. Call `createNote({title:"Nueva nota", content:"", tabId: activeTabId ?? firstTab})`.
- *   2. Navigate to `/` with `replace: true` so the `/new` entry is
- *      purged from the history stack (Android system back button
+ *   1. Resolve `tabId` from `activeTabId`, the first tab, or by creating
+ *      the default "General" tab for first-run accounts.
+ *   2. Call `createNote({title:"Nueva nota", content:"", tabId})`.
+ *   3. Navigate to `/notes/:id` with `replace: true` so the user sees
+ *      the created note immediately and the `/new` entry is purged (Android system back button
  *      will not return to a stale `/new` view).
  *
  * While the create call is in flight we render a brief
  * "Creando nota…" flash so the user has feedback that the tap was
  * registered. If the create rejects (network error, 401, etc.) we
- * surface a friendly error AND still try to navigate back to `/`.
+ * surface a friendly error with an explicit back-to-home action.
  */
 export function NewNotePage() {
   const navigate = useNavigate();
-  const { createNote, activeTabId, tabs } = useNoteStore();
+  const { createNote, createTab, activeTabId, tabs } = useNoteStore();
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -28,24 +31,35 @@ export function NewNotePage() {
       try {
         let tabId = activeTabId ?? tabs[0]?.id ?? null;
         if (!tabId) {
-          // No tabs at all — there is no valid place to create the note.
-          // Bounce back home; the user will land in the empty state.
-          navigate("/", { replace: true });
-          return;
+          // Match MobileHomePage's first-run create flow: when there are
+          // no spaces yet, create the default "General" space first so
+          // BottomNav → Nueva works for a brand-new account too.
+          const tab = await createTab("General");
+          tabId = tab.id;
         }
-        await createNote({ title: "Nueva nota", content: "", tabId });
+        // 5s cutoff covers slow networks without leaving the UI in a
+        // "Creando nota…" limbo on dead backends. Without this the page
+        // hangs forever if the backend is down or the token is invalid.
+        const note = await withTimeout(
+          createNote({ title: "Nueva nota", content: "", tabId }),
+          5000
+        );
         if (cancelled) return;
-        navigate("/", { replace: true });
+        navigate(`/notes/${note.id}`, { replace: true });
       } catch (err) {
         if (cancelled) return;
-        setError(err instanceof Error ? err.message : "Error al crear la nota");
+        if (err instanceof TimeoutError) {
+          setError("La creación de la nota tardó demasiado. Probá de nuevo.");
+        } else {
+          setError(err instanceof Error ? err.message : "Error al crear la nota");
+        }
       }
     }
     void go();
     return () => {
       cancelled = true;
     };
-  }, [createNote, activeTabId, tabs, navigate]);
+  }, [createNote, createTab, activeTabId, tabs, navigate]);
 
   if (error) {
     return (

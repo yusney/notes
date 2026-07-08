@@ -145,7 +145,7 @@ describe("MobileShell (PR2 — shell-redesign-v1)", () => {
     expect(screen.queryByRole("dialog", { name: /menú lateral/i })).not.toBeInTheDocument();
   });
 
-  it("back chevron calls navigate(-1) and the host route changes", async () => {
+  it("back chevron on /notes/:id navigates deterministically to /", async () => {
     const user = userEvent.setup();
     let lastPath = "/notes/abc";
     function PathProbe() {
@@ -154,10 +154,11 @@ describe("MobileShell (PR2 — shell-redesign-v1)", () => {
       return null;
     }
     render(
-      <MemoryRouter initialEntries={["/", "/notes/abc"]} initialIndex={1}>
+      <MemoryRouter initialEntries={["/search", "/notes/abc"]} initialIndex={1}>
         <Routes>
           <Route element={<MobileShell />}>
             <Route path="/" element={<div>home</div>} />
+            <Route path="/search" element={<div>search</div>} />
             <Route path="/notes/:id" element={<div>note</div>} />
           </Route>
         </Routes>
@@ -165,6 +166,30 @@ describe("MobileShell (PR2 — shell-redesign-v1)", () => {
       </MemoryRouter>,
     );
     expect(lastPath).toBe("/notes/abc");
+    await user.click(screen.getByTestId("mobile-back-button"));
+    expect(lastPath).toBe("/");
+  });
+
+  it("back chevron on non-note secondary routes still uses browser history", async () => {
+    const user = userEvent.setup();
+    let lastPath = "/search";
+    function PathProbe() {
+      const loc = useLocation();
+      lastPath = loc.pathname;
+      return null;
+    }
+    render(
+      <MemoryRouter initialEntries={["/", "/search"]} initialIndex={1}>
+        <Routes>
+          <Route element={<MobileShell />}>
+            <Route path="/" element={<div>home</div>} />
+            <Route path="/search" element={<div>search</div>} />
+          </Route>
+        </Routes>
+        <PathProbe />
+      </MemoryRouter>,
+    );
+    expect(lastPath).toBe("/search");
     await user.click(screen.getByTestId("mobile-back-button"));
     expect(lastPath).toBe("/");
   });

@@ -509,16 +509,8 @@ export function NoteEditor({ note, availableTags = EMPTY_TAGS, onSave, onSaveAnd
   }
 
   return (
-    <div className="flex h-full flex-col overflow-hidden bg-surface">
-      {isMobile ? (
-        <div
-          role="status"
-          aria-live="polite"
-          className="shrink-0 flex items-center justify-between border-b border-border bg-surface-elevated/85 px-4 py-2 backdrop-blur"
-        >
-          <SaveStatusIndicator status={status} />
-        </div>
-      ) : (
+    <div className="flex h-full w-full flex-1 flex-col overflow-hidden bg-surface">
+      {isMobile ? null : (
         <div className="shrink-0 flex items-center justify-between border-b border-border bg-surface-elevated/85 px-8 py-4 backdrop-blur">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-text-secondary">Editor</p>

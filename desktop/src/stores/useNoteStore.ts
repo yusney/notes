@@ -233,6 +233,13 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     // REQ-TAB-04 "Tapping the active tab is idempotent".
     if (get().activeTabId === tabId) return;
     set({ activeTabId: tabId, activeNoteId: null, page: 1, visibleNoteIds: [] });
+    // Re-fetch notes for the newly selected tab. Without this the
+    // accumulated `notes` array still holds the previous tab's rows
+    // and `filteredNotes()` returns stale data (or empty results if
+    // the backend filters by tab server-side and the previous fetch
+    // only covered one tab). The fire-and-forget `void` is intentional
+    // — callers don't need to await the round-trip before continuing.
+    void get().fetchNotes(tabId ?? undefined);
   },
 
   fetchNotes: async (tabId) => {
@@ -273,10 +280,18 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
         : fetchedIds;
 
       set({
-        notes: [
-          ...notes.map((note) => fetchedById.get(note.id) ?? note),
-          ...fetchedNotes.filter((note) => !notes.some((existing) => existing.id === note.id)),
-        ],
+        // When replacing (page 1, filter/tab change, refresh), wipe the
+        // accumulated notes array and use ONLY the fetched ones. The old
+        // merge logic (`...notes.map(...) + ...fetchedNotes.filter(...)`)
+        // kept notes from previous sessions/tabs, inflating the count
+        // (e.g. user A's 55 + user B's 48 = 103 visible in /search).
+        // On append (infinite scroll nextPage), keep accumulating.
+        notes: isAppend
+          ? [
+              ...notes.map((note) => fetchedById.get(note.id) ?? note),
+              ...fetchedNotes.filter((note) => !notes.some((existing) => existing.id === note.id)),
+            ]
+          : fetchedNotes,
         visibleNoteIds: nextVisibleNoteIds,
         page: paged.page,
         pageSize: paged.pageSize,
@@ -444,3 +459,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
 
   resetPage: () => set({ page: 1, visibleNoteIds: [] }),
 }));
+
+if (typeof window !== "undefined" && (import.meta as any).env?.DEV) {
+  (window as unknown as { __noteStore?: typeof useNoteStore }).__noteStore = useNoteStore;
+}

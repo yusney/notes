@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { MobileHomePage } from "./MobileHomePage";
 
 /**
@@ -145,24 +145,33 @@ describe("MobileHomePage (PR3 hotfix — shell-redesign-v1)", () => {
     // Count <button> tags inside the empty-state subtree.
     const buttons = empty!.querySelectorAll("button");
     expect(buttons.length).toBe(1);
-    // The CTA copy is "Crear desde desktop" (the canonical single CTA from
+    // The CTA copy is "Crear nota" (the canonical single CTA from
     // EmptyState.tsx — S1 contract).
-    expect(buttons[0]).toHaveTextContent(/crear desde desktop/i);
+    expect(buttons[0]).toHaveTextContent(/crear nota/i);
   });
 
-  it("tapping the empty-state CTA invokes createNote via the store (regression coverage)", async () => {
+  it("tapping the empty-state CTA creates and opens the new note", async () => {
     const createNote = vi.fn().mockResolvedValue({ id: "new-2" });
+    const setActiveNote = vi.fn();
     mockStore({
       notes: [],
       filteredNotes: () => [],
       createNote,
+      setActiveNote,
       activeTabId: "tab-1",
       tabs: [{ id: "tab-1", name: "General" }],
     });
 
     const user = userEvent.setup();
-    renderPage();
-    const cta = screen.getByRole("button", { name: /crear desde desktop/i });
+    render(
+      <MemoryRouter initialEntries={["/"]}>
+        <Routes>
+          <Route path="/" element={<MobileHomePage />} />
+          <Route path="/notes/:id" element={<div data-testid="created-note">created note</div>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    const cta = screen.getByRole("button", { name: /crear nota/i });
     await user.click(cta);
     expect(createNote).toHaveBeenCalledTimes(1);
     const arg = createNote.mock.calls[0]?.[0] as
@@ -172,6 +181,8 @@ describe("MobileHomePage (PR3 hotfix — shell-redesign-v1)", () => {
     expect(arg?.title).toBe("Nueva nota");
     expect(arg?.content).toBe("");
     expect(arg?.tabId).toBe("tab-1");
+    expect(setActiveNote).toHaveBeenCalledWith("new-2");
+    expect(await screen.findByTestId("created-note")).toBeInTheDocument();
   });
 
   it("tapping a note row in the populated list calls setActiveNote (preserves mobile nav contract)", async () => {

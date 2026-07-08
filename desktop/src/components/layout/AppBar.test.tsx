@@ -2,10 +2,17 @@ import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { AppBar } from "./AppBar";
 
-describe("AppBar (PR1 — shell-redesign-v1)", () => {
-  it("renders the title text", () => {
+describe("AppBar", () => {
+  it("renders the title in an h1", () => {
     render(<AppBar title="Notas" />);
-    expect(screen.getByRole("heading", { level: 1, name: /notas/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Notas" })).toBeInTheDocument();
+  });
+
+  it("does NOT render an h1 when title is empty (e.g. /notes/:id uses the NoteViewer header instead)", () => {
+    const { container } = render(<AppBar title="" leading={<button>Volver</button>} />);
+    expect(container.querySelector("h1")).not.toBeInTheDocument();
+    // The header still exists so the back chevron's slot has a place to live.
+    expect(container.querySelector('[data-testid="app-bar"]')).toBeInTheDocument();
   });
 
   it("exposes data-testid='app-bar' as anchor for downstream tests (MobileShell, etc.)", () => {

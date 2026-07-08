@@ -640,14 +640,16 @@ describe("NoteEditor", () => {
       expect(content?.className).toMatch(/pb-\[env\(safe-area-inset-bottom\)\]/);
     });
 
-    it("mobile variant header shows the save status indicator (status-only header)", () => {
+    it("mobile variant has no dedicated status-only header (defense: vertical chrome stays compact)", () => {
       const { container } = render(
         <NoteEditor note={mockNote} onSave={vi.fn()} variant="mobile" />
       );
-      // Save status indicator is rendered with role="status" / aria-live
-      // via the SaveStatusIndicator component. The mobile header holds it
-      // (the desktop header holds the buttons instead).
-      expect(container.querySelector("[role='status']")).toBeInTheDocument();
+      // The mobile editor used to render a SaveStatusIndicator bar above
+      // the title — that ate ~40px of vertical space on small screens
+      // before any content appeared. We dropped it: the status now lives
+      // only inside the desktop header (`role="status"` only when
+      // `variant !== "mobile"`). Guard against re-introducing the bar.
+      expect(container.querySelector("[role='status']")).not.toBeInTheDocument();
     });
   });
 
