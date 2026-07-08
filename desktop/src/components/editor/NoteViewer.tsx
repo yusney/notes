@@ -1,106 +1,18 @@
 import { useState, useEffect } from "react";
-import { EditorContent, useEditor, ReactNodeViewRenderer, NodeViewWrapper, NodeViewContent } from "@tiptap/react";
+import { EditorContent, useEditor } from "@tiptap/react";
 // REQ-PERF-05 — lowlight CSS ships with the viewer lazy chunk.
 import "../../styles/lowlight.css";
-import { StarterKit } from "@tiptap/starter-kit";
-import { CodeBlockLowlight } from "@tiptap/extension-code-block-lowlight";
-import { Link } from "@tiptap/extension-link";
-import { TaskList } from "@tiptap/extension-task-list";
-import { TaskItem } from "@tiptap/extension-task-item";
-import { Table } from "@tiptap/extension-table";
-import { TableRow } from "@tiptap/extension-table-row";
-import { TableCell } from "@tiptap/extension-table-cell";
-import { TableHeader } from "@tiptap/extension-table-header";
-import { Markdown } from "tiptap-markdown";
-import { createLazyLowlight, discoverAndRegisterGrammars } from "./grammarLoader";
+import { discoverAndRegisterGrammars } from "./grammarLoader";
+import { viewerExtensions, lowlight } from "./extensions";
 import type { Note } from "../../types";
-import type { NodeViewProps } from "@tiptap/react";
 import { ShareDialog } from "../share/ShareDialog";
 
 /**
- * Mobile breakpoint (matches Tailwind `md:`). Exported so unit tests can
- * reuse the same constant if they need to compute viewports.
+ * Mobile breakpoint (matches Tailwind `md:`). Module-local — not
+ * exported, because no test or other module needs to reuse it (the
+ * previous export was dead code).
  */
-export const MOBILE_MAX_PX = 767;
-
-// REQ-GRMR-01: lazy grammar loading. The lowlight instance starts with
-// ZERO grammars registered; grammars are pulled into the active
-// instance the first time a code block of that language is encountered
-// (see discoverAndRegisterGrammars in grammarLoader.ts).
-const lowlight = createLazyLowlight();
-
-function CodeBlockCopyButton({ node }: Pick<NodeViewProps, "node">) {
-  const [copied, setCopied] = useState(false);
-
-  async function handleCopy() {
-    if (copied) return;
-    await navigator.clipboard.writeText(node.textContent);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }
-
-  return (
-    <NodeViewWrapper className="relative my-4">
-      <button
-        type="button"
-        onClick={handleCopy}
-        aria-label="Copiar código"
-        className="absolute top-2 right-2 z-10 rounded border border-border bg-surface-elevated px-2 py-0.5 text-xs font-medium text-text-secondary transition-colors hover:text-text-primary"
-      >
-        {copied ? "Copiado ✓" : "Copiar"}
-      </button>
-      <pre>
-        <NodeViewContent />
-      </pre>
-    </NodeViewWrapper>
-  );
-}
-
-const CodeBlockWithCopyExtension = CodeBlockLowlight.extend({
-  addNodeView() {
-    return ReactNodeViewRenderer(CodeBlockCopyButton);
-  },
-});
-
-const viewerExtensions = [
-  StarterKit.configure({ codeBlock: false }),
-  CodeBlockWithCopyExtension.configure({ lowlight, defaultLanguage: null }),
-  // PR3-hotfix (shell-redesign-v1): the Notes.Api stores note content
-  // as MARKDOWN, not HTML. The viewer must parse the markdown so
-  // fenced code blocks render as <pre> blocks (lowlight-highlighted),
-  // headings render as <h1>/<h2>/etc., and inline code/backticks
-  // render as <code>. Without this extension the viewer treated
-  // `note.content` as raw HTML — markdown source (including the
-  // ```` ``` ```` fence characters) leaked into the rendered output
-  // as a single <p> of plain text. The editor (`NoteEditor`) has
-  // always used this extension; the viewer was missing it (likely
-  // because TipTap's default codeBlock handling works for HTML
-  // content, and the original note content was HTML before the
-  // backend migrated to markdown). transformPastedText/transform-
-  // CopiedText are off because the viewer is read-only — there's
-  // no paste/copy flow to convert.
-  Markdown.configure({ transformPastedText: false, transformCopiedText: false }),
-  Link.configure({
-    openOnClick: true,
-    HTMLAttributes: { target: "_blank", rel: "noopener noreferrer" },
-  }),
-  TaskList,
-  TaskItem.configure({ nested: false }),
-  Table.configure({ resizable: false }),
-  TableRow,
-  TableCell,
-  TableHeader,
-];
-
-// Exported for the TipTap extensions parity regression test
-// (extensions-parity.test.ts) which locks the bugfix #2227 invariant.
-// Both `editorExtensions` (NoteEditor) and `viewerExtensions`
-// (NoteViewer) MUST share the same core extensions so a future
-// change to one cannot silently re-introduce the "Sin contenido."
-// markdown-not-parsed bug class (the mobile viewer treated the
-// markdown source as raw HTML and leaked the ```` ``` ```` fence
-// characters into the rendered output).
-export { viewerExtensions };
+const MOBILE_MAX_PX = 767;
 
 interface NoteViewerProps {
   note: Note;

@@ -176,19 +176,24 @@ describe("REQ-GRMR-01 — lazy grammar loading", () => {
     );
     expect(totalRegisters).toBe(0);
 
-    // (b) Wiring contract — NoteViewer.tsx must use the lazy factory
-    // and must NOT bypass it with `createLowlight(all)`. The lazy
-    // factory is the supported contract for module-init lowlight
-    // creation; any direct `createLowlight(all)` call would re-register
-    // every grammar eagerly and violate REQ-GRMR-01.
+    // (b) Wiring contract — the lowlight must be created via the
+    // lazy factory and must NOT bypass it with `createLowlight(all)`.
+    // The lazy factory is the supported contract for module-init
+    // lowlight creation; any direct `createLowlight(all)` call would
+    // re-register every grammar eagerly and violate REQ-GRMR-01.
+    // As of shell-redesign-v1, both `NoteEditor` and `NoteViewer`
+    // import the shared `lowlight` from `./extensions` (extracted
+    // to keep those component files fast-refreshable), so the
+    // contract is now enforced in `extensions.tsx` instead of the
+    // individual component files.
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const fs = require("fs") as typeof import("fs");
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const path = require("path") as typeof import("path");
-    const viewerPath = path.resolve(__dirname, "./NoteViewer.tsx");
-    const viewerSource = fs.readFileSync(viewerPath, "utf-8");
-    expect(viewerSource).toMatch(/createLazyLowlight\s*\(\s*\)/);
-    expect(viewerSource).not.toMatch(/createLowlight\s*\(\s*all\b/);
+    const extensionsPath = path.resolve(__dirname, "./extensions.tsx");
+    const extensionsSource = fs.readFileSync(extensionsPath, "utf-8");
+    expect(extensionsSource).toMatch(/createLazyLowlight\s*\(\s*\)/);
+    expect(extensionsSource).not.toMatch(/createLowlight\s*\(\s*all\b/);
   });
 
   it("first code block: ensureGrammarRegistered('rust') registers exactly one rust grammar", async () => {

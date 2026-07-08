@@ -57,6 +57,10 @@ vi.mock("@tiptap/react", () => ({
   ReactNodeViewRenderer: vi.fn(() => vi.fn()),
   NodeViewWrapper: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   NodeViewContent: () => <div />,
+  // NoteEditor's `CodeBlockTabExtension` lives in extensions.tsx (extracted
+  // for fast-refresh). We mock it as a no-op class so the viewer test
+  // can import the extension array without the real TipTap Extension.
+  Extension: { create: vi.fn(() => ({})) },
 }));
 
 // ─── Fixtures ────────────────────────────────────────────────────────────────

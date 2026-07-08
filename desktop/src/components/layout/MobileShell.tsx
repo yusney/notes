@@ -86,6 +86,12 @@ export function MobileShell({ children }: MobileShellProps = {}) {
   // Auto-close the drawer on any URL change. The URL is the source of
   // truth for "where am I" — keeping the sheet open across navigation
   // would feel like the drawer is sticky and broken.
+  //
+  // The react-doctor `no-mutable-in-deps` rule flags `location.pathname`
+  // as a mutable global — false positive. `useLocation()` (line 82)
+  // already subscribes the component to location changes; the effect
+  // re-runs whenever the component re-renders due to a route change.
+  // eslint-disable-next-line react-doctor/no-mutable-in-deps
   useEffect(() => {
     setSheetOpen(false);
   }, [location.pathname]);
@@ -95,6 +101,7 @@ export function MobileShell({ children }: MobileShellProps = {}) {
   // viewer. On mobile we don't want that signal — the route IS the
   // source of truth. Resetting on every non-home route keeps the
   // desktop <main> hidden so the mobile <Outlet> owns the viewport.
+  // eslint-disable-next-line react-doctor/no-mutable-in-deps
   useEffect(() => {
     if (location.pathname !== "/") {
       useNoteStore.setState({ activeNoteId: null });

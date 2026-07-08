@@ -85,22 +85,20 @@ fn exit_app(app: tauri::AppHandle, should_exit: tauri::State<Arc<AtomicBool>>) {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let mut builder = tauri::Builder::default();
     let should_exit = Arc::new(AtomicBool::new(false));
     let should_exit_for_run = should_exit.clone();
+    let builder = tauri::Builder::default();
 
     // Must be registered before other plugins so Linux/Windows can forward
     // deep links from a second spawned process to the already-running app.
     #[cfg(desktop)]
-    {
-        builder = builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+    let builder = builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             // Bring the window to front when a second instance is launched.
             if let Some(window) = app.get_webview_window("main") {
                 window.show().ok();
                 window.set_focus().ok();
             }
         }));
-    }
 
     builder
         .plugin(tauri_plugin_opener::init())
@@ -174,17 +172,17 @@ pub fn run() {
         })
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
-        .run(move |app_handle, event| match event {
-            RunEvent::ExitRequested { api, .. } => {
+        .run(move |_app_handle, event| match event {
+            RunEvent::ExitRequested { api: _api, .. } => {
                 // Don't exit when the window closes — keep running in tray.
                 // exit_app command sets should_exit=true so the process can exit.
                 if !should_exit_for_run.load(Ordering::SeqCst) {
-                    api.prevent_exit();
+                    _api.prevent_exit();
                 }
             }
             RunEvent::WindowEvent {
                 label,
-                event: WindowEvent::CloseRequested { api, .. },
+                event: WindowEvent::CloseRequested { api: _api, .. },
                 ..
             } => {
                 // Desktop-only: keep the window alive in the system tray and
@@ -195,9 +193,9 @@ pub fn run() {
                 #[cfg(desktop)]
                 {
                     if label == "main" && !should_exit_for_run.load(Ordering::SeqCst) {
-                        api.prevent_close();
-                        if app_handle.get_webview_window("main").is_some() {
-                            app_handle.emit("close-requested-dialog", ()).unwrap_or(());
+                        _api.prevent_close();
+                        if _app_handle.get_webview_window("main").is_some() {
+                            _app_handle.emit("close-requested-dialog", ()).unwrap_or(());
                         }
                     }
                 }
