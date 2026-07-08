@@ -425,7 +425,7 @@ describe("ApiClient", () => {
 
 // REQ-PERF-H — Tauri desktop login regression guard (introduced by commit F).
 // Commit F (6bb39d2) migrated every URL call site to use getApiBaseUrl(),
-// which routes through loadRuntimeConfig() and reads desktop/public/config.json.
+// which routes through loadRuntimeConfig() and reads apps/client/public/config.json.
 // That file shipped {"apiBaseUrl":"http://10.0.2.2:8080"} — the Android
 // emulator's loopback IP — which is unreachable from a real desktop binary.
 // Result: Google OAuth exchange + startURL (useOAuth.ts:43,87) and the

@@ -1,4 +1,4 @@
-const { test, expect } = require('/home/yusney/app/notes/desktop/node_modules/@playwright/test');
+const { test, expect } = require('@playwright/test');
 
 test('basic smoke test', async ({ page }) => {
   await page.goto('/');

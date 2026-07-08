@@ -9,7 +9,7 @@
 #   3. If a previous `pnpm tauri android dev` is still running (PID file
 #      at /tmp/tauri-android-dev.pid), brings the app to the foreground
 #      via `am start` and tails the dev log — no second instance needed.
-#   4. Otherwise launches `pnpm tauri android dev` from desktop/, which
+#   4. Otherwise launches `pnpm tauri android dev` from apps/client/, which
 #      builds the Rust shell, runs the Vite dev server, installs the
 #      debug APK on the emulator, and starts the app pointed at the
 #      dev server. Hot reload is automatic on any .tsx / .ts / .css
@@ -36,7 +36,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-DESKTOP_DIR="$ROOT/desktop"
+CLIENT_DIR="$ROOT/apps/client"
 
 # ── Env vars ────────────────────────────────────────────────────────────
 export JAVA_HOME="${JAVA_HOME:-/snap/android-studio/current/jbr}"
@@ -110,7 +110,7 @@ fi
 # ── Tauri build + dev server (foreground) ──────────────────────────────
 # Vite dev server + Gradle install + launch + file watcher. Ctrl+C
 # stops the whole chain cleanly.
-cd "$DESKTOP_DIR"
+cd "$CLIENT_DIR"
 echo "→ Starting tauri android dev (first build 1-2 min, hot reload after)..."
 echo ""
 exec pnpm tauri android dev
