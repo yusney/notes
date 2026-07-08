@@ -2,7 +2,8 @@ import { describe, it, expect } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, useLocation } from "react-router-dom";
-import { BottomNav, BOTTOM_NAV_ITEMS } from "./BottomNav";
+import { BottomNav } from "./BottomNav";
+import { BOTTOM_NAV_ITEMS } from "./BottomNav.items";
 
 function renderBottomNav(initialPath = "/") {
   return render(

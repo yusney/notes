@@ -1,20 +1,11 @@
 /* eslint-disable react-doctor/prefer-tag-over-role -- div[role=status] is correct ARIA live region; no native HTML equivalent */
 import { useEffect, useReducer, useRef } from "react";
-import { useEditor, EditorContent, Extension } from "@tiptap/react";
+import { useEditor, EditorContent } from "@tiptap/react";
 // REQ-PERF-05 — lowlight CSS ships with the editor lazy chunk (was
 // previously in the cold-boot render-blocking chain via index.css).
 import "../../styles/lowlight.css";
-import { StarterKit } from "@tiptap/starter-kit";
-import { CodeBlockLowlight } from "@tiptap/extension-code-block-lowlight";
-import { Link } from "@tiptap/extension-link";
-import { TaskList } from "@tiptap/extension-task-list";
-import { TaskItem } from "@tiptap/extension-task-item";
-import { Table } from "@tiptap/extension-table";
-import { TableRow } from "@tiptap/extension-table-row";
-import { TableCell } from "@tiptap/extension-table-cell";
-import { TableHeader } from "@tiptap/extension-table-header";
-import { Markdown } from "tiptap-markdown";
-import { createLazyLowlight, discoverAndRegisterGrammars } from "./grammarLoader";
+import { discoverAndRegisterGrammars } from "./grammarLoader";
+import { editorExtensions, lowlight } from "./extensions";
 import { useAutoSave, type SaveStatus } from "../../hooks/useAutoSave";
 import type { Note, Tag } from "../../types";
 import { TagInput } from "../notes/TagInput";
@@ -23,48 +14,6 @@ import { formatCodeBlock } from "./CodeFormatter";
 import type { SupportedFormatLang } from "./CodeFormatter";
 import { countEditorStats } from "./countEditorStats";
 import { NoteEditorMobileToolbar } from "./NoteEditorMobileToolbar";
-
-// REQ-GRMR-01: lazy grammar loading — the editor (desktop) follows the
-// same contract as the viewer. The lowlight instance starts empty and
-// registers grammars on demand when the editor hits a code block of
-// that language (discoverAndRegisterGrammars).
-const lowlight = createLazyLowlight();
-
-const CodeBlockTabExtension = Extension.create({
-  name: "codeBlockTab",
-  addKeyboardShortcuts() {
-    return {
-      Tab: () => {
-        if (this.editor.isActive("codeBlock")) {
-          this.editor.chain().focus().insertContent("  ").run();
-          return true;
-        }
-        return false;
-      },
-    };
-  },
-});
-
-const editorExtensions = [
-  StarterKit.configure({ codeBlock: false }),
-  CodeBlockLowlight.configure({ lowlight, defaultLanguage: null }),
-  CodeBlockTabExtension,
-  Link.configure({ autolink: true, openOnClick: false }),
-  TaskList,
-  TaskItem.configure({ nested: false }),
-  Table.configure({ resizable: false }),
-  TableRow,
-  TableCell,
-  TableHeader,
-  Markdown.configure({ transformPastedText: true, transformCopiedText: false }),
-];
-
-// Exported for the TipTap extensions parity regression test
-// (extensions-parity.test.ts) which locks the bugfix #2227 invariant:
-// `editorExtensions` and `NoteViewer.viewerExtensions` must share the
-// same core extensions so a future change to one cannot silently
-// re-introduce the "Sin contenido." markdown-not-parsed bug class.
-export { editorExtensions };
 
 function SaveStatusIndicator({ status }: { status: SaveStatus }) {
   if (status === "saving" || status === "pending") {

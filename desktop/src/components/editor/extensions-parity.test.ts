@@ -1,6 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { editorExtensions } from "./NoteEditor";
-import { viewerExtensions } from "./NoteViewer";
+import { editorExtensions, viewerExtensions } from "./extensions";
 
 /**
  * Bugfix #2227 invariant — TipTap extensions parity.

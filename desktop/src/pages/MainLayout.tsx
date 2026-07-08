@@ -77,6 +77,12 @@ export function MainLayout() {
   // still-open note because activeNoteId persists across routes.
   // We also reset on initial mount so the home shows the list, not the
   // last note the user had open before navigating away.
+  //
+  // The react-doctor `no-mutable-in-deps` rule flags `location.pathname`
+  // as a mutable global — false positive. `useLocation()` subscribes the
+  // component to route changes; the effect re-runs whenever the
+  // component re-renders because the route changed.
+  // eslint-disable-next-line react-doctor/no-mutable-in-deps
   useEffect(() => {
     if (location.pathname === "/") {
       setActiveNote(null);
