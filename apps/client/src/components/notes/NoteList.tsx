@@ -184,10 +184,14 @@ export function NoteList({
       data-testid="note-list"
       className="flex min-h-0 flex-1 w-full flex-col overflow-hidden border-r border-border bg-surface md:w-80"
     >
-      <div className="border-b border-border px-4 py-2 md:p-4">
+      <div className="hidden border-b border-border px-4 py-2 md:block md:p-4">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <span className="text-xs font-semibold uppercase tracking-[0.22em] text-text-secondary">
+            {/* Sidebar section label — desktop only. On mobile the
+                AppBar in MobileShell already shows the page title
+                ("Notas"), so duplicating it here as a small uppercase
+                chip at a different Y position read as a misalignment. */}
+            <span className="hidden text-xs font-semibold uppercase tracking-[0.22em] text-text-secondary md:inline">
               Notas
             </span>
             <p className="mt-1 hidden text-sm text-text-secondary md:block">

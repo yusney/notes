@@ -4,7 +4,9 @@ import { AppBar } from "./AppBar";
 import { BottomNav } from "./BottomNav";
 import { SideSheet } from "./SideSheet";
 import { EspaciosSection } from "./EspaciosSection";
+import { SearchBar } from "../notes/SearchBar";
 import { useNoteStore } from "../../stores/useNoteStore";
+import { useMobileSearchStore } from "../../stores/useMobileSearchStore";
 
 /**
  * Mobile shell — single-column mobile-only chrome that wraps react-router's
@@ -58,10 +60,15 @@ function shouldShowMenu(pathname: string): boolean {
 // pushes the empty / content area down on a thumb-driven viewport.
 // The AppBar still renders the leading slot (back chevron) so the
 // user has a clear way out.
+//
+// `/search` is handled separately below — the AppBar renders the
+// SearchBar component (not a string title) in the title slot so the
+// search input sits at the same Y position as the hamburger button
+// (same flex row), not as a separate row below.
 function getMobileTitle(pathname: string): string {
   if (pathname === "/") return "Notas";
   if (pathname === "/new") return "Nueva nota";
-  if (pathname === "/search") return "Buscar";
+  if (pathname === "/search") return "";
   if (pathname === "/profile") return "Perfil";
   if (pathname === "/settings") return "Configuración";
   if (pathname.startsWith("/notes/")) return "";
@@ -112,6 +119,15 @@ export function MobileShell({ children }: MobileShellProps = {}) {
 
   const showMenu = shouldShowMenu(location.pathname);
   const title = getMobileTitle(location.pathname);
+  const isSearchRoute = location.pathname === "/search";
+
+  // Reset the mobile search query when the user navigates away from
+  // /search so re-entering the route always shows a fresh empty input.
+  useEffect(() => {
+    if (!isSearchRoute) {
+      useMobileSearchStore.getState().resetQuery();
+    }
+  }, [isSearchRoute]);
 
   function handleBack() {
     if (location.pathname.startsWith("/notes/")) {
@@ -148,7 +164,24 @@ export function MobileShell({ children }: MobileShellProps = {}) {
       data-testid="mobile-shell"
       className="md:hidden flex h-screen flex-col bg-surface text-text-primary"
     >
-      <AppBar title={title} leading={leading} />
+      <AppBar
+        title={
+          // On /search, render the SearchBar in the title slot so the
+          // search input shares the AppBar's flex row with the hamburger
+          // — same Y position, no separate row below that would
+          // duplicate the search affordance and read as a misalignment.
+          isSearchRoute ? (
+            <SearchBar
+              onSearch={(q) => useMobileSearchStore.getState().setQuery(q)}
+              debounceMs={0}
+              variant="appbar"
+            />
+          ) : (
+            title
+          )
+        }
+        leading={leading}
+      />
       <main className="flex min-h-0 flex-1 overflow-hidden">
         {children !== undefined ? children : <Outlet />}
       </main>

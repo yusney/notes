@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { SearchBar } from "../components/notes/SearchBar";
 import { NoteList } from "../components/notes/NoteList";
-import { MobilePageFrame } from "../components/layout/MobilePageFrame";
 import { useNoteStore } from "../stores/useNoteStore";
+import { useMobileSearchStore } from "../stores/useMobileSearchStore";
 import type { Note } from "../types";
 
 const SEARCH_PAGE_SIZE = 10;
@@ -12,12 +11,12 @@ const SEARCH_PAGE_SIZE = 10;
  * MobileSearchPage — full-screen search route for `/search` on mobile
  * (decision #2: NOT a modal sheet).
  *
+ * The search input itself lives in the AppBar (rendered by MobileShell
+ * in the title slot — same Y as the hamburger). The query state is
+ * shared via `useMobileSearchStore` so the AppBar's SearchBar and
+ * this page's filter read from the same source.
+ *
  * Behavior:
- *   - Local-only query state — typing here does NOT mutate the global
- *     `useNoteStore.searchQuery`. The wide-viewport list filter lives in the
- *     global store; mobile search is a parallel concern. Keeping
- *     them decoupled means typing in mobile search doesn't reset the
- *     user's wide-viewport-side query.
  *   - Filters the store's `notes` list by case-insensitive substring
  *     match against title OR content (content stripped of HTML tags).
  *   - Pagination: only the first `SEARCH_PAGE_SIZE` notes are rendered
@@ -31,10 +30,16 @@ const SEARCH_PAGE_SIZE = 10;
  *   - Tapping a note navigates to `/notes/:id`.
  */
 export function MobileSearchPage() {
-  const { notes } = useNoteStore();
+  const { notes, tabs } = useNoteStore();
   const navigate = useNavigate();
-  const [query, setQuery] = useState("");
+  const query = useMobileSearchStore((s) => s.query);
   const [visibleCount, setVisibleCount] = useState(SEARCH_PAGE_SIZE);
+
+  // Reset the visible-page cursor whenever the query changes so each
+  // new search starts from the first page.
+  useEffect(() => {
+    setVisibleCount(SEARCH_PAGE_SIZE);
+  }, [query]);
 
   const filtered = useMemo<Note[]>(() => {
     const q = query.trim().toLowerCase();
@@ -46,20 +51,13 @@ export function MobileSearchPage() {
     });
   }, [notes, query]);
 
-  // Reset the visible-page cursor whenever the query changes so each
-  // new search starts from the first page.
-  useEffect(() => {
-    setVisibleCount(SEARCH_PAGE_SIZE);
-  }, [query]);
-
   const visible = filtered.slice(0, visibleCount);
   const hasMore = visible.length < filtered.length;
 
   return (
-    <MobilePageFrame testId="mobile-search-page" className="flex flex-1 flex-col">
-      <SearchBar onSearch={(q) => setQuery(q)} debounceMs={0} />
+    <div data-testid="mobile-search-page" className="flex min-h-0 flex-1 flex-col bg-surface">
       {filtered.length === 0 ? (
-        <div className="flex flex-1 flex-col items-center justify-center px-2 text-center text-text-secondary">
+        <div className="flex flex-1 flex-col items-center justify-center px-4 text-center text-text-secondary">
           <p className="text-sm">Sin resultados para &quot;{query}&quot;.</p>
           <p className="mt-1 text-xs">
             Probá con otra palabra o creá una nota nueva desde la pestaña Nueva.
@@ -68,6 +66,7 @@ export function MobileSearchPage() {
       ) : (
         <NoteList
           notes={visible}
+          tabs={tabs}
           activeNoteId={null}
           onNoteSelect={(id) => navigate(`/notes/${id}`)}
           onCreateNote={() => {
@@ -81,6 +80,6 @@ export function MobileSearchPage() {
           onLoadMore={() => setVisibleCount((c) => c + SEARCH_PAGE_SIZE)}
         />
       )}
-    </MobilePageFrame>
+    </div>
   );
 }

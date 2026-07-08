@@ -287,7 +287,7 @@ export function MainLayout() {
         mobile). On wide viewports, the existing "+" inside the list panel
         header stays.
       */}
-      <div className="relative flex h-screen flex-col md:flex-row overflow-hidden bg-surface text-text-primary pt-[env(safe-area-inset-top)] md:pt-0">
+      <div className="relative flex h-screen flex-col md:flex-row overflow-hidden bg-surface text-text-primary">
         <div className="hidden md:flex md:w-60 md:shrink-0 md:flex-col md:border-r md:border-border md:bg-surface-elevated md:text-text-primary">
           <Sidebar
             tabs={tabs}

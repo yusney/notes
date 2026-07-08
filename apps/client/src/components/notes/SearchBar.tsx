@@ -3,14 +3,17 @@ import { useState, useEffect, useRef } from "react";
 interface SearchBarProps {
   onSearch: (query: string) => void;
   debounceMs?: number;
+  variant?: "page" | "appbar";
 }
 
 export function SearchBar({
   onSearch,
   debounceMs = 300,
+  variant = "page",
 }: SearchBarProps) {
   const [value, setValue] = useState("");
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isAppBar = variant === "appbar";
 
   function scheduleSearch(query: string) {
     if (timerRef.current) clearTimeout(timerRef.current);
@@ -49,33 +52,40 @@ export function SearchBar({
   }
 
   return (
-    <div>
+    <div className={isAppBar ? "w-full" : undefined}>
       <div className="relative flex items-center">
-        <span className="absolute left-3 text-text-secondary" aria-hidden="true">
+        <span
+          className={`absolute text-text-secondary ${isAppBar ? "left-2.5 text-sm" : "left-3"}`}
+          aria-hidden="true"
+        >
           🔍
         </span>
-          <input
-            type="search"
-            name="note-search"
-            autoComplete="off"
-            aria-label="Buscar notas"
+        <input
+          type="search"
+          name="note-search"
+          autoComplete="off"
+          aria-label="Buscar notas"
           value={value}
           onChange={onQueryChange}
-          placeholder="Buscar en título y contenido…"
-            className="w-full border-b-2 border-input-border bg-surface py-2.5 pl-9 pr-8 text-sm text-text-primary placeholder:text-text-secondary focus:border-accent focus:bg-surface-elevated focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          placeholder={isAppBar ? "Buscar notas…" : "Buscar en título y contenido…"}
+          className={
+            isAppBar
+              ? "h-11 w-full rounded border border-border bg-surface px-9 text-sm text-text-primary placeholder:text-text-secondary focus:border-accent focus:bg-surface-elevated focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              : "w-full border-b-2 border-input-border bg-surface py-2.5 pl-9 pr-8 text-sm text-text-primary placeholder:text-text-secondary focus:border-accent focus:bg-surface-elevated focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          }
         />
         {value && (
           <button
             type="button"
             onClick={handleClear}
             aria-label="Limpiar búsqueda"
-            className="absolute right-2 text-text-secondary hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="absolute right-2 grid size-8 place-items-center text-text-secondary hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             ✕
           </button>
         )}
       </div>
-      {value && (
+      {!isAppBar && value && (
         <p className="mt-1 px-2 text-[10px] text-text-secondary">
           Buscando en títulos y contenido de las notas
         </p>

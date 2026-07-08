@@ -104,18 +104,18 @@
   --color-code-inline: #f472b6;
   /* shell-redesign-v1 (PR1) — safe-area aliases (mobile notch / gesture bar)
    *
-   * `--safe-top` is the status-bar inset capped at 24px. The Pixel 10
+   * `--safe-top` is the status-bar inset clamped between 24px and 32px. The Pixel 10
    * AVD reports a 142px displayCutout via `env(safe-area-inset-top)`
    * even on Tauri Android's non-overlay WebView, which previously
-   * stretched the AppBar into a 210px+ dead band. Capping at 24px
-   * keeps the mobile chrome compact while still reserving enough
-   * room for the non-overlay Android status bar.
+   * stretched the AppBar into a 210px+ dead band. Clamping to 24–32px
+   * keeps the mobile chrome compact while still reserving a
+   * stable status-bar band across Android WebView reports.
    *
    * If Tauri ever switches to edge-to-edge on Android
    * (`windowDrawsSystemBarBackgrounds` + translucent status bar),
    * raise the cap and audit AppBar height again.
    */
-  --safe-top: max(min(env(safe-area-inset-top, 0px), 24px), 0px);
+  --safe-top: clamp(24px, env(safe-area-inset-top, 24px), 32px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
   --safe-right: env(safe-area-inset-right, 0px);
@@ -146,18 +146,18 @@
   --color-code-inline: #f472b6;
   /* shell-redesign-v1 (PR1) — safe-area aliases (mobile notch / gesture bar)
    *
-   * `--safe-top` is the status-bar inset capped at 24px. The Pixel 10
+   * `--safe-top` is the status-bar inset clamped between 24px and 32px. The Pixel 10
    * AVD reports a 142px displayCutout via `env(safe-area-inset-top)`
    * even on Tauri Android's non-overlay WebView, which previously
-   * stretched the AppBar into a 210px+ dead band. Capping at 24px
-   * keeps the mobile chrome compact while still reserving enough
-   * room for the non-overlay Android status bar.
+   * stretched the AppBar into a 210px+ dead band. Clamping to 24–32px
+   * keeps the mobile chrome compact while still reserving a
+   * stable status-bar band across Android WebView reports.
    *
    * If Tauri ever switches to edge-to-edge on Android
    * (`windowDrawsSystemBarBackgrounds` + translucent status bar),
    * raise the cap and audit AppBar height again.
    */
-  --safe-top: max(min(env(safe-area-inset-top, 0px), 24px), 0px);
+  --safe-top: clamp(24px, env(safe-area-inset-top, 24px), 32px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
   --safe-right: env(safe-area-inset-right, 0px);
@@ -188,18 +188,18 @@ html.light {
   --color-code-inline: #c2410c;
   /* shell-redesign-v1 (PR1) — safe-area aliases (mobile notch / gesture bar)
    *
-   * `--safe-top` is the status-bar inset capped at 24px. The Pixel 10
+   * `--safe-top` is the status-bar inset clamped between 24px and 32px. The Pixel 10
    * AVD reports a 142px displayCutout via `env(safe-area-inset-top)`
    * even on Tauri Android's non-overlay WebView, which previously
-   * stretched the AppBar into a 210px+ dead band. Capping at 24px
-   * keeps the mobile chrome compact while still reserving enough
-   * room for the non-overlay Android status bar.
+   * stretched the AppBar into a 210px+ dead band. Clamping to 24–32px
+   * keeps the mobile chrome compact while still reserving a
+   * stable status-bar band across Android WebView reports.
    *
    * If Tauri ever switches to edge-to-edge on Android
    * (`windowDrawsSystemBarBackgrounds` + translucent status bar),
    * raise the cap and audit AppBar height again.
    */
-  --safe-top: max(min(env(safe-area-inset-top, 0px), 24px), 0px);
+  --safe-top: clamp(24px, env(safe-area-inset-top, 24px), 32px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
   --safe-right: env(safe-area-inset-right, 0px);

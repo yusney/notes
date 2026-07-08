@@ -3,6 +3,8 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { MobileSearchPage } from "./MobileSearchPage";
+import { SearchBar } from "../components/notes/SearchBar";
+import { useMobileSearchStore } from "../stores/useMobileSearchStore";
 
 const NOTE_1 = {
   id: "n-1",
@@ -45,17 +47,33 @@ vi.mock("../stores/useNoteStore", () => ({
 import { useNoteStore } from "../stores/useNoteStore";
 
 /**
- * MobileSearchPage — full-screen mobile search route (PR2, decision #2).
+ * MobileSearchPage — page content for the /search route on mobile.
  *
- * Renders a SearchBar at the top (controlled by local state, NOT the
- * global store — the global store is shared with the wide-viewport list
- * filter and we don't want a typing-in-search to mutate that yet).
- * Below the SearchBar, a filterable NoteList shows matching notes.
+ * The search input lives in the AppBar (rendered by MobileShell in the
+ * title slot — same Y as the hamburger), NOT in the page. The page
+ * reads the query from `useMobileSearchStore` and filters notes.
  *
- * Empty state when no notes match the query.
+ * To exercise the page's filter logic in isolation (without the full
+ * MobileShell chrome), the test harness renders a standalone SearchBar
+ * that writes to the same store. This mirrors the production wire-up
+ * (AppBar's SearchBar writes to the store, page reads from it) without
+ * pulling in BottomNav, SideSheet, etc.
  */
+function renderSearchHarness() {
+  return render(
+    <MemoryRouter initialEntries={["/search"]}>
+      <SearchBar
+        onSearch={(q) => useMobileSearchStore.getState().setQuery(q)}
+        debounceMs={0}
+      />
+      <MobileSearchPage />
+    </MemoryRouter>,
+  );
+}
+
 describe("MobileSearchPage (PR2 — shell-redesign-v1)", () => {
   beforeEach(() => {
+    useMobileSearchStore.getState().resetQuery();
     vi.mocked(useNoteStore).mockReturnValue({
       notes: [NOTE_1, NOTE_2, NOTE_3],
       filteredNotes: () => [NOTE_1, NOTE_2, NOTE_3],
@@ -66,20 +84,12 @@ describe("MobileSearchPage (PR2 — shell-redesign-v1)", () => {
   });
 
   it("renders a search input with aria-label='Buscar notas'", () => {
-    render(
-      <MemoryRouter initialEntries={["/search"]}>
-        <MobileSearchPage />
-      </MemoryRouter>,
-    );
+    renderSearchHarness();
     expect(screen.getByRole("searchbox", { name: /buscar notas/i })).toBeInTheDocument();
   });
 
   it("initially lists all notes from the store", () => {
-    render(
-      <MemoryRouter initialEntries={["/search"]}>
-        <MobileSearchPage />
-      </MemoryRouter>,
-    );
+    renderSearchHarness();
     expect(screen.getByText(/reunión con cliente/i)).toBeInTheDocument();
     expect(screen.getByText(/lista de compras/i)).toBeInTheDocument();
     expect(screen.getByText(/receta de pasta/i)).toBeInTheDocument();
@@ -87,11 +97,7 @@ describe("MobileSearchPage (PR2 — shell-redesign-v1)", () => {
 
   it("typing in the search bar filters notes by title (case-insensitive)", async () => {
     const user = userEvent.setup();
-    render(
-      <MemoryRouter initialEntries={["/search"]}>
-        <MobileSearchPage />
-      </MemoryRouter>,
-    );
+    renderSearchHarness();
     const input = screen.getByRole("searchbox", { name: /buscar notas/i });
     await user.type(input, "pasta");
     expect(screen.queryByText(/reunión con cliente/i)).not.toBeInTheDocument();
@@ -101,11 +107,7 @@ describe("MobileSearchPage (PR2 — shell-redesign-v1)", () => {
 
   it("typing in the search bar filters notes by content (case-insensitive)", async () => {
     const user = userEvent.setup();
-    render(
-      <MemoryRouter initialEntries={["/search"]}>
-        <MobileSearchPage />
-      </MemoryRouter>,
-    );
+    renderSearchHarness();
     const input = screen.getByRole("searchbox", { name: /buscar notas/i });
     await user.type(input, "leche");
     expect(screen.queryByText(/reunión con cliente/i)).not.toBeInTheDocument();
@@ -115,11 +117,7 @@ describe("MobileSearchPage (PR2 — shell-redesign-v1)", () => {
 
   it("shows an empty hint when no note matches", async () => {
     const user = userEvent.setup();
-    render(
-      <MemoryRouter initialEntries={["/search"]}>
-        <MobileSearchPage />
-      </MemoryRouter>,
-    );
+    renderSearchHarness();
     const input = screen.getByRole("searchbox", { name: /buscar notas/i });
     await user.type(input, "xyz123-no-match");
     expect(screen.queryByText(/reunión con cliente/i)).not.toBeInTheDocument();
@@ -128,7 +126,7 @@ describe("MobileSearchPage (PR2 — shell-redesign-v1)", () => {
     expect(screen.getByText(/sin resultados|no se encontr/i)).toBeInTheDocument();
   });
 
-  it("does NOT call setSearchQuery on the global store (local-only filter)", async () => {
+  it("does NOT call setSearchQuery on the global note store (mobile search is local)", async () => {
     const user = userEvent.setup();
     const setSearchQuery = vi.fn();
     vi.mocked(useNoteStore).mockReturnValue({
@@ -139,11 +137,7 @@ describe("MobileSearchPage (PR2 — shell-redesign-v1)", () => {
       fetchNotes: vi.fn().mockResolvedValue(undefined),
     } as never);
 
-    render(
-      <MemoryRouter initialEntries={["/search"]}>
-        <MobileSearchPage />
-      </MemoryRouter>,
-    );
+    renderSearchHarness();
     await user.type(screen.getByRole("searchbox", { name: /buscar notas/i }), "hola");
     expect(setSearchQuery).not.toHaveBeenCalled();
   });
