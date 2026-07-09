@@ -20,7 +20,7 @@ import { MemoryRouter } from "react-router-dom";
  *   - Populated store + mobile viewport → NoteList in the
  *     MobileShell `<main>`. EmptyState is NOT visible.
  *   - Wide viewport → REQ-LAY-01 wide-viewport-pixel-identical holds
- *     (MobileShell subtree stays `md:hidden`, AppBar/BottomNav
+ *     (MobileShell subtree stays `lg:hidden`, AppBar/BottomNav
  *     chrome still present in the DOM tree).
  *
  * REQ-PERF-02 NOTE: we import MainLayout directly (NOT through
@@ -276,7 +276,7 @@ describe("MainLayout mobile home integration (PR3 hotfix — shell-redesign-v1)"
     expect(mobileMain!.querySelector('[data-testid="empty-state"]')).toBeNull();
   });
 
-  it("on wide viewports, the MobileShell subtree stays `md:hidden` (REQ-LAY-01 wide-viewport-pixel-identical)", () => {
+  it("on wide viewports, the MobileShell subtree stays `lg:hidden` (REQ-LAY-01 wide-viewport-pixel-identical)", () => {
     mockMatchMedia(false);
 
     render(
@@ -286,14 +286,14 @@ describe("MainLayout mobile home integration (PR3 hotfix — shell-redesign-v1)"
     );
 
     // MobileShell is still in the DOM tree (just visually hidden via
-    // md:hidden CSS). The AppBar inside MobileShell renders regardless.
+    // lg:hidden CSS). The AppBar inside MobileShell renders regardless.
     expect(screen.getByTestId("app-bar")).toBeInTheDocument();
     const mobileShell = document.querySelector('[data-testid="mobile-shell"]');
     expect(mobileShell).not.toBeNull();
-    expect(mobileShell!.className).toMatch(/\bmd:hidden\b/);
-    // The wrapper carrying the MobileShell subtree is also `md:hidden`
+    expect(mobileShell!.className).toMatch(/\blg:hidden\b/);
+    // The wrapper carrying the MobileShell subtree is also `lg:hidden`
     // (REQ-LAY-01 — wide-viewport pixel-identical).
     const wrapper = mobileShell!.parentElement as HTMLElement;
-    expect(wrapper.className).toMatch(/\bmd:hidden\b/);
+    expect(wrapper.className).toMatch(/\blg:hidden\b/);
   });
 });

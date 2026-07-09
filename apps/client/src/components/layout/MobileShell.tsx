@@ -13,8 +13,8 @@ import { useMobileSearchStore } from "../../stores/useMobileSearchStore";
  * `<Outlet/>` with the AppBar (top), BottomNav (bottom) and a SideSheet
  * drawer opened from a hamburger trigger.
  *
- * Mount: caller (`MainLayout`) places this inside a `md:hidden` sibling
- * so the mobile shell only renders at <768px. MobileShell itself is
+ * Mount: caller (`MainLayout`) places this inside a `lg:hidden` sibling
+ * so the mobile shell only renders at <1024px. MobileShell itself is
  * mount-agnostic — its visibility is decided by the parent.
  *
  * Mobile-only behaviours encoded here:
@@ -41,8 +41,8 @@ import { useMobileSearchStore } from "../../stores/useMobileSearchStore";
  *      context about which screen they are on.
  *
  * REQ-LAY-01 (wide-viewport-pixel-identical): this component is added as a
- * `md:hidden` sibling of the existing flex tree in `MainLayout`; the
- * wide-viewport markup (`md:flex-row`, `md:flex`, etc.) is untouched.
+ * `lg:hidden` sibling of the existing flex tree in `MainLayout`; the
+ * wide-viewport markup (`lg:flex-row`, `lg:flex`, etc.) is untouched.
  */
 
 // Routes that should show the hamburger menu. Note detail routes keep
@@ -162,7 +162,7 @@ export function MobileShell({ children }: MobileShellProps = {}) {
   return (
     <div
       data-testid="mobile-shell"
-      className="md:hidden flex h-screen flex-col bg-surface text-text-primary"
+      className="lg:hidden flex h-screen flex-col bg-surface text-text-primary"
     >
       <AppBar
         title={

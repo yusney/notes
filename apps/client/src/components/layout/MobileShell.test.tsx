@@ -8,7 +8,7 @@ import { useNoteStore } from "../../stores/useNoteStore";
 /**
  * Tests for MobileShell (PR2 — shell-redesign-v1).
  *
- * MobileShell is the `md:hidden` sibling inside `MainLayout`'s flex
+ * MobileShell is the `lg:hidden` sibling inside `MainLayout`'s flex
  * tree. It composes the mobile-only chrome (AppBar + Outlet + BottomNav)
  * and orchestrates the SideSheet drawer via a hamburger trigger. PR2
  * wires the store-override behaviour that keeps the wide viewport
@@ -75,13 +75,13 @@ describe("MobileShell (PR2 — shell-redesign-v1)", () => {
       };
   });
 
-  it("renders an AppBar + BottomNav inside a `md:hidden` root", () => {
+  it("renders an AppBar + BottomNav inside a `lg:hidden` root", () => {
     const { container } = renderShell("/");
     expect(screen.getByTestId("app-bar")).toBeInTheDocument();
     expect(screen.getByRole("navigation", { name: /navegación principal/i })).toBeInTheDocument();
     const shell = container.querySelector('[data-testid="mobile-shell"]');
     expect(shell).not.toBeNull();
-    expect(shell!.className).toMatch(/\bmd:hidden\b/);
+    expect(shell!.className).toMatch(/\blg:hidden\b/);
   });
 
   it("renders the AppBar + main + BottomNav as direct flex siblings (h-screen flex-col)", () => {

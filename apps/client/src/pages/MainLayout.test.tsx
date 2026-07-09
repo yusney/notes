@@ -6,13 +6,13 @@ import { useAuthStore } from "../stores/useAuthStore";
 
 /**
  * Mock matchMedia for responsive-layout tests. Tailwind v4 emits
- * `@media (min-width: 768px) { ... }` for the `md:` variant; the
- * responsive contract is encoded in CSS classes (md:flex-row, etc.),
+ * `@media (min-width: 1024px) { ... }` for the `lg:` variant; the
+ * responsive contract is encoded in CSS classes (lg:flex-row, etc.),
  * but the test asserts the SAME intent at the JS class level.
  *
  * The viewport itself is purely cosmetic for jsdom — what matters is
  * that the *rendered class list* reflects the mobile vs. wide viewport
- * intent. So we mock matchMedia to return matches:true for "(max-width: 767px)"
+ * intent. So we mock matchMedia to return matches:true for "(max-width: 1023px)"
  * in the mobile case and matches:false in the wide-viewport case. The actual
  * `window.innerWidth` is irrelevant.
  */
@@ -148,18 +148,18 @@ describe("MainLayout", () => {
     expect(screen.getByTestId("search-bar")).toBeInTheDocument();
   });
 
-  it("mounts MobileShell as a `md:hidden` sibling inside the flex tree", () => {
+  it("mounts MobileShell as a `lg:hidden` sibling inside the flex tree", () => {
     // PR2 — MobileShell integration. The mobile shell renders an AppBar
     // (data-testid="app-bar") which is the easiest visible anchor.
-    mockMatchMedia(false); // wide-viewport render context (md: classes resolve correctly)
+    mockMatchMedia(false); // wide-viewport render context (lg: classes resolve correctly)
     render(<MemoryRouter><MainLayout /></MemoryRouter>);
     // MobileShell mounts an AppBar at top of its subtree. The shell itself
-    // is wrapped in a div with `md:hidden`, so at wide-viewport the AppBar is
+    // is wrapped in a div with `lg:hidden`, so at wide-viewport the AppBar is
     // visually hidden — but in the DOM tree it's still present.
     expect(screen.getByTestId("app-bar")).toBeInTheDocument();
   });
 
-  it("the MobileShell wrapper carries the `md:hidden` class (REQ-LAY-01 wide-viewport-pixel-identical)", () => {
+  it("the MobileShell wrapper carries the `lg:hidden` class (REQ-LAY-01 wide-viewport-pixel-identical)", () => {
     mockMatchMedia(false); // wide viewport
     render(<MemoryRouter><MainLayout /></MemoryRouter>);
     // Find the wrapper div that holds MobileShell. It's the element
@@ -167,20 +167,20 @@ describe("MainLayout", () => {
     const appBar = screen.getByTestId("app-bar");
     const wrapper = appBar.parentElement as HTMLElement;
     expect(wrapper).not.toBeNull();
-    expect(wrapper.className).toMatch(/\bmd:hidden\b/);
+    expect(wrapper.className).toMatch(/\blg:hidden\b/);
   });
 });
 
 // ── Responsive layout (REQ-LAY-01) ───────────────────────────────────────────
 //
-// Mobile (<768px): the three columns stack vertically into a single column
+// Mobile (<1024px): the three columns stack vertically into a single column
 // (only one panel visible at a time). Tailwind: root has `flex-col`, panels
-// gated with `hidden md:flex`. PR2 adds a MobileShell subtree as a
-// `md:hidden` sibling — the wide-viewport `md:flex-row` and panel gating stay
+// gated with `hidden lg:flex`. PR2 adds a MobileShell subtree as a
+// `lg:hidden` sibling — the wide-viewport `lg:flex-row` and panel gating stay
 // byte-identical to pre-PR2.
 //
-// Desktop (≥768px): the three columns sit side-by-side as today. Tailwind:
-// root has `md:flex-row`, panels visible by default.
+// Desktop (≥1024px): the three columns sit side-by-side as today. Tailwind:
+// root has `lg:flex-row`, panels visible by default.
 
 describe("MainLayout responsive (REQ-LAY-01)", () => {
   beforeEach(() => {
@@ -188,7 +188,7 @@ describe("MainLayout responsive (REQ-LAY-01)", () => {
   });
 
   it("uses flex-col (single-column) at 360px viewport (mobile)", () => {
-    mockMatchMedia(true); // (max-width: 767px) → matches on mobile
+    mockMatchMedia(true); // (max-width: 1023px) → matches on mobile
 
     const { container } = render(<MemoryRouter><MainLayout /></MemoryRouter>);
     const root = container.firstChild as HTMLElement;
@@ -196,8 +196,8 @@ describe("MainLayout responsive (REQ-LAY-01)", () => {
 
     // The root flex container must declare mobile-first single-column.
     expect(root.className).toMatch(/\bflex-col\b/);
-    // And opt-into row layout only at the md breakpoint.
-    expect(root.className).toMatch(/\bmd:flex-row\b/);
+    // And opt-into row layout only at the lg breakpoint.
+    expect(root.className).toMatch(/\blg:flex-row\b/);
   });
 
   it("uses flex-col at 360px viewport (mobile) — sidebar is hidden", () => {
@@ -205,31 +205,31 @@ describe("MainLayout responsive (REQ-LAY-01)", () => {
 
     const { container } = render(<MemoryRouter><MainLayout /></MemoryRouter>);
     // The Sidebar is the first column of the 3-col wide-viewport layout. On mobile
-    // it must be hidden (md:block, default hidden) so the list/viewer take
+    // it must be hidden (lg:flex, default hidden) so the list/viewer take
     // the full viewport width.
     const sidebar = container.querySelector('[data-testid="sidebar"]');
     expect(sidebar).not.toBeNull();
     const sidebarWrapper = sidebar!.parentElement as HTMLElement;
     expect(sidebarWrapper).not.toBeNull();
-    // The wrapper must hide the sidebar on mobile and reveal it on md.
+    // The wrapper must hide the sidebar on mobile and reveal it on lg.
     expect(sidebarWrapper.className).toMatch(/\bhidden\b/);
-    expect(sidebarWrapper.className).toMatch(/\bmd:flex\b/);
+    expect(sidebarWrapper.className).toMatch(/\blg:flex\b/);
   });
 
   it("uses flex-row (3-column) at 1280px viewport (wide viewport) — sidebar visible", () => {
-    mockMatchMedia(false); // wide viewport: (max-width: 767px) → no match
+    mockMatchMedia(false); // wide viewport: (max-width: 1023px) → no match
 
     const { container } = render(<MemoryRouter><MainLayout /></MemoryRouter>);
     // All three columns visible.
     expect(container.querySelector('[data-testid="sidebar"]')).toBeInTheDocument();
     expect(container.querySelector('[data-testid="note-list"]')).toBeInTheDocument();
 
-    // Sidebar wrapper is visible on wide viewports (md:flex).
+    // Sidebar wrapper is visible on wide viewports (lg:flex).
     const sidebar = container.querySelector('[data-testid="sidebar"]')!;
     const sidebarWrapper = sidebar.parentElement as HTMLElement;
-    expect(sidebarWrapper.className).toMatch(/\bmd:flex\b/);
+    expect(sidebarWrapper.className).toMatch(/\blg:flex\b/);
     expect(sidebarWrapper.className).toMatch(/\bhidden\b/);
-    expect(sidebarWrapper.className).toMatch(/\bmd:flex\b/);
+    expect(sidebarWrapper.className).toMatch(/\blg:flex\b/);
   });
 
   it("keeps the 3-column wide-viewport layout pixel-identical to pre-change (REQ-WIDE-01)", () => {
@@ -243,28 +243,22 @@ describe("MainLayout responsive (REQ-LAY-01)", () => {
     expect(container.querySelector('[data-testid="note-list"]')).toBeInTheDocument();
 
     // Root still wraps the panels in a row layout at wide viewport.
-    expect(root.className).toMatch(/\bmd:flex-row\b/);
+    expect(root.className).toMatch(/\blg:flex-row\b/);
   });
 
-  it("the source has NOT introduced any new `md:*` class outside the MobileShell subtree", () => {
+  it("the source keeps the MobileShell wrapper gated with `lg:hidden`", () => {
     // Source-level lint of the diff vs. the pr1-foundation baseline.
-    // Catches accidental regressions where a future commit re-adds or
-    // moves a `md:` class in MainLayout outside the MobileShell wrapper.
-    //
-    // Implementation: read the file, locate the MobileShell subtree
-    // (the wrapper div carrying `md:hidden`), and verify every `md:`
-    // token in the file is inside that subtree. This is intentionally
-    // coarse — finer-grained diff-checking is done at the PR-review
-    // step via the explicit `git diff` audit (see apply-progress).
+    // Catches accidental regressions where a future commit moves the app
+    // shell boundary back to `md:hidden`.
     const fs = require("fs");
     const path = require("path");
     const src = fs.readFileSync(
       path.resolve(__dirname, "MainLayout.tsx"),
       "utf8"
     );
-    // Find the MobileShell wrapper — `<div className="...md:hidden..."><MobileShell />`
-    const mobileShellMatch = src.match(/<div[^>]*md:hidden[^>]*>\s*<MobileShell/);
-    expect(mobileShellMatch, "MobileShell must be wrapped in a div with md:hidden").not.toBeNull();
+    // Find the MobileShell wrapper — `<div className="...lg:hidden..."><MobileShell />`
+    const mobileShellMatch = src.match(/<div[^>]*lg:hidden[^>]*>\s*<MobileShell/);
+    expect(mobileShellMatch, "MobileShell must be wrapped in a div with lg:hidden").not.toBeNull();
   });
 
   it("the empty state shows exactly ONE primary CTA (single-CTA rule per decisions #2207)", () => {

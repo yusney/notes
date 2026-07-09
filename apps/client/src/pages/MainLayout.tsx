@@ -269,16 +269,16 @@ export function MainLayout() {
     <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
       {/*
         Responsive root (REQ-LAY-01):
-        - Mobile (<768px): flex-col → the wide-viewport branch's three panels
-          collapse (Sidebar is `hidden md:flex`, list/main swap to hidden
+        - Mobile (<1024px): flex-col → the wide-viewport branch's three panels
+          collapse (Sidebar is `hidden lg:flex`, list/main swap to hidden
           on mobile). The new MobileShell subtree (last sibling) carries
-          `md:hidden` so it's invisible at wide-viewport and the only visible
-          surface at <768px. MobileShell contains the AppBar + Outlet
+          `lg:hidden` so it's invisible at wide-viewport and the only visible
+          surface at <1024px. MobileShell contains the AppBar + Outlet
           (rendering MobileNotePage / NewNotePage / MobileSearchPage) +
           BottomNav + SideSheet.
-        - Desktop (≥768px): md:flex-row → identical 3-column layout to
+        - Desktop (≥1024px): lg:flex-row → identical 3-column layout to
           pre-PR2 (REQ-WIDE-01 / S9 visual-regression baseline).
-          MobileShell subtree is `md:hidden` and contributes zero pixels
+          MobileShell subtree is `lg:hidden` and contributes zero pixels
           to the wide viewport.
 
         PR2 wiring: PR2 also DROPS the FAB (`<FloatingActionButton />`)
@@ -287,8 +287,8 @@ export function MainLayout() {
         mobile). On wide viewports, the existing "+" inside the list panel
         header stays.
       */}
-      <div className="relative flex h-screen flex-col md:flex-row overflow-hidden bg-surface text-text-primary">
-        <div className="hidden md:flex md:w-60 md:shrink-0 md:flex-col md:border-r md:border-border md:bg-surface-elevated md:text-text-primary">
+      <div className="relative flex h-screen flex-col lg:flex-row overflow-hidden bg-surface text-text-primary">
+        <div className="hidden lg:flex md:w-60 md:shrink-0 md:flex-col md:border-r md:border-border md:bg-surface-elevated md:text-text-primary">
           <Sidebar
             tabs={tabs}
             activeTabId={activeTabId}
@@ -306,11 +306,11 @@ export function MainLayout() {
           Desktop-only list panel — PR2 removes the activeNote-conditional
           visibility swap. Pre-PR2 the list was `hidden` on mobile when a
           note was active; in PR2 the mobile surface is owned by
-          MobileShell (added as a `md:hidden` sibling below). The wide viewport
-          list is hidden on mobile via `hidden md:flex` and the panel
+          MobileShell (added as a `lg:hidden` sibling below). The wide viewport
+          list is hidden on mobile via `hidden lg:flex` and the panel
           takes its full wide-viewport width via `md:w-80`.
         */}
-        <div className="hidden md:flex w-full min-w-0 shrink-0 flex-col border-b md:border-b-0 md:border-r border-border bg-surface overflow-hidden md:h-full md:w-80 md:min-w-[200px]">
+        <div className="hidden lg:flex w-full min-w-0 shrink-0 flex-col border-b md:border-b-0 md:border-r border-border bg-surface overflow-hidden md:h-full md:w-80 md:min-w-[200px]">
           <div className="border-b border-border p-4 pb-3">
             <SearchBar onSearch={handleSearchNotes} />
           </div>
@@ -371,7 +371,7 @@ export function MainLayout() {
           )}
         </div>
 
-        <main className="hidden md:block md:min-w-0 md:flex-1 md:overflow-hidden md:h-full">
+        <main className="hidden lg:block md:min-w-0 md:flex-1 md:overflow-hidden md:h-full">
           {activeNote ? (
             <Suspense fallback={<EditorSkeleton />}>
               {isEditing ? (
@@ -424,14 +424,14 @@ export function MainLayout() {
 
         {/*
           PR2 — Mobile shell subtree (REQ-LAY-01 / shell-redesign-v1).
-          Wrapped in `md:hidden` so it contributes zero pixels at
+          Wrapped in `lg:hidden` so it contributes zero pixels at
           wide viewports. Inside, MobileShell owns the AppBar,
           Outlet (mobile drill-down routes), BottomNav, and SideSheet.
           The MobileShell itself also calls `useNoteStore.setState({ activeNoteId: null })`
           on non-home mobile routes so the wide-viewport store-driven
           list↔main swap doesn't fight the mobile single-column.
         */}
-        <div className="md:hidden h-full w-full">
+        <div className="lg:hidden h-full w-full">
           <MobileShell />
         </div>
 
