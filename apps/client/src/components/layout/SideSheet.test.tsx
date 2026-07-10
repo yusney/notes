@@ -134,11 +134,14 @@ describe("SideSheet (PR1 — shell-redesign-v1)", () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
-  it("applies safe-area left padding via var(--safe-left) on the inner wrapper", () => {
-  renderSideSheet();
-  const inner = screen.getByTestId("side-sheet-inner");
-  expect(inner.className).toMatch(/pl-\[var\(--safe-left\)\]/);
-});
+  it("applies safe-area top and left padding on the inner wrapper", () => {
+    renderSideSheet();
+    const inner = screen.getByTestId("side-sheet-inner");
+
+    expect(inner.className).toMatch(/pt-\[var\(--safe-top\)\]/);
+    expect(inner.className).toMatch(/pl-\[var\(--safe-left\)\]/);
+    expect(inner.className).toMatch(/pb-\[max\(1rem,var\(--safe-bottom\)\)\]/);
+  });
 });
 
 describe("SideSheet (PR3 — Salir confirmation flow)", () => {
@@ -206,4 +209,3 @@ describe("SideSheet (PR3 — Salir confirmation flow)", () => {
     expect(dialog).toBeInTheDocument();
   });
 });
-

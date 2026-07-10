@@ -59,8 +59,8 @@ interface SideSheetProps {
  * deleted) so the user has a single, consistent drawer for the
  * account menu.
  *
- * Safe-area: `pl-[var(--safe-left)]` on the inner wrapper pushes the
- * content away from the left-side camera/notch on landscape devices.
+ * Safe-area: the inner wrapper owns top/left/bottom padding so drawer
+ * content stays clear of status bars, cameras, and gesture areas.
  */
 export function SideSheet({ open, onClose, header, children }: SideSheetProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -120,7 +120,7 @@ export function SideSheet({ open, onClose, header, children }: SideSheetProps) {
     >
       <div
         data-testid="side-sheet-inner"
-        className="flex h-full flex-col gap-2 overflow-y-auto pb-4 pl-[var(--safe-left)] pr-2"
+        className="flex h-full flex-col gap-2 overflow-y-auto pb-[max(1rem,var(--safe-bottom))] pl-[var(--safe-left)] pr-2 pt-[var(--safe-top)]"
       >
         <h2 className="px-4 text-[length:var(--type-caption)] font-semibold uppercase tracking-[0.22em] text-text-secondary">
           Menú
