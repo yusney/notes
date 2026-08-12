@@ -48,15 +48,20 @@ describe("bundle assertions (REQ-PERF-09, T8)", () => {
   it("emits the expected vendor chunks with [name]-[hash].js pattern", () => {
     const chunks = listChunks();
     const expected = ["react", "router", "tiptap", "code", "dnd"];
+    // Vite hashes can include `-` as a separator between base64-like chars
+    // (e.g. `react-D2GyzDo-.js`), so the chunk name regex tolerates any
+    // number of `[A-Za-z0-9-]` chars between the leading dash and the
+    // trailing `.js`.
+    const chunkNameRe = /-[\w-]+\.js$/;
     for (const name of expected) {
-      const match = chunks.find((f) => f.startsWith(`${name}-`) && /-\w+\.js$/.test(f));
+      const match = chunks.find((f) => f.startsWith(`${name}-`) && chunkNameRe.test(f));
       expect(match, `expected vendor chunk ${name}-*.js to be emitted; got ${chunks.join(", ")}`).toBeDefined();
     }
   });
 
   it("emits a main entry chunk under assets/index-*.js", () => {
     const chunks = listChunks();
-    const entry = chunks.find((f) => f.startsWith("index-") && /-\w+\.js$/.test(f));
+    const entry = chunks.find((f) => f.startsWith("index-") && /-[\w-]+\.js$/.test(f));
     expect(entry, "expected main entry index-*.js chunk").toBeDefined();
   });
 
