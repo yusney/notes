@@ -500,3 +500,4 @@ apps/client/coverage/
 # Engram local memory
 .engram/
 src/Notes.Api/appsettings.Development.json
+apps/api/Notes.Api/appsettings.Development.json
