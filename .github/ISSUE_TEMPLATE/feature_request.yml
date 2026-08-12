@@ -69,7 +69,7 @@ body:
     attributes:
       label: Alcance técnico (opcional)
       description: Módulos potencialmente afectados (API, Desktop, DB, etc.).
-      placeholder: "Ej.: Notes.Api, Notes.Application, desktop/src/pages"
+      placeholder: "Ej.: Notes.Api, Notes.Application, apps/client/src/pages"
 
   - type: textarea
     id: contexto_adicional

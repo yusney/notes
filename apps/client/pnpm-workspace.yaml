@@ -1,0 +1,17 @@
+packages:
+  - '.'
+
+# Security hardening: delay installs of newly published versions for 7 days
+# to allow time for malicious packages to be detected and unpublished.
+minimumReleaseAge: '10080 minutes'
+
+# highlight.js@11.11.1 is pinned in pnpm-lock.yaml. PR3 promotes it to a
+# direct dep (it was already transitive through lowlight +
+# @tiptap/extension-code-block-lowlight); the 7-day maturity rule was
+# authored well before this version was added and the exclusion is
+# bounded by exact-version pinning.
+minimumReleaseAgeExclude:
+  - highlight.js
+
+# Security hardening: reject packages whose trust signals weaken between updates.
+trustPolicy: no-downgrade

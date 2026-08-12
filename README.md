@@ -1,19 +1,18 @@
 # Notes — Gestor de Conocimiento Personal
 
-A personal knowledge management system with a web API backend (ASP.NET Core) and a cross-platform desktop app (Tauri + React).
+A personal knowledge management system with a web API backend (ASP.NET Core) and a cross-platform client app (Tauri + React + Android).
 
 ## Architecture
 
 ```
 notes/
-├── src/                     # .NET backend (Clean Architecture)
-│   ├── Notes.Api/           # ASP.NET Core Web API
-│   ├── Notes.Application/   # Use cases (MediatR + CQRS)
-│   ├── Notes.Domain/        # Domain entities & interfaces
-│   └── Notes.Infrastructure/# EF Core + PostgreSQL + services
-├── desktop/                 # Tauri v2 desktop app
-│   ├── src/                 # React + TypeScript frontend
-│   └── src-tauri/           # Rust/Tauri shell
+├── apps/
+│   ├── api/                 # .NET backend (Clean Architecture)
+│   │   ├── Notes.Api/       # ASP.NET Core Web API
+│   │   ├── Notes.Application/  # Use cases (MediatR + CQRS)
+│   │   ├── Notes.Domain/       # Domain entities & interfaces
+│   │   └── Notes.Infrastructure/ # EF Core + PostgreSQL + services
+│   └── client/                 # Tauri + React client (Windows/macOS/Linux + Android)
 ├── tests/                   # Integration & E2E tests
 ├── Dockerfile               # Multi-stage Docker build for API
 ├── docker-compose.yml       # Local dev: PostgreSQL + API
@@ -27,9 +26,10 @@ notes/
 | .NET SDK | 10.0+ |
 | Node.js | 22+ |
 | pnpm | 10+ |
-| Rust | stable (for desktop build) |
+| Rust | stable (for client build) |
 | Docker & Docker Compose | 24+ |
 | PostgreSQL | 16 (via Docker) |
+| JDK 17+ + Android SDK API 34 + Android NDK r25c+ | (Android target only — see `apps/client/README.md#build-for-android`) |
 
 ## Quick Start (Local Development)
 
@@ -54,7 +54,7 @@ docker-compose up -d
 Or run the API directly with .NET CLI (requires a running PostgreSQL):
 
 ```bash
-cd src/Notes.Api
+cd apps/api/Notes.Api
 dotnet run --launch-profile http
 # API: http://localhost:5000
 ```
@@ -65,18 +65,26 @@ dotnet run --launch-profile http
 dotnet test notes.slnx
 ```
 
-### 4. Run desktop app (development)
+### 4. Run client app (development)
 
 ```bash
-cd desktop
+cd apps/client
 pnpm install
 pnpm tauri dev
+```
+
+To run the same project against an Android emulator or device (Android 11+, minSdk 30; JDK 17 + Android SDK API 34 + NDK r25c+ required — see `apps/client/README.md#build-for-android`):
+
+```bash
+cd apps/client
+pnpm tauri android dev     # live-reload on first connected device / emulator
+pnpm tauri android build --debug   # debug APK at src-tauri/gen/android/app/build/outputs/apk/debug/app-debug.apk
 ```
 
 ### 5. Run frontend tests
 
 ```bash
-cd desktop
+cd apps/client
 pnpm exec vitest run
 ```
 
@@ -94,7 +102,7 @@ Copy `.env.example` to `.env` and fill in the values.
 | `Jwt__Secret` | JWT signing key (≥32 chars) | **REQUIRED** |
 | `Jwt__Issuer` | JWT issuer | `notes-api` |
 | `Jwt__Audience` | JWT audience | `notes-client` |
-| `VITE_API_BASE_URL` | API base URL used by the desktop app | `http://localhost:8080` |
+| `VITE_API_BASE_URL` | API base URL used by the client app | `http://localhost:8080` |
 
 ### OAuth (optional — required only if social login is enabled)
 
@@ -144,12 +152,12 @@ curl http://localhost:8080/health
 ### Linux (.AppImage, .deb)
 
 ```bash
-cd desktop
+cd apps/client
 pnpm install
 VITE_API_BASE_URL=https://api.your-domain.com pnpm tauri build
 ```
 
-Artifacts: `desktop/src-tauri/target/release/bundle/`
+Artifacts: `apps/client/src-tauri/target/release/bundle/`
 
 ### Windows (.msi, .exe)
 
@@ -196,7 +204,7 @@ Set production secrets in Dokploy environment panel (never in the repository).
 | GET | `/api/auth/oauth/google/callback` | No | Google callback (browser) |
 | GET | `/api/auth/oauth/github` | No | Redirect to GitHub login |
 | GET | `/api/auth/oauth/github/callback` | No | GitHub callback (browser) |
-| POST | `/api/auth/oauth/desktop/exchange` | No | Exchange one-time code for JWT (desktop app) |
+| POST | `/api/auth/oauth/client/exchange` | No | Exchange one-time code for JWT (installed client) |
 
 ### Resources
 
@@ -221,7 +229,7 @@ The API exposes its full schema via OpenAPI. Documentation endpoints are **only 
 | Launch mode | Default port | Example URL |
 |---|---|---|
 | `docker-compose up -d` | `8080` | `http://localhost:8080/scalar/v1` |
-| `dotnet run --project src/Notes.Api --launch-profile http` | `5000` | `http://localhost:5000/scalar/v1` |
+| `dotnet run --project apps/api/Notes.Api --launch-profile http` | `5000` | `http://localhost:5000/scalar/v1` |
 
 > ℹ️ Production does not expose these endpoints. To regenerate API clients in CI/prod, build the project locally with `ASPNETCORE_ENVIRONMENT=Development` and pipe `/openapi/v1.json` into your generator.
 

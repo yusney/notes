@@ -4,19 +4,19 @@ WORKDIR /app
 
 # Copy solution and project files first (layer cache optimization)
 COPY notes.slnx .
-COPY src/Notes.Domain/Notes.Domain.csproj src/Notes.Domain/
-COPY src/Notes.Application/Notes.Application.csproj src/Notes.Application/
-COPY src/Notes.Infrastructure/Notes.Infrastructure.csproj src/Notes.Infrastructure/
-COPY src/Notes.Api/Notes.Api.csproj src/Notes.Api/
+COPY apps/api/Notes.Domain/Notes.Domain.csproj apps/api/Notes.Domain/
+COPY apps/api/Notes.Application/Notes.Application.csproj apps/api/Notes.Application/
+COPY apps/api/Notes.Infrastructure/Notes.Infrastructure.csproj apps/api/Notes.Infrastructure/
+COPY apps/api/Notes.Api/Notes.Api.csproj apps/api/Notes.Api/
 
 # Restore dependencies (cached layer)
-RUN dotnet restore src/Notes.Api/Notes.Api.csproj
+RUN dotnet restore apps/api/Notes.Api/Notes.Api.csproj
 
 # Copy all source code
-COPY src/ src/
+COPY apps/ apps/
 
 # Publish production build (re-restore to match SDK version in container)
-RUN dotnet publish src/Notes.Api/Notes.Api.csproj \
+RUN dotnet publish apps/api/Notes.Api/Notes.Api.csproj \
     -c Release \
     -o /app/publish
 

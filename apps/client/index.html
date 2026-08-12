@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <!-- shell-redesign-v1 (PR1): theme-color mirrors --color-surface (default :root dark)
+         so the Android system status bar blends with the app on mobile web/Tauri Android. -->
+    <meta name="theme-color" content="#131313" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#f5f5f4" media="(prefers-color-scheme: light)" />
+    <title>Tauri + React + Typescript</title>
+  </head>
+
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
