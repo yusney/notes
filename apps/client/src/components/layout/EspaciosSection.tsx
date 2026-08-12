@@ -62,7 +62,7 @@ export function EspaciosSection({ onClose }: EspaciosSectionProps) {
           data-testid="espacios-create-tab"
           onClick={() => setDialogOpen(true)}
           aria-label="Nueva tab"
-          className="grid size-8 place-items-center rounded-full border border-border bg-surface text-lg leading-none text-accent transition-colors hover:border-accent hover:bg-accent hover:text-accent-text"
+          className="grid size-11 place-items-center rounded-full border border-border bg-surface text-lg leading-none text-accent transition-colors hover:border-accent hover:bg-accent hover:text-accent-text"
         >
           +
         </button>

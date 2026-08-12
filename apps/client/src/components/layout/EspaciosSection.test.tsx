@@ -59,7 +59,10 @@ describe("EspaciosSection (T2 — empty state)", () => {
     renderSection();
     expect(screen.getByText(/no hay espacios\. creá uno para agrupar tus notas\./i)).toBeInTheDocument();
     expect(screen.getByText(/^espacios$/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /nueva tab/i })).toBeEnabled();
+    const createTabButton = screen.getByRole("button", { name: /nueva tab/i });
+    expect(createTabButton).toBeEnabled();
+    expect(createTabButton.className).toMatch(/size-11/);
+    expect(createTabButton.className).toMatch(/rounded-full/);
   });
 });
 
