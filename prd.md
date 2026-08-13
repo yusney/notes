@@ -242,7 +242,7 @@ Una herramienta de fricción cero que funciona como "segundo cerebro" para desar
 | Principio | Detalle |
 |-----------|---------|
 | **Diseño Minimalista** | La interfaz cede todo el protagonismo al contenido. Nada de menús recargados ni distracciones. Sensación de herramienta limpia. |
-| **Responsividad** | La plataforma debe ser navegable y legible desde un teléfono móvil (para consultar guías de despliegue rápidas fuera de la computadora). Uso principal: desktop. |
+| **Responsividad** | La plataforma debe ser navegable y legible desde un teléfono móvil (para consultar guías de despliegue rápidas fuera de la computadora). Uso principal: cliente web/installed client. |
 | **Flujo rápido** | Acceso directo permanente para crear notas desde cualquier pantalla. Foco en reducir fricción. |
 | **Feedback inmediato** | Acciones como copiar, guardar, eliminar, compartir deben tener feedback visual instantáneo (toasts, transiciones). |
 | **Dark mode first** | Diseñar primero en dark mode (público objetivo: devs). El light mode es un ciudadano de segunda clase que también debe verse bien. |
@@ -481,8 +481,8 @@ Cada acción en la aplicación tiene 4 estados que DEBEN estar diseñados:
 | **Desktop app** | Tauri + React | Binarios nativos (.exe, .dmg, .AppImage) distribuidos vía GitHub Releases |
 | **Base de datos** | PostgreSQL en VPS | Mismo servidor que el backend en MVP. Migrable a servicio externo si escala. |
 | **Containerización** | Docker (solo backend) | Cada deploy del backend genera una imagen Docker nueva |
-| **CI/CD** | GitHub Actions | Build, test y deploy automático del backend + build de la app desktop |
-| **Repositorio** | GitHub | Source code, issues, project management, releases con binarios desktop |
+| **CI/CD** | GitHub Actions | Build, test y deploy automático del backend + build de la client app |
+| **Repositorio** | GitHub | Source code, issues, project management, releases con binarios del cliente |
 
 ### Flujo de Deployment
 
@@ -505,7 +505,7 @@ GitHub Actions se dispara
         │   ├── Run nuevo container
         │   └── Health check → OK → Deploy exitoso
         │
-        └── 7. Build desktop app (Tauri)
+        └── 7. Build client app (Tauri)
                 │
                 ├── Build Windows (.msi, .exe)
                 ├── Build macOS (.dmg, .app)
@@ -546,7 +546,7 @@ notes/
 │   ├── Notes.Application/          # Use cases, DTOs, interfaces
 │   ├── Notes.Domain/                # Entities, Value Objects, Enums
 │   └── Notes.Infrastructure/        # EF Core, repositories, external services
-├── desktop/                        # Tauri + React app
+├── apps/client/                        # Tauri + React app
 │   ├── src/                        # React components, hooks, state
 │   ├── src-tauri/                  # Rust shell (config, commands, native)
 │   │   ├── src/
@@ -565,7 +565,7 @@ notes/
 ├── .github/
 │   └── workflows/
 │       ├── deploy-backend.yml      # Deploy API a Dokploy
-│       └── build-desktop.yml       # Build Tauri desktop app
+│       └── build-client.yml       # Build Tauri client app
 └── README.md
 ```
 
@@ -575,7 +575,7 @@ notes/
 |---------|---------|
 | **Formatos** | Windows: `.msi` (instalador) + `.exe` (portable)<br>macOS: `.dmg` (instalador) + `.app` (portable)<br>Linux: `.AppImage` (portable) + `.deb` (Debian/Ubuntu) |
 | **Canal** | GitHub Releases con auto-updater de Tauri |
-| **Versionado** | Tags `v1.0.0`, `v1.1.0` en GitHub disparan build de desktop |
+| **Versionado** | Tags `v1.0.0`, `v1.1.0` en GitHub disparan build del cliente |
 | **Auto-update** | Tauri updater integrado. La app notifica cuando hay nueva versión y se actualiza automáticamente. |
 | **Firma** | Binarios firmados (Windows: certificado, macOS: notarización Apple, Linux: GPG opcional) |
 | **Backend URL** | Configurable en `tauri.conf.json` o variable de entorno. Default: `https://notes-api.donduque.dev` |
@@ -634,7 +634,7 @@ notes/
 | API estilo | **Controllers RESTful tradicionales** | Explícitos, testeables con WebApplicationFactory, claros para Clean Architecture. |
 | State management (Frontend) | **Zustand** | Simple, sin boilerplate, performante, buen devtools. |
 | Comunicación Tauri ↔ API | **HTTP fetch nativo** | Más simple, sin dependencia de plugins de Tauri. |
-| Auto-update desktop | **Tauri updater integrado** | Notifica al usuario y descarga automáticamente. |
+| Auto-update client | **Tauri updater integrado** | Notifica al usuario y descarga automáticamente. |
 
 ### ⏳ Pendientes
 

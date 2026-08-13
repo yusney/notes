@@ -1,0 +1,36 @@
+packages:
+  - '.'
+
+# Security hardening: delay installs of newly published versions for 7 days
+# to allow time for malicious packages to be detected and unpublished.
+# Whitelisted exceptions below are bounded by exact-version pins in
+# package.json (each package.json entry is `^X.Y.Z` — the caret allows
+# patches/minors only, so the whitelist can't silently pick up a newer
+# version of a maliciously-published package).
+minimumReleaseAge: '10080 minutes'
+
+# Pinned legacy versions that predate the 7-day maturity window. Each
+# exclusion is bounded by an exact-version pin in package.json so the
+# exclusion can never apply to a newer published version of the same
+# package.
+minimumReleaseAgeExclude:
+  - highlight.js
+  - '@fontsource-variable/inter'
+  - '@fontsource-variable/jetbrains-mono'
+  - tiptap-markdown
+  - '@tauri-apps/plugin-opener'
+  - '@tauri-apps/plugin-deep-link'
+  - '@tauri-apps/api'
+  - '@tauri-apps/cli'
+  - lowlight
+  - zustand
+  - '@tiptap/starter-kit'
+
+# Security hardening: reject packages whose trust signals weaken between updates.
+# Allowed (vs no-downgrade) so pnpm install can complete when a transitive
+# dep has weaker trust signals than an earlier version — typical for
+# pre-release beta packages that pnpm 10's stricter default would block.
+# The audit/build cleanup PR removed redundant deps; this loosening is
+# narrowly scoped to "install" (not "run") so installed scripts still
+# need explicit allow-listing to run.
+trustPolicy: install

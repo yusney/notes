@@ -1,0 +1,67 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`BottomNav (PR1 — shell-redesign-v1) > renders stably at 360px viewport (visual regression snapshot) 1`] = `
+<nav
+  aria-label="Navegación principal"
+  class="sticky bottom-0 z-10 grid grid-cols-4 border-t border-border bg-surface-elevated pb-[var(--safe-bottom)] text-text-secondary"
+>
+  <a
+    aria-current="page"
+    class="flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 px-2 py-1 text-[length:var(--type-caption)] transition-colors text-accent"
+    data-discover="true"
+    href="/"
+  >
+    <span
+      aria-hidden="true"
+    >
+      📝
+    </span>
+    <span>
+      Notas
+    </span>
+  </a>
+  <a
+    class="flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 px-2 py-1 text-[length:var(--type-caption)] transition-colors hover:text-text-primary"
+    data-discover="true"
+    href="/search"
+  >
+    <span
+      aria-hidden="true"
+    >
+      🔍
+    </span>
+    <span>
+      Buscar
+    </span>
+  </a>
+  <a
+    class="flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 px-2 py-1 text-[length:var(--type-caption)] transition-colors hover:text-text-primary"
+    data-discover="true"
+    href="/new"
+  >
+    <span
+      aria-hidden="true"
+      data-testid="bottom-nav-icon-nueva"
+    >
+      +
+    </span>
+    <span>
+      Nueva
+    </span>
+  </a>
+  <a
+    class="flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 px-2 py-1 text-[length:var(--type-caption)] transition-colors hover:text-text-primary"
+    data-discover="true"
+    href="/profile"
+  >
+    <span
+      aria-hidden="true"
+    >
+      👤
+    </span>
+    <span>
+      Perfil
+    </span>
+  </a>
+</nav>
+`;

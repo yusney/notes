@@ -1,9 +1,0 @@
-packages:
-  - '.'
-
-# Security hardening: delay installs of newly published versions for 7 days
-# to allow time for malicious packages to be detected and unpublished.
-minimumReleaseAge: '10080 minutes'
-
-# Security hardening: reject packages whose trust signals weaken between updates.
-trustPolicy: no-downgrade

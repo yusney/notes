@@ -59,8 +59,8 @@ Tests       246 passed (246)
 ### Changed File Coverage
 | File | Line % | Branch % | Uncovered Lines | Rating |
 |------|--------|----------|-----------------|--------|
-| `desktop/src/components/editor/NoteEditor.tsx` | 64.28% | 57.89% | uncovered per coverage report, including save/toolbar branches | ⚠️ Low |
-| `desktop/src/components/editor/NoteViewer.tsx` | 50.00% | 16.66% | 15-24, 43 | ⚠️ Low |
+| `apps/client/src/components/editor/NoteEditor.tsx` | 64.28% | 57.89% | uncovered per coverage report, including save/toolbar branches | ⚠️ Low |
+| `apps/client/src/components/editor/NoteViewer.tsx` | 50.00% | 16.66% | 15-24, 43 | ⚠️ Low |
 
 **Average changed file coverage**: 57.14%
 
@@ -69,11 +69,11 @@ Tests       246 passed (246)
 ### Assertion Quality
 | File | Line | Assertion | Issue | Severity |
 |------|------|-----------|-------|----------|
-| `desktop/src/components/editor/NoteEditor.test.tsx` | 474 | CSS regex against `index.css` | Implementation-detail assertion; does not prove checkbox behavior in editor | WARNING |
-| `desktop/src/components/editor/NoteEditor.test.tsx` | 489 | extension array length / config checks | Implementation-detail assertion; does not prove markdown paste transforms content | WARNING |
-| `desktop/src/components/editor/NoteEditor.test.tsx` | 528 | Markdown extension option assertions | Implementation-detail assertion; does not cover bold/heading/task/link/plain-text/HTML paste scenarios | WARNING |
-| `desktop/src/components/editor/NoteViewer.test.tsx` | 114 | CSS regex against `index.css` | Implementation-detail assertion; does not prove rendered checkboxes are visible/read-only | WARNING |
-| `desktop/src/components/editor/NoteViewer.test.tsx` | 145 | Link config option assertions | Implementation-detail assertion; does not prove rendered anchor output | WARNING |
+| `apps/client/src/components/editor/NoteEditor.test.tsx` | 474 | CSS regex against `index.css` | Implementation-detail assertion; does not prove checkbox behavior in editor | WARNING |
+| `apps/client/src/components/editor/NoteEditor.test.tsx` | 489 | extension array length / config checks | Implementation-detail assertion; does not prove markdown paste transforms content | WARNING |
+| `apps/client/src/components/editor/NoteEditor.test.tsx` | 528 | Markdown extension option assertions | Implementation-detail assertion; does not cover bold/heading/task/link/plain-text/HTML paste scenarios | WARNING |
+| `apps/client/src/components/editor/NoteViewer.test.tsx` | 114 | CSS regex against `index.css` | Implementation-detail assertion; does not prove rendered checkboxes are visible/read-only | WARNING |
+| `apps/client/src/components/editor/NoteViewer.test.tsx` | 145 | Link config option assertions | Implementation-detail assertion; does not prove rendered anchor output | WARNING |
 
 **Assertion quality**: 0 CRITICAL, 5 WARNING
 
@@ -102,9 +102,9 @@ Tests       246 passed (246)
 ### Correctness (Static Evidence)
 | Requirement | Status | Notes |
 |------------|--------|-------|
-| `NoteEditor` has Markdown, Link, TaskList, TaskItem | ✅ Implemented | Present in `desktop/src/components/editor/NoteEditor.tsx` lines 35-43 |
-| `NoteViewer` has Link, TaskList, TaskItem | ✅ Implemented | Present in `desktop/src/components/editor/NoteViewer.tsx` lines 47-56 |
-| CSS rules exist for checkboxes and links | ✅ Implemented | Present in `desktop/src/index.css` lines 262-280 |
+| `NoteEditor` has Markdown, Link, TaskList, TaskItem | ✅ Implemented | Present in `apps/client/src/components/editor/NoteEditor.tsx` lines 35-43 |
+| `NoteViewer` has Link, TaskList, TaskItem | ✅ Implemented | Present in `apps/client/src/components/editor/NoteViewer.tsx` lines 47-56 |
+| CSS rules exist for checkboxes and links | ✅ Implemented | Present in `apps/client/src/index.css` lines 262-280 |
 | CodeBlockLowlight regression avoided | ✅ Implemented | `NoteEditor.tsx` retains `CodeBlockLowlight.configure(...)` |
 | CodeBlockTabExtension retained | ✅ Implemented | `NoteEditor.tsx` lines 20-33 and included in `editorExtensions` |
 | Viewer read-only task config | ⚠️ Deviates | Source attempts `editable: false`, but current TaskItem typings reject this option and break build |
@@ -120,7 +120,7 @@ Tests       246 passed (246)
 
 ### Issues Found
 **CRITICAL**
-- `pnpm build` fails, so the change is not merge-safe. The blocking errors are in `desktop/src/components/editor/NoteEditor.test.tsx`, `desktop/src/components/editor/NoteViewer.test.tsx`, and `desktop/src/components/editor/NoteViewer.tsx`.
+- `pnpm build` fails, so the change is not merge-safe. The blocking errors are in `apps/client/src/components/editor/NoteEditor.test.tsx`, `apps/client/src/components/editor/NoteViewer.test.tsx`, and `apps/client/src/components/editor/NoteViewer.tsx`.
 - The spec requires runtime proof for markdown paste recognition, but no passing test covers actual paste behavior for bold, headings/lists, task lists, links, plain text, or HTML paste.
 - The spec requires runtime proof that task checkboxes are interactive in `NoteEditor`; no such passing test exists.
 

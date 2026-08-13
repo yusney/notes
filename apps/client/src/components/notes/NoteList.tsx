@@ -1,0 +1,657 @@
+import { useRef, useState } from "react";
+import type { Note, Tab } from "../../types";
+import type { SortBy } from "../../stores/useNoteStore";
+import { useDraggable } from "@dnd-kit/core";
+import { Select } from "../ui/Select";
+import { Pagination } from "./Pagination";
+import { MoveToTabMenu } from "./MoveToTabMenu";
+import { NoteActionSheet } from "./NoteActionSheet";
+import { DeleteConfirmDialog } from "./DeleteConfirmDialog";
+import { InfiniteScrollSentinel } from "./InfiniteScrollSentinel";
+
+const SORT_OPTIONS: { value: SortBy; label: string }[] = [
+  { value: "creation", label: "Fecha de creación" },
+  { value: "modification", label: "Última modificación" },
+  { value: "alphabetical", label: "Alfabético" },
+];
+
+/**
+ * Module-scope empty array used as the default for the optional `tabs` prop.
+ * Returning a fresh `[]` every render breaks memoization in downstream
+ * children (e.g. NoteRow), so we hoist a single constant instead.
+ */
+const EMPTY_TABS: Tab[] = [];
+
+/** Long-press duration before `onLongPress` fires (per Material 3). */
+const LONG_PRESS_MS = 500;
+/** Touch drift threshold (px) beyond which we cancel a pending long-press. */
+const LONG_PRESS_MOVE_TOLERANCE_PX = 10;
+
+interface NoteListProps {
+  notes: Note[];
+  /**
+   * Available tabs — used to render the tab badge eyebrow on each note row
+   * AND to populate the "Mover a..." accessible menu's tab options.
+   * If a note's `tabId` isn't found in this list, the eyebrow is omitted.
+   */
+  tabs?: Tab[];
+  activeNoteId: string | null;
+  onNoteSelect: (noteId: string) => void;
+  onCreateNote: () => void;
+  onDeleteNote?: (noteId: string) => void;
+  onToggleFavorite?: (noteId: string) => void;
+  /**
+   * Controls whether the drag handle (the @dnd-kit pickup affordance) is
+   * rendered on each row. The actual move-on-drop logic lives in MainLayout's
+   * DndContext onDragEnd — this prop is purely a render gate. Default: false.
+   *
+   * The drag flow is one of TWO ways to move a note between tabs; the other
+   * is the explicit "Mover a..." menu gated on `onMoveToTab`. Both can coexist.
+   */
+  enableDrag?: boolean;
+  /**
+   * Callback for the accessible "Mover a..." menu. When provided, each row
+   * gets a discoverable, keyboard-operable trigger sibling of the select
+   * button that opens a dialog listing the available tabs. Closing the menu
+   * via the dialog is handled internally.
+   */
+  onMoveToTab?: (noteId: string, tabId: string) => void;
+  /**
+   * Long-press recogniser callback. On mobile, a 500ms hold on a note row
+   * (cancelled by >10px of finger drift, by release before 500ms, or by
+   * sibling-button activation) fires this with the note id so the caller
+   * can open an action sheet. The click after a fired long-press is
+   * suppressed so the sheet doesn't double as a tap-to-open and a tap-to-
+   * navigate. No-op on wide viewports (no touch events fire).
+   */
+  onLongPress?: (noteId: string) => void;
+  searchQuery?: string;
+  sortBy?: SortBy;
+  onSortChange?: (sortBy: SortBy) => void;
+  isFavoriteOnly?: boolean;
+  onFavoriteFilterToggle?: () => void;
+  pagination?: {
+    page: number;
+    pageSize: number;
+    totalCount: number;
+    onPageChange: (page: number) => void;
+  };
+  /**
+   * When true, `<Pagination>` (rendered when `pagination` is set) lays out
+   * its buttons in a vertical stack on viewports ≤767px and gives them
+   * full-width. Required at 360px-class viewports to avoid horizontal
+   * overflow (REQ-LAY-05). Desktop at ≥768px is byte-identical regardless.
+   * Default: false.
+   */
+  paginationMobileLayout?: boolean;
+  /**
+   * When true, mounts an `<InfiniteScrollSentinel>` after the last note
+   * and a manual "Cargar más" fallback button. Mobile-only — the parent
+   * (`MobileHomePage`) passes `true` here. Desktop renders explicit
+   * `<Pagination>` instead. REQ-LIST-06.
+   */
+  infiniteScroll?: boolean;
+  /**
+   * Whether more pages exist. When `false`, the sentinel + "Cargar más"
+   * button are not rendered (REQ-LIST-06 last-page scenario).
+   */
+  hasMore?: boolean;
+  /**
+   * Currently fetching the next page. The parent should suppress the
+   * sentinel from firing while this is `true` to avoid double-fetches.
+   */
+  isLoadingMore?: boolean;
+  /**
+   * Called when the sentinel intersects the viewport OR the "Cargar más"
+   * button is tapped. The parent invokes `useNoteStore.nextPage()` here.
+   */
+  onLoadMore?: () => void;
+}
+
+export function NoteList({
+  notes,
+  tabs = EMPTY_TABS,
+  activeNoteId,
+  onNoteSelect,
+  onCreateNote,
+  onDeleteNote,
+  onToggleFavorite,
+  enableDrag = false,
+  onMoveToTab,
+  onLongPress,
+  searchQuery = "",
+  sortBy,
+  onSortChange,
+  isFavoriteOnly = false,
+  onFavoriteFilterToggle,
+  pagination,
+  paginationMobileLayout = false,
+  infiniteScroll = false,
+  hasMore = false,
+  isLoadingMore = false,
+  onLoadMore,
+}: NoteListProps) {
+  const totalTags = notes.reduce((count, note) => count + (note.tags?.length ?? 0), 0);
+
+  // Action-sheet state for mobile long-press (REQ-LIST-03). `sheetNoteId`
+  // identifies the long-pressed note; the sheet is rendered as a sibling of
+  // the list body (mirrors the MoveToTabMenu mount pattern).
+  const [sheetNoteId, setSheetNoteId] = useState<string | null>(null);
+  // Delete-dialog state for the share-warning gate (REQ-LIST-04/05). Lives
+  // at the NoteList level so the dialog can own its own pending state.
+  const [deleteDialogNoteId, setDeleteDialogNoteId] = useState<string | null>(null);
+  // Ref to the scrollable <ul> container. The InfiniteScrollSentinel uses
+  // this as its IntersectionObserver root so it fires when the sentinel
+  // enters the SCROLLER, not just the viewport. The <ul> has
+  // `overflow-y-auto` (line ~228) so without this ref the IO would watch
+  // the wrong container and never fire as the user scrolls inside the list.
+  const listRef = useRef<HTMLUListElement | null>(null);
+  const sheetNote = sheetNoteId
+    ? notes.find((n) => n.id === sheetNoteId) ?? null
+    : null;
+  const deleteDialogNote = deleteDialogNoteId
+    ? notes.find((n) => n.id === deleteDialogNoteId) ?? null
+    : null;
+
+  function handleLongPress(noteId: string) {
+    setSheetNoteId(noteId);
+  }
+
+  function handleSheetAction(kind: string) {
+    if (kind === "delete" && sheetNoteId) {
+      // T8: route the delete flow through the share-warning dialog
+      // (REQ-LIST-04 / REQ-LIST-05) instead of calling onDeleteNote
+      // directly. The dialog loads its own share warning + calls
+      // useNoteStore.deleteNote on confirm.
+      setDeleteDialogNoteId(sheetNoteId);
+    }
+  }
+
+  function handleSheetClose() {
+    setSheetNoteId(null);
+  }
+
+  function handleDeleteDialogClose() {
+    setDeleteDialogNoteId(null);
+  }
+
+  const SHEET_ACTIONS = [
+    { kind: "delete", label: "Eliminar", icon: "🗑" },
+  ];
+
+  return (
+    <div
+      data-testid="note-list"
+      className="flex min-h-0 flex-1 w-full flex-col overflow-hidden border-r border-border bg-surface md:w-80"
+    >
+      <div className="hidden border-b border-border px-4 py-2 md:block md:p-4">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            {/* Sidebar section label — desktop only. On mobile the
+                AppBar in MobileShell already shows the page title
+                ("Notas"), so duplicating it here as a small uppercase
+                chip at a different Y position read as a misalignment. */}
+            <span className="hidden text-xs font-semibold uppercase tracking-[0.22em] text-text-secondary md:inline">
+              Notas
+            </span>
+            <p className="mt-1 hidden text-sm text-text-secondary md:block">
+              {notes.length} {notes.length === 1 ? "nota" : "notas"} · {totalTags} tags
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            {onFavoriteFilterToggle && (
+              <button
+                type="button"
+                onClick={onFavoriteFilterToggle}
+                aria-label="Solo favoritos"
+                aria-pressed={isFavoriteOnly}
+                className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                  isFavoriteOnly
+                    ? "border-accent bg-accent-subtle text-text-primary"
+                    : "border-border bg-surface-elevated text-text-secondary hover:border-accent hover:text-accent"
+                }`}
+              >
+                ★
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onCreateNote}
+              aria-label="Nueva nota"
+              className="hidden size-9 place-items-center rounded-full bg-accent text-lg leading-none text-accent-text transition-colors hover:bg-accent-hover md:grid"
+            >
+              +
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {(onSortChange || sortBy) && (
+        <div className="border-b border-border px-4 py-3">
+          <Select
+            options={SORT_OPTIONS}
+            value={sortBy ?? "creation"}
+            onChange={(v) => onSortChange?.(v as SortBy)}
+            ariaLabel="Ordenar por"
+          />
+        </div>
+      )}
+
+      <ul
+        ref={listRef}
+        data-testid="note-list-scroller"
+        className="flex-1 min-h-0 overflow-y-auto p-2"
+      >
+        {notes.length === 0 ? (
+          <li className="m-2 border border-dashed border-border bg-surface-elevated/70 px-5 py-8 text-center text-sm text-text-secondary">
+            {searchQuery ? (
+              <>
+                No se encontraron notas para{" "}
+                <span className="font-medium text-text-primary">"{searchQuery}"</span>
+                <p className="mt-2">
+	                  <button
+	                    type="button"
+	                    onClick={onCreateNote}
+	                    className="font-medium text-accent hover:text-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+	                  >
+                    Crear una nota nueva
+                  </button>
+                </p>
+              </>
+            ) : (
+              <>
+                <p>Crea tu primera nota</p>
+                <button
+                  type="button"
+                  onClick={onCreateNote}
+                  className="mt-3 rounded-full bg-accent px-4 py-2 text-xs font-semibold text-accent-text transition-colors hover:bg-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                >
+                  Nueva nota
+                </button>
+              </>
+            )}
+          </li>
+        ) : (
+          notes.map((note) => (
+            <NoteRow
+              key={note.id}
+              note={note}
+              tabs={tabs}
+              activeNoteId={activeNoteId}
+              onNoteSelect={onNoteSelect}
+              onDeleteNote={onDeleteNote}
+              onToggleFavorite={onToggleFavorite}
+              enableDrag={enableDrag}
+              onMoveToTab={onMoveToTab}
+              onLongPress={onLongPress ?? handleLongPress}
+            />
+          ))
+        )}
+        {/* Mobile infinite-scroll sentinel + fallback button. Mounted as a
+            sibling of the rows so the parent <ul> scrolls them into view
+            together. The sentinel is invisible (h-1) and only fires the
+            parent's onLoadMore when it enters the viewport. The fallback
+            button is the user's escape hatch when IO is broken / disabled. */}
+        {infiniteScroll && notes.length > 0 && (
+          <>
+            <li className="px-2 pb-1">
+              <InfiniteScrollSentinel
+                enabled={hasMore && !isLoadingMore}
+                onIntersect={() => onLoadMore?.()}
+                rootRef={listRef}
+              />
+            </li>
+            {hasMore && (
+              <li className="px-2 pb-2">
+                <button
+                  type="button"
+                  onClick={onLoadMore}
+                  disabled={isLoadingMore}
+                  data-testid="load-more"
+                  className="w-full rounded border border-border bg-surface-elevated px-3 py-2 text-xs font-semibold text-text-primary transition-colors hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                >
+                  {isLoadingMore ? "Cargando…" : "Cargar más"}
+                </button>
+              </li>
+            )}
+            {!hasMore && notes.length > 0 && (
+              <li className="px-2 pb-2 text-center text-[11px] text-text-secondary">
+                — {notes.length} notas —
+              </li>
+            )}
+          </>
+        )}
+      </ul>
+      {/* Desktop: explicit <Pagination> control. Mobile goes infinite scroll
+          (see the sentinel above) and does NOT render this — REQ-LIST-06. */}
+      {pagination && !infiniteScroll && (
+        <Pagination
+          page={pagination.page}
+          pageSize={pagination.pageSize}
+          totalCount={pagination.totalCount}
+          onPageChange={pagination.onPageChange}
+          mobileLayout={paginationMobileLayout}
+        />
+      )}
+
+      {sheetNote && (
+        <NoteActionSheet
+          open={sheetNoteId !== null}
+          onClose={handleSheetClose}
+          noteTitle={sheetNote.title}
+          actions={SHEET_ACTIONS}
+          onAction={handleSheetAction}
+        />
+      )}
+
+      {deleteDialogNote && (
+        <DeleteConfirmDialog
+          open={deleteDialogNoteId !== null}
+          onClose={handleDeleteDialogClose}
+          noteId={deleteDialogNote.id}
+          noteTitle={deleteDialogNote.title}
+        />
+      )}
+    </div>
+  );
+}
+
+interface NoteRowProps {
+  note: Note;
+  /**
+   * Available tabs — used to resolve the note's tab name for the eyebrow AND
+   * to populate the "Mover a..." menu's options. If the note's `tabId` isn't
+   * found, the eyebrow is omitted (the menu's empty-state handles it).
+   */
+  tabs?: Tab[];
+  activeNoteId: string | null;
+  onNoteSelect: (noteId: string) => void;
+  onDeleteNote?: (noteId: string) => void;
+  onToggleFavorite?: (noteId: string) => void;
+  enableDrag?: boolean;
+  onMoveToTab?: (noteId: string, tabId: string) => void;
+  onLongPress?: (noteId: string) => void;
+}
+
+/**
+ * Tiny folder/segment glyph used as a subtle prefix for the tab eyebrow.
+ * Inline SVG keeps it crisp at any size and avoids pulling in an icon dep.
+ */
+const FOLDER_GLYPH = (
+  <svg
+    aria-hidden="true"
+    viewBox="0 0 16 16"
+    width="10"
+    height="10"
+    fill="currentColor"
+    className="shrink-0 opacity-70"
+  >
+    <path d="M2 4.5A1.5 1.5 0 0 1 3.5 3h2.379a1.5 1.5 0 0 1 1.06.44l.94.94a.5.5 0 0 0 .353.146H12.5A1.5 1.5 0 0 1 14 6.026V11.5A1.5 1.5 0 0 1 12.5 13h-9A1.5 1.5 0 0 1 2 11.5z" />
+  </svg>
+);
+
+/**
+ * One note row in the list. Extracted so it can use the useDraggable hook
+ * (hooks can't be called conditionally per-note inside the parent's loop).
+ *
+ * Layout: <li> is a flex row with these children, ALL siblings of each other —
+ *   1. Drag handle (own gutter column on the left, flex sibling of the card)
+ *      — only when enableDrag is true
+ *   2. "Mover a..." trigger (own gutter column on the left, flex sibling of
+ *      the card) — only when onMoveToTab is provided
+ *   3. Select <button> (the card filling the remaining width, the main click target)
+ *   4. Favorite star <button> (absolute top-right, sibling of the select button)
+ *   5. Delete <button> (absolute bottom-right, sibling of the select button)
+ *   6. MoveToTabMenu (a Modal — sibling of everything, only mounted when open)
+ *
+ * None of these buttons may be NESTED inside another — a <button> inside a
+ * <button> is invalid HTML and breaks semantics. All interactive buttons
+ * (handle, mover, favorite, delete) live as siblings of the select <button>.
+ */
+function NoteRow({
+  note,
+  tabs = EMPTY_TABS,
+  activeNoteId,
+  onNoteSelect,
+  onDeleteNote,
+  onToggleFavorite,
+  enableDrag = false,
+  onMoveToTab,
+  onLongPress,
+}: NoteRowProps) {
+  const draggable = useDraggable({ id: note.id, disabled: !enableDrag });
+  const [isMoveMenuOpen, setIsMoveMenuOpen] = useState(false);
+
+  // Long-press recogniser (mobile-only — wide-viewport lacks `touchstart`).
+  //   - `touchStart` records the start position + arms a 500ms timer.
+  //   - `touchMove` cancels if the finger drifts >10px (covers scroll).
+  //   - `touchEnd` cancels if the timer hasn't fired yet (covers tap).
+  //   - When the timer fires, set `longPressFiredRef` so the post-touch
+  //     synthesised `click` is suppressed.
+  const longPressTimerRef = useRef<number | null>(null);
+  const longPressStartRef = useRef<{ x: number; y: number } | null>(null);
+  const longPressFiredRef = useRef<boolean>(false);
+
+  function cancelLongPressTimer() {
+    if (longPressTimerRef.current !== null) {
+      window.clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    longPressStartRef.current = null;
+  }
+
+  function handleTouchStart(event: React.TouchEvent<HTMLButtonElement>) {
+    if (!onLongPress) return;
+    const touch = event.touches[0];
+    if (!touch) return;
+    longPressFiredRef.current = false;
+    longPressStartRef.current = { x: touch.clientX, y: touch.clientY };
+    longPressTimerRef.current = window.setTimeout(() => {
+      longPressFiredRef.current = true;
+      longPressTimerRef.current = null;
+      onLongPress?.(note.id);
+    }, LONG_PRESS_MS);
+  }
+
+  function handleTouchMove(event: React.TouchEvent<HTMLButtonElement>) {
+    const start = longPressStartRef.current;
+    if (!start) return;
+    const touch = event.touches[0];
+    if (!touch) return;
+    const dx = touch.clientX - start.x;
+    const dy = touch.clientY - start.y;
+    if (Math.hypot(dx, dy) > LONG_PRESS_MOVE_TOLERANCE_PX) {
+      cancelLongPressTimer();
+    }
+  }
+
+  function handleTouchEnd() {
+    // If the timer already fired (longPressFiredRef === true) the click
+    // suppression handles the synthetic click. If it's still pending, the
+    // touchend is just a tap — clear the timer so it never fires.
+    if (longPressTimerRef.current !== null) {
+      cancelLongPressTimer();
+    }
+  }
+
+  function handleRowClick() {
+    // Suppress the synthesised click the browser fires on touchend if a
+    // long-press already opened the action sheet (REQ-LIST-03 cancel-on-move
+    // test mirrors this: pressing then releasing past 500ms must NOT
+    // double-trigger onNoteSelect).
+    if (longPressFiredRef.current) {
+      longPressFiredRef.current = false;
+      return;
+    }
+    onNoteSelect(note.id);
+  }
+
+  // Resolve tab name once per render. If the tab isn't loaded yet, omit the eyebrow.
+  const tabName = tabs.find((t) => t.id === note.tabId)?.name ?? null;
+
+  // Style: when drag is active, dim opacity so user can see what they picked up.
+  const style = draggable.isDragging
+    ? { opacity: 0.4, cursor: "grabbing" }
+    : undefined;
+
+  return (
+    <li
+      ref={draggable.setNodeRef}
+      className="group relative mb-1 md:mb-2 flex items-stretch gap-1"
+      style={style}
+    >
+      {enableDrag && (
+        // SIBLING of the select button. Sits in its own left gutter column —
+        // not absolutely positioned over the card. stopPropagation isolates
+        // pointer/keyboard events so the parent <button> doesn't fire onNoteSelect.
+        // The `.drag-handle` class is the CSS hook for the (hover: none) gate
+        // in `src/index.css` — on touch-only devices the handle is hidden AND
+        // non-interactive, satisfying REQ-LAY-03.
+        <button
+          ref={draggable.setActivatorNodeRef}
+          type="button"
+          data-testid={`note-handle-${note.id}`}
+          aria-label="Arrastrar nota"
+          onPointerDown={(e) => e.stopPropagation()}
+          onKeyDown={(e) => e.stopPropagation()}
+          // @dnd-kit drag listeners attached here so only the handle starts the drag.
+          {...draggable.listeners}
+          {...draggable.attributes}
+          className="drag-handle flex w-5 flex-shrink-0 cursor-grab items-center justify-center self-center rounded text-text-secondary/60 opacity-0 transition-opacity hover:text-accent focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent group-hover:opacity-100"
+        >
+          {/* 2x3 dot grid — refined grab affordance, replaces the old "⋮⋮" glyph */}
+          <span aria-hidden="true" className="grid grid-cols-2 gap-[3px]">
+            <span className="block size-[3px] rounded-full bg-current" />
+            <span className="block size-[3px] rounded-full bg-current" />
+            <span className="block size-[3px] rounded-full bg-current" />
+            <span className="block size-[3px] rounded-full bg-current" />
+            <span className="block size-[3px] rounded-full bg-current" />
+            <span className="block size-[3px] rounded-full bg-current" />
+          </span>
+        </button>
+      )}
+
+      {onMoveToTab && (
+        // SIBLING of the select button (sits in the left gutter, after the drag
+        // handle when both are present). This is the explicit, discoverable,
+        // keyboard-operable alternative to the drag pickup flow — it closes the
+        // a11y criterion of issue #9 that the KeyboardSensor alone did not satisfy.
+        // stopPropagation isolates pointer events so onNoteSelect doesn't fire.
+        <button
+          type="button"
+          data-testid={`note-move-trigger-${note.id}`}
+          aria-label="Mover nota a otro espacio"
+          aria-haspopup="dialog"
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsMoveMenuOpen(true);
+          }}
+          className="flex w-5 flex-shrink-0 items-center justify-center self-center rounded text-text-secondary/60 opacity-0 transition-opacity hover:text-accent focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent group-hover:opacity-100"
+        >
+          <span aria-hidden="true" className="text-base leading-none">→</span>
+        </button>
+      )}
+
+      <button
+        type="button"
+        onClick={handleRowClick}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onNoteSelect(note.id); } }}
+        aria-current={activeNoteId === note.id ? "true" : undefined}
+        data-testid={`note-row-${note.id}`}
+        className={`min-w-0 flex-1 border px-3 py-1.5 md:px-4 md:py-3 text-left transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+          activeNoteId === note.id
+            ? "border-accent border-2 bg-surface-elevated"
+            : "border-border bg-surface-elevated/75 hover:border-accent hover:bg-surface-elevated"
+        }`}
+      >
+        {tabName && (
+          // Eyebrow chip: visible on mobile AND wide viewport. Compact size keeps
+          // the mobile row near 72px (chip + title + preview). At ≥768px the
+          // wide-viewport padding lifts the row, but the chip stays the same.
+          // Mobile: tighter chip (smaller py, no leading margin) to densify
+          // the list per viewport. Desktop keeps the original vertical air.
+          <div
+            data-testid={`note-tab-eyebrow-wrap-${note.id}`}
+            className="mb-0.5 md:mb-1 flex"
+          >
+            <span
+              data-testid={`note-tab-eyebrow-${note.id}`}
+              className="inline-flex max-w-full items-center gap-1 rounded-full bg-accent-subtle px-2 py-[2px] text-[10px] font-semibold uppercase tracking-wider text-text-secondary"
+            >
+              {FOLDER_GLYPH}
+              <span className="truncate">{tabName}</span>
+            </span>
+          </div>
+        )}
+        <p className={`min-w-0 truncate text-sm font-semibold text-text-primary ${onToggleFavorite ? "pr-7" : ""}`}>{note.title}</p>
+        {/* Preview: 1-line clamp on mobile (≤80px row budget), 2-line on wide viewports. */}
+        <p className="mt-1 line-clamp-1 md:line-clamp-2 text-xs leading-4 md:leading-5 text-text-secondary">
+          {note.content.replace(/<[^>]*>/g, " ").slice(0, 90) || "Sin contenido todavía"}
+        </p>
+        {note.tags?.length > 0 && (
+          // Tag chip row: hidden on mobile; long-press sheet is the path
+          // back to tags on small viewports (future iteration). Desktop
+          // shows the chip row inline.
+          <div
+            data-testid={`note-tags-${note.id}`}
+            className="hidden md:flex md:mt-3 md:flex-wrap md:gap-1.5"
+          >
+            {note.tags.slice(0, 3).map((tag) => (
+              <span key={tag.id} className="rounded-full bg-accent-subtle px-2 py-0.5 text-xs text-text-secondary">
+                {tag.name}
+              </span>
+            ))}
+          </div>
+        )}
+      </button>
+
+      {onToggleFavorite && (
+        // SIBLING of the select button (mirrors the drag handle and delete buttons).
+        // Positioned absolute top-right of the <li> so it stays visually anchored
+        // to the title row without nesting another <button> inside the select <button>
+        // (invalid HTML — the browser would close the outer button early, breaking
+        // clicks, focus, and screen readers).
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onToggleFavorite(note.id); }}
+          aria-label="Favorito"
+          aria-pressed={note.isFavorite ?? false}
+          className={`absolute top-2 right-2 z-10 size-6 grid place-items-center text-base leading-none transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+            note.isFavorite ? "text-accent" : "text-border hover:text-accent"
+          }`}
+        >
+          ★
+        </button>
+      )}
+
+      {onDeleteNote && (
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onDeleteNote(note.id); }}
+          aria-label="eliminar nota"
+          className="absolute bottom-2 right-2 hidden rounded-full px-2 py-1 text-xs font-semibold text-danger transition-colors hover:bg-danger/10 hover:text-danger-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger group-hover:flex"
+        >
+          ✕
+        </button>
+      )}
+
+      {onMoveToTab && (
+        // The menu is a sibling of every button inside the row. Mounted only
+        // when open to avoid a persistent dialog in the DOM. The Modal's native
+        // <dialog> + showModal() gives us the focus trap, backdrop, and Escape
+        // handling for free — see MoveToTabMenu.tsx for the keyboard nav layer.
+        <MoveToTabMenu
+          open={isMoveMenuOpen}
+          onClose={() => setIsMoveMenuOpen(false)}
+          noteTitle={note.title}
+          currentTabId={note.tabId}
+          tabs={tabs}
+          onSelect={(tabId) => onMoveToTab(note.id, tabId)}
+        />
+      )}
+    </li>
+  );
+}

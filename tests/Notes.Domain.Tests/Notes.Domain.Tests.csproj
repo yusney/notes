@@ -19,7 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Notes.Domain\Notes.Domain.csproj" />
+    <ProjectReference Include="..\..\apps\api\Notes.Domain\Notes.Domain.csproj" />
   </ItemGroup>
 
 </Project>

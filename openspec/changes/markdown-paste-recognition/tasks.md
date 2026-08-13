@@ -38,23 +38,23 @@ Chain strategy: pending
 - [x] 2.1 **RED** — In `NoteEditor.test.tsx`, add failing test: paste `**hello**` → editor HTML contains `<strong>`. ~15 lines.
 - [x] 2.2 **RED** — Add failing test: paste `- [ ] pending\n- [x] done` → HTML contains `data-type="taskItem"`. ~15 lines.
 - [x] 2.3 **RED** — Add failing test: paste `[Google](https://google.com)` → HTML contains `<a href`. ~12 lines.
-- [x] 2.4 **GREEN** — In `desktop/src/components/editor/NoteEditor.tsx`, add `Link.configure({ autolink: true })`, `TaskList`, `TaskItem.configure({ nested: false })`, `Markdown.configure({ transformPastedText: true, transformCopiedText: false })` after `StarterKit`. ~30 lines.
+- [x] 2.4 **GREEN** — In `apps/client/src/components/editor/NoteEditor.tsx`, add `Link.configure({ autolink: true })`, `TaskList`, `TaskItem.configure({ nested: false })`, `Markdown.configure({ transformPastedText: true, transformCopiedText: false })` after `StarterKit`. ~30 lines.
 - [x] 2.5 **REFACTOR** — Extract extension array to named const `editorExtensions` for readability. ~5 lines.
 
 ---
 
 ## Phase 3: Core Implementation — NoteViewer
 
-- [x] 3.1 **RED** — Create `desktop/src/components/editor/NoteViewer.test.tsx`; add failing test: HTML with `<a href>` renders with `target="_blank"`. ~20 lines.
+- [x] 3.1 **RED** — Create `apps/client/src/components/editor/NoteViewer.test.tsx`; add failing test: HTML with `<a href>` renders with `target="_blank"`. ~20 lines.
 - [x] 3.2 **RED** — Add failing test: HTML with task list renders checkboxes as non-interactive (`pointer-events: none` or `disabled`). ~20 lines.
-- [x] 3.3 **GREEN** — In `desktop/src/components/editor/NoteViewer.tsx`, add `Link.configure({ openOnClick: true, HTMLAttributes: { target: '_blank', rel: 'noopener noreferrer' } })`, `TaskList`, `TaskItem.configure({ editable: false, nested: false })`. ~35 lines.
+- [x] 3.3 **GREEN** — In `apps/client/src/components/editor/NoteViewer.tsx`, add `Link.configure({ openOnClick: true, HTMLAttributes: { target: '_blank', rel: 'noopener noreferrer' } })`, `TaskList`, `TaskItem.configure({ editable: false, nested: false })`. ~35 lines.
 - [x] 3.4 **REFACTOR** — Extract extension array to named const `viewerExtensions`. ~5 lines.
 
 ---
 
 ## Phase 4: CSS + Cleanup
 
-- [x] 4.1 Add checkbox cursor/pointer-events styles and link color/underline overrides to `desktop/src/index.css`. ~20 lines.
+- [x] 4.1 Add checkbox cursor/pointer-events styles and link color/underline overrides to `apps/client/src/index.css`. ~20 lines.
 - [x] 4.2 Verify open question: test paste of fenced code block — confirm `CodeBlockLowlight` is not broken by `tiptap-markdown`. Add one regression test if needed. ~15 lines.
 - [x] 4.3 Run `pnpm test` — all scenarios green. Fix any snapshot drift.
 

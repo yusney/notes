@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: desktop
+        working-directory: apps/client
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -32,7 +32,7 @@ jobs:
         with:
           node-version: "22"
           cache: "pnpm"
-          cache-dependency-path: desktop/pnpm-lock.yaml
+          cache-dependency-path: apps/client/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec tsc --noEmit
       - run: pnpm exec vitest run
@@ -63,7 +63,7 @@ jobs:
         with:
           node-version: "22"
           cache: "pnpm"
-          cache-dependency-path: desktop/pnpm-lock.yaml
+          cache-dependency-path: apps/client/pnpm-lock.yaml
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -72,10 +72,10 @@ jobs:
 
       - uses: swatinem/rust-cache@v2
         with:
-          workspaces: "desktop/src-tauri -> target"
+          workspaces: "apps/client/src-tauri -> target"
 
       - name: Install frontend dependencies
-        working-directory: desktop
+        working-directory: apps/client
         run: pnpm install --frozen-lockfile
 
       - name: Install Linux system dependencies
@@ -97,7 +97,7 @@ jobs:
           VITE_API_BASE_URL: "https://notes-api.donduque.dev"
           APPLE_SIGNING_IDENTITY: "-"
         with:
-          projectPath: desktop
+          projectPath: apps/client
           tagName: ${{ github.ref_name }}
           releaseName: "${{ github.ref_name }}"
           releaseBody: "See the release notes below."
