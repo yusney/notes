@@ -116,9 +116,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: notes-android-debug-apk
-          # Multi-file upload — `apk-paths.txt` lists the absolute paths
-          # written by the previous step.
-          path: apps/client/apk-paths.txt
+          # IMPORTANT: glob the *.apk files directly. The previous version
+          # uploaded `apk-paths.txt` (a text file with paths to the APKs)
+          # which produced an artifact containing only that text file — no
+          # APKs at all. Glob captures all APKs in one upload.
+          path: apps/client/src-tauri/gen/android/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
           retention-days: 90
 
