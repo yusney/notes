@@ -51,7 +51,11 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
         with:
-          packages: |
+          # YAML list form — `packages: |` (multiline scalar) was being
+          # concatenated into a single invalid package id on this action
+          # version, producing:
+          #   "Failed to find package 'platforms;android-34\nbuild-tools;...'"
+          packages: >-
             platforms;android-34
             build-tools;34.0.0
             platform-tools
