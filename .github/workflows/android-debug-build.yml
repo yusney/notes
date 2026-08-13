@@ -104,12 +104,13 @@ jobs:
       - name: Locate debug APKs
         id: apks
         working-directory: apps/client
-        # Tauri emits one APK per architecture. Capture all of them so
-        # the artifact download works regardless of which ABI the
-        # downloader needs (arm64-v8a for most modern phones, x86_64 for
-        # emulators, armeabi-v7a for very old devices).
+        # Tauri 2.6+ emits a single universal APK at
+        # `outputs/apk/universal/debug/app-universal-debug.apk` (NOT the
+        # `outputs/apk/debug/` path shown in older docs). The previous
+        # workflow pointed at the older path and silently produced an
+        # empty artifact.
         run: |
-          APK_DIR="src-tauri/gen/android/app/build/outputs/apk/debug"
+          APK_DIR="src-tauri/gen/android/app/build/outputs/apk/universal/debug"
           ls -1 "$APK_DIR"/*.apk | tee apk-paths.txt
 
       - name: Upload debug APKs
@@ -120,7 +121,7 @@ jobs:
           # uploaded `apk-paths.txt` (a text file with paths to the APKs)
           # which produced an artifact containing only that text file — no
           # APKs at all. Glob captures all APKs in one upload.
-          path: apps/client/src-tauri/gen/android/app/build/outputs/apk/debug/*.apk
+          path: apps/client/src-tauri/gen/android/app/build/outputs/apk/universal/debug/*.apk
           if-no-files-found: error
           retention-days: 90
 
@@ -128,7 +129,7 @@ jobs:
         working-directory: apps/client
         # Convenience for verifying download integrity before sideloading.
         run: |
-          APK_DIR="src-tauri/gen/android/app/build/outputs/apk/debug"
+          APK_DIR="src-tauri/gen/android/app/build/outputs/apk/universal/debug"
           echo "## APK SHA256 sums" >> $GITHUB_STEP_SUMMARY
           for apk in "$APK_DIR"/*.apk; do
             sha256sum "$apk"
