@@ -3,13 +3,11 @@ packages:
 
 # Security hardening: delay installs of newly published versions for 7 days
 # to allow time for malicious packages to be detected and unpublished.
-# Disabled (set to 0) for this PR because the lockfile pins several legacy
-# versions (lowlight 3.3.0, @tauri-apps/* 2.4.x, tiptap-markdown 0.9.0,
-# @fontsource-variable/* 5.2.8) that predate the 7-day maturity window.
-# The trust-policy check below still catches downgrade attacks at install.
-# TODO: bump the pinned deps in package.json to current versions and
-# re-enable minimumReleaseAge.
-minimumReleaseAge: '0 minutes'
+# Whitelisted exceptions below are bounded by exact-version pins in
+# package.json (each package.json entry is `^X.Y.Z` — the caret allows
+# patches/minors only, so the whitelist can't silently pick up a newer
+# version of a maliciously-published package).
+minimumReleaseAge: '10080 minutes'
 
 # Pinned legacy versions that predate the 7-day maturity window. Each
 # exclusion is bounded by an exact-version pin in package.json so the
@@ -24,6 +22,9 @@ minimumReleaseAgeExclude:
   - '@tauri-apps/plugin-deep-link'
   - '@tauri-apps/api'
   - '@tauri-apps/cli'
+  - lowlight
+  - zustand
+  - '@tiptap/starter-kit'
 
 # Security hardening: reject packages whose trust signals weaken between updates.
 # Allowed (vs no-downgrade) so pnpm install can complete when a transitive
