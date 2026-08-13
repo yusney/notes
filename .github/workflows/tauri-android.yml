@@ -49,15 +49,25 @@ jobs:
           distribution: "temurin"
           java-version: "17"
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-        with:
-          packages: |
-            platforms;android-34
-            build-tools;34.0.0
-            platform-tools
-            ndk;26.1.10909125
-          cmdline-tools: latest
+      - name: Setup Android SDK (manual — bypasses android-actions/setup-android@v3 bug)
+        env:
+          ANDROID_HOME: ${{ github.workspace }}/.android-sdk
+        # Same workaround as android-debug-build.yml — the action's
+        # `packages:` parser collapses the list into a single invalid
+        # package id, so we install via `sdkmanager` directly.
+        run: |
+          mkdir -p "$ANDROID_HOME/cmdline-tools"
+          cd "$ANDROID_HOME/cmdline-tools"
+          if [ ! -d "latest" ]; then
+            echo "Downloading Android cmdline-tools 11076708..."
+            curl -fsSL https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -o cmdline.zip
+            unzip -q cmdline.zip
+            mv cmdline-tools latest
+            rm cmdline.zip
+          fi
+          export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
+          yes 2>/dev/null | sdkmanager --licenses > /dev/null
+          sdkmanager "platforms;android-34" "build-tools;34.0.0" "platform-tools" "ndk;26.1.10909125"
 
       - name: Install Rust (stable + Android targets)
         uses: dtolnay/rust-toolchain@stable

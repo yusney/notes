@@ -48,19 +48,27 @@ jobs:
           distribution: "temurin"
           java-version: "17"
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-        with:
-          # YAML list form — `packages: |` (multiline scalar) was being
-          # concatenated into a single invalid package id on this action
-          # version, producing:
-          #   "Failed to find package 'platforms;android-34\nbuild-tools;...'"
-          packages: >-
-            platforms;android-34
-            build-tools;34.0.0
-            platform-tools
-            ndk;26.1.10909125
-          cmdline-tools: latest
+      - name: Setup Android SDK (manual)
+        env:
+          ANDROID_HOME: ${{ github.workspace }}/.android-sdk
+        # Replaces `android-actions/setup-android@v3` which has a known
+        # bug parsing `packages:` as a multiline string (sdkmanager gets
+        # one concatenated package id with literal newlines instead of
+        # four separate ids). The `tauri-android.yml` workflow hits the
+        # same bug — fix both when upgrading the action version.
+        run: |
+          mkdir -p "$ANDROID_HOME/cmdline-tools"
+          cd "$ANDROID_HOME/cmdline-tools"
+          if [ ! -d "latest" ]; then
+            echo "Downloading Android cmdline-tools 11076708..."
+            curl -fsSL https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -o cmdline.zip
+            unzip -q cmdline.zip
+            mv cmdline-tools latest
+            rm cmdline.zip
+          fi
+          export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
+          yes 2>/dev/null | sdkmanager --licenses > /dev/null
+          sdkmanager "platforms;android-34" "build-tools;34.0.0" "platform-tools" "ndk;26.1.10909125"
 
       - name: Install Rust (stable + Android targets)
         uses: dtolnay/rust-toolchain@stable
