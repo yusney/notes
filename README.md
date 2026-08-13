@@ -173,14 +173,26 @@ Requires macOS runner (code signing recommended for distribution).
 
 ## CI/CD
 
-GitHub Actions (`.github/workflows/ci.yml`) runs on every push/PR to `main`:
+GitHub Actions runs on every push/PR to `main`:
 
-| Job | What it does |
-|-----|-------------|
-| `backend` | Restore → Build → Test (.NET) |
-| `frontend` | Type check → Unit tests → Build |
-| `docker-build` | Builds and validates Docker image |
-| `tauri-build` | Builds Linux AppImage + .deb artifacts |
+| Workflow | Trigger | What it does |
+|----------|--------|-------------|
+| `.github/workflows/ci.yml` | push / PR to `main` | Backend test + frontend type-check/unit + Docker build validation + tauri Linux AppImage/.deb artifacts |
+| `.github/workflows/release.yml` | push tag `v*` | Desktop installers for Linux / Windows / macOS + signed Android release AAB. Attaches all artifacts to a draft GitHub Release. See [RELEASING.md](./RELEASING.md) for the full pipeline, including first-upload to Google Play. |
+| `.github/workflows/tauri-android.yml` | push tag `v*.*.*` or manual dispatch | Debug Android APK (not signed, not for distribution) |
+
+## Releasing
+
+End-to-end release process — keystore generation, GitHub Secrets,
+first Play Console upload, subsequent releases, rollback, troubleshooting
+— lives in **[RELEASING.md](./RELEASING.md)**.
+
+Quick summary of the flow:
+
+1. Bump versions in `apps/client/{package.json, src-tauri/Cargo.toml, src-tauri/tauri.conf.json}`.
+2. `git tag vX.Y.Z && git push origin main vX.Y.Z`.
+3. CI builds desktop + signed Android AAB, creates a draft GitHub Release.
+4. First upload to Google Play must be manual (Google's policy).
 
 ## Deployment (Dokploy + VPS)
 

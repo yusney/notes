@@ -1,0 +1,121 @@
+name: Android Debug APK (manual download)
+
+# Builds the unsigned debug APK for every push to `main` and uploads it as
+# a 90-day workflow artifact. Designed so the maintainer can download the
+# latest build quickly without needing a Play Console or upload keystore.
+#
+# For signed release AABs, see release.yml (tag-gated, requires
+# ANDROID_KEY_* secrets).
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Cancel any in-flight build for the same SHA so retag pipelines don't
+# double-spend CI minutes.
+concurrency:
+  group: android-debug-build-${{ github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  android-debug:
+    name: Build Android Debug APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      VITE_API_BASE_URL: "https://notes-api.donduque.dev"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+          cache-dependency-path: apps/client/pnpm-lock.yaml
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: |
+            platforms;android-34
+            build-tools;34.0.0
+            platform-tools
+            ndk;26.1.10909125
+          cmdline-tools: latest
+
+      - name: Install Rust (stable + Android targets)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
+
+      - name: Cache Rust build artifacts
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "apps/client/src-tauri -> target"
+
+      - name: Install frontend dependencies
+        working-directory: apps/client
+        run: pnpm install --frozen-lockfile
+
+      - name: Initialize Android target (idempotent)
+        working-directory: apps/client
+        # `tauri android init --ci` materializes `src-tauri/gen/android/` on
+        # fresh checkouts. Safe to re-run — existing files are kept.
+        run: |
+          if [ ! -d src-tauri/gen/android ]; then
+            pnpm tauri android init --ci
+          fi
+
+      - name: Build debug APK
+        working-directory: apps/client
+        # `--debug` produces an APK signed with Android's auto-generated
+        # debug keystore (per-developer). Installable on any device after
+        # the user accepts "Install from unknown sources". Not for
+        # distribution — see release.yml for the signed release AAB.
+        run: pnpm tauri android build --debug
+
+      - name: Locate debug APKs
+        id: apks
+        working-directory: apps/client
+        # Tauri emits one APK per architecture. Capture all of them so
+        # the artifact download works regardless of which ABI the
+        # downloader needs (arm64-v8a for most modern phones, x86_64 for
+        # emulators, armeabi-v7a for very old devices).
+        run: |
+          APK_DIR="src-tauri/gen/android/app/build/outputs/apk/debug"
+          ls -1 "$APK_DIR"/*.apk | tee apk-paths.txt
+
+      - name: Upload debug APKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: notes-android-debug-apk
+          # Multi-file upload — `apk-paths.txt` lists the absolute paths
+          # written by the previous step.
+          path: apps/client/apk-paths.txt
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Print SHA256 sums
+        working-directory: apps/client
+        # Convenience for verifying download integrity before sideloading.
+        run: |
+          APK_DIR="src-tauri/gen/android/app/build/outputs/apk/debug"
+          echo "## APK SHA256 sums" >> $GITHUB_STEP_SUMMARY
+          for apk in "$APK_DIR"/*.apk; do
+            sha256sum "$apk"
+          done | tee -a $GITHUB_STEP_SUMMARY
