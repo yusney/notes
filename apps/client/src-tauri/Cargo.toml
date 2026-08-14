@@ -26,7 +26,15 @@ tauri-build = { version = "2", features = [] }
 # builds (audit #2317): `devtools` enables the WebView inspector in
 # production APK/AAB, and `tray-icon` is compiled on mobile where there
 # is no system tray.
-tauri = { version = "2", features = ["tray-icon"] }
+#
+# Bumped Tauri 2 → 2.11 to pull in the fix for the Android JNI panic
+# (tao 0.35.2 ndk_glue NullPtr on Rust_onActivityCreate) that crashed
+# the activity when the OAuth callback deep link was delivered.
+# Verified fix exists in tao >= 0.36 (pulled by tauri 2.11+).
+# Plugins are kept on the 2.x stable line — `tauri-plugin-deep-link`
+# has no 2.11 release (latest is 2.4.9) but the bug is in `tao` core,
+# not the plugin, so the plugin version doesn't matter for the fix.
+tauri = { version = "2.11", features = ["tray-icon"] }
 tauri-plugin-stronghold = "2"
 tauri-plugin-opener = "2"
 tauri-plugin-deep-link = "2"
