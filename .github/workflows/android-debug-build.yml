@@ -101,6 +101,16 @@ jobs:
         # distribution — see release.yml for the signed release AAB.
         run: pnpm tauri android build --debug
 
+      - name: Patch OAuth callback deep-link intent-filter
+        working-directory: apps/client
+        # tauri-plugin-deep-link v2.6.1 only emits `http`/`https` schemes
+        # in the auto-generated intent-filter, so the Notes backend's
+        # `notes://auth.callback?code=...` redirect lands on "no app to
+        # handle this URL" and the screen sits waiting. The patch adds a
+        # `<data android:scheme="notes" />` to the same filter that
+        # already captures the OAuth callback host. Idempotent.
+        run: python3 ../../scripts/patch-android-deep-link.py
+
       - name: Locate debug APKs
         id: apks
         working-directory: apps/client

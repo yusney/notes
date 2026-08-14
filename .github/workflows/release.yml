@@ -187,6 +187,14 @@ jobs:
           base64 -d <<< "${{ secrets.ANDROID_KEY_BASE64 }}" > $RUNNER_TEMP/keystore.jks
           echo "storeFile=$RUNNER_TEMP/keystore.jks" >> keystore.properties
 
+      - name: Patch OAuth callback deep-link intent-filter
+        working-directory: apps/client
+        # Same workaround as android-debug-build.yml — tauri-plugin-deep-link
+        # v2.6.1 doesn't emit the `notes://` scheme on its own. The Notes API
+        # redirects to `notes://auth.callback?code=...`, so the patch is
+        # required for both debug APKs and signed release AABs.
+        run: python3 ../../scripts/patch-android-deep-link.py
+
       - name: Build release AAB
         working-directory: apps/client
         run: pnpm tauri android build -- --aab
